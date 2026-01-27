@@ -8,17 +8,17 @@
 
 import AppKit
 
-class NotificationManager {
+public class NotificationManager {
     private let stateFileURL: URL
     
-    init() {
+    public init() {
         // ~/.password_monitor_state
         let homeDir = FileManager.default.homeDirectoryForCurrentUser
         stateFileURL = homeDir.appendingPathComponent(".password_monitor_state")
     }
     
     /// Sprawdza czy dzisiaj już pokazano notyfikację
-    func shouldShowTodayNotification() -> Bool {
+    public func shouldShowTodayNotification() -> Bool {
         guard let lastShown = getLastNotificationDate() else {
             return true  // Nigdy nie pokazano
         }
@@ -28,7 +28,7 @@ class NotificationManager {
     }
     
     /// Zapisuje timestamp ostatniej notyfikacji
-    func markNotificationShown() {
+    public func markNotificationShown() {
         let timestamp = String(Date().timeIntervalSince1970)
         try? timestamp.write(to: stateFileURL, atomically: true, encoding: .utf8)
     }
@@ -42,7 +42,7 @@ class NotificationManager {
     }
     
     /// Pokazuje dialog ostrzeżenia
-    func showPasswordWarning(daysLeft: Int, expiryDate: Date) -> Bool {
+    public func showPasswordWarning(daysLeft: Int, expiryDate: Date) -> Bool {
         let alert = NSAlert()
         alert.messageText = "Ostrzeżenie o wygaśnięciu hasła"
         
@@ -86,7 +86,7 @@ class NotificationManager {
     }
     
     /// Otwiera System Settings do zmiany hasła
-    func openPasswordSettings() {
+    public func openPasswordSettings() {
         let macOSVersion = ProcessInfo.processInfo.operatingSystemVersion
         
         if macOSVersion.majorVersion >= 13 {

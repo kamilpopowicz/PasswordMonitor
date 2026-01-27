@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- W PasswordMonitor/Info.plist dodaj: -->
+	<key>Application is agent (UIElement)</key>
+	<true/>
+	<!-- Aplikacja działa tylko w menu bar, bez dock icon -->
+	
+	<key>LSBackgroundOnly</key>
+	<false/>
+	<!-- Pozwala na otwieranie okien -->
+
+	<key>SMAuthorizedClients</key>
+	<array>
+	    <string>anchor apple generic and identifier "com.company.PasswordMonitor.Helper"</string>
+	</array>
+
+</dict>
+</plist>

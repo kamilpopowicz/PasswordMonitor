@@ -8,24 +8,14 @@
 
 import Foundation
 
-struct PasswordInfo {
-    let lastSetDate: Date
-    let daysUntilExpiration: Int
-    let expiryDate: Date
-    let isExpired: Bool
-}
 
-enum ADError: Error {
-    case notConnected
-    case userNotFound
-    case invalidData
-    case commandFailed(String)
-}
 
-class ActiveDirectoryManager {
-    private let domainName = "BP-ITAKA"  // Twoja domena z skryptu
+public class ActiveDirectoryManager {
+    private let domainName = "BP-ITAKA"  // Twoja domena
     private let maxPasswordAge = 30  // Dni
     private let warningThreshold = 7  // Ostrzeż od 7 dni
+    
+    public init() {}
     
     /// Sprawdza połączenie z AD
     func checkADConnectivity() -> Bool {
@@ -47,7 +37,7 @@ class ActiveDirectoryManager {
     }
     
     /// Pobiera informacje o haśle użytkownika
-    func getPasswordInfo(for username: String) throws -> PasswordInfo {
+    public func getPasswordInfo(for username: String) throws -> PasswordInfo {
         // Najpierw próba z AD
         if checkADConnectivity() {
             if let info = try? getPasswordInfoFromAD(username: username) {
@@ -71,13 +61,21 @@ class ActiveDirectoryManager {
         ]
         
         let pipe = Pipe()
+        let errorPipe = Pipe()
         task.standardOutput = pipe
-        task.standardError = pipe
+        task.standardError = errorPipe
         
         try task.run()
         task.waitUntilExit()
         
+        // DODAJ DEBUGGING
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        if let errorOutput = String(data: errorData, encoding: .utf8), !errorOutput.isEmpty {
+            print("dscl stderr: \(errorOutput)")
+        }
+        
         guard task.terminationStatus == 0 else {
+            print("dscl exit code: \(task.terminationStatus)")
             throw ADError.commandFailed("dscl failed with code \(task.terminationStatus)")
         }
         
@@ -86,21 +84,37 @@ class ActiveDirectoryManager {
             throw ADError.invalidData
         }
         
+        // DODAJ DEBUGGING
+        print("dscl output: \(output)")
+        
         // Parse: "SMBPasswordLastSet: 133123456789012345"
-        guard let lastSetRaw = output
-            .components(separatedBy: "SMBPasswordLastSet:")
-            .last?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              let lastSetInt = Int64(lastSetRaw) else {
+        let lines = output.components(separatedBy: .newlines)
+        guard let lastSetLine = lines.first(where: { $0.contains("SMBPasswordLastSet") }) else {
+            print("SMBPasswordLastSet not found in output")
             throw ADError.invalidData
         }
+        
+        print("Found line: \(lastSetLine)")
+        
+        let components = lastSetLine.components(separatedBy: ":")
+        guard components.count >= 2,
+              let lastSetRaw = components.last?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let lastSetInt = Int64(lastSetRaw) else {
+            print("Failed to parse: \(lastSetLine)")
+            throw ADError.invalidData
+        }
+        
+        print("Parsed timestamp: \(lastSetInt)")
         
         // Konwersja Windows FILETIME → UNIX timestamp
         let unixTimestamp = (lastSetInt / 10_000_000) - 11_644_473_600
         let lastSetDate = Date(timeIntervalSince1970: TimeInterval(unixTimestamp))
         
+        print("Converted to date: \(lastSetDate)")
+        
         return calculateExpirationInfo(from: lastSetDate)
     }
+
     
     /// Fallback: lokalny passwordLastSetTime
     private func getPasswordInfoLocal(username: String) throws -> PasswordInfo {
@@ -176,7 +190,7 @@ class ActiveDirectoryManager {
     }
     
     /// Sprawdza czy trzeba pokazać ostrzeżenie
-    func shouldShowWarning(passwordInfo: PasswordInfo) -> Bool {
+    public func shouldShowWarning(passwordInfo: PasswordInfo) -> Bool {
         return passwordInfo.daysUntilExpiration <= warningThreshold
     }
 }

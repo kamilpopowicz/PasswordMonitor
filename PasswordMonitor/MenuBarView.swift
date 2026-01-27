@@ -5,9 +5,10 @@
 //  Created by Kamil Popowicz on 26/01/2026.
 //
 
-
 import SwiftUI
 import ServiceManagement
+import PasswordMonitorCore
+import Combine
 
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
@@ -60,9 +61,9 @@ struct MenuBarView: View {
                     .font(.caption)
             }
             
-            Button("Ustawienia...") {
-                openSettings()
-            }
+            // Use SettingsLink instead of the old openSettings()
+            SettingsLink {Text("Ustawienia...")}
+                .controlSize(.regular)
             
             Divider()
             
@@ -78,7 +79,7 @@ struct MenuBarView: View {
     }
     
     private var helperServiceColor: Color {
-        let service = SMAppService.agent(plistName: "com.company.PasswordMonitor.Helper.plist")
+        let service = SMAppService.loginItem(identifier: "com.company.PasswordMonitorHelper")
         return service.status == .enabled ? .green : .red
     }
     
@@ -117,11 +118,6 @@ struct MenuBarView: View {
                 }
             }
         }
-    }
-    
-    private func openSettings() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
