@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var domainName = "BP-ITAKA"
     @State private var maxPasswordAge = 30
     @State private var warningThreshold = 7
+    @State private var hoursToCheck: [Int] = [8, 9, 10, 11, 12, 13, 14 ,15 ,16 ,17 ,19 ,20]
     @State private var showAlert = false
     @State private var alertMessage = ""
     
@@ -83,12 +84,12 @@ struct SettingsView: View {
     }
     
     private var helperServiceColor: Color {
-        let service = SMAppService.loginItem(identifier: "com.company.PasswordMonitor.Helper")
+        let service = SMAppService.loginItem(identifier: "popo.PasswordMonitorHelperApp")
         return service.status == .enabled ? .green : .red
     }
     
     private var helperServiceStatus: String {
-        let service = SMAppService.loginItem(identifier: "com.company.PasswordMonitor.Helper")
+        let service = SMAppService.loginItem(identifier: "popo.PasswordMonitorHelperApp")
         switch service.status {
         case .enabled: return "Aktywny"
         case .notRegistered: return "Nie zarejestrowany"

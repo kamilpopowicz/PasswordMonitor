@@ -42,11 +42,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func registerHelperService() {
         // UŻYJ loginItem() zamiast agent()
-        let service = SMAppService.loginItem(identifier: "com.company.PasswordMonitor.Helper")
+        let service = SMAppService.loginItem(identifier: "popo.PasswordMonitorHelperApp")
         
         print("Helper bundle path:")
         let bundleURL = Bundle.main.bundleURL
-            .appendingPathComponent("Contents/Library/LoginItems/PasswordMonitorHelper.app")
+            .appendingPathComponent("Contents/Library/LoginItems/PasswordMonitorHelperApp.app")
         print("  \(bundleURL.path)")
         print("  Exists: \(FileManager.default.fileExists(atPath: bundleURL.path))")
         

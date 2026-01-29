@@ -79,7 +79,7 @@ struct MenuBarView: View {
     }
     
     private var helperServiceColor: Color {
-        let service = SMAppService.loginItem(identifier: "com.company.PasswordMonitorHelper")
+        let service = SMAppService.loginItem(identifier: "popo.PasswordMonitorHelperApp")
         return service.status == .enabled ? .green : .red
     }
     
