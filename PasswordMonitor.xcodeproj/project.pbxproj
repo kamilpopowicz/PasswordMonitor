@@ -7,12 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C72340B42F27466000C53976 /* PasswordMonitorHelper in CopyFiles */ = {isa = PBXBuildFile; fileRef = C72340972F27411100C53976 /* PasswordMonitorHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		C72340C42F28192F00C53976 /* PasswordMonitorCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; };
 		C72340D12F281BF800C53976 /* PasswordMonitorCore.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		C72340D62F28207000C53976 /* PasswordMonitorCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; };
-		C72340DC2F28213900C53976 /* PasswordMonitorCore.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		C72340FF2F2825D500C53976 /* PasswordMonitorHelper in CopyFiles */ = {isa = PBXBuildFile; fileRef = C72340972F27411100C53976 /* PasswordMonitorHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -23,35 +19,9 @@
 			remoteGlobalIDString = C72340BB2F28192F00C53976;
 			remoteInfo = PasswordMonitorCore;
 		};
-		C72340D82F28207000C53976 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = C723407D2F263E5400C53976 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = C72340BB2F28192F00C53976;
-			remoteInfo = PasswordMonitorCore;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		C72340952F27411100C53976 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
-			dstSubfolderSpec = 0;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 1;
-		};
-		C72340B32F27462900C53976 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = Contents/Library/LoginItems;
-			dstSubfolderSpec = 1;
-			files = (
-				C72340B42F27466000C53976 /* PasswordMonitorHelper in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		C72340D02F281BDF00C53976 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -62,51 +32,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C72340DB2F28212900C53976 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				C72340DC2F28213900C53976 /* PasswordMonitorCore.framework in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		C72340FB2F28248100C53976 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 7;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		C72340FE2F2825B100C53976 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = Contents/Library/LoginItems;
-			dstSubfolderSpec = 1;
-			files = (
-				C72340FF2F2825D500C53976 /* PasswordMonitorHelper in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		C72340852F263E5400C53976 /* PasswordMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PasswordMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C72340972F27411100C53976 /* PasswordMonitorHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PasswordMonitorHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PasswordMonitorCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		C75A047E2F2B3784009BC04C /* PasswordMonitorHelperApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PasswordMonitorHelperApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		C72340FD2F28249400C53976 /* Exceptions for "PasswordMonitorHelper" folder in "Copy Files" phase from "PasswordMonitorHelper" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = C72340FB2F28248100C53976 /* CopyFiles */;
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C75A048B2F2B37CD009BC04C /* Exceptions for "PasswordMonitorHelperApp" folder in "PasswordMonitorHelperApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				main.swift,
 				Resources/com.popo.PasswordMonitorHelper.plist,
 			);
+			target = C75A047D2F2B3784009BC04C /* PasswordMonitorHelperApp */;
 		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 		C72341022F288C3900C53976 /* Exceptions for "PasswordMonitor" folder in "Copy Bundle Resources" phase from "PasswordMonitor" target */ = {
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
 			buildPhase = C72340832F263E5400C53976 /* Resources */;
@@ -125,17 +70,17 @@
 			path = PasswordMonitor;
 			sourceTree = "<group>";
 		};
-		C72340982F27411100C53976 /* PasswordMonitorHelper */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				C72340FD2F28249400C53976 /* Exceptions for "PasswordMonitorHelper" folder in "Copy Files" phase from "PasswordMonitorHelper" target */,
-			);
-			path = PasswordMonitorHelper;
-			sourceTree = "<group>";
-		};
 		C72340BD2F28192F00C53976 /* PasswordMonitorCore */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PasswordMonitorCore;
+			sourceTree = "<group>";
+		};
+		C75A047F2F2B3784009BC04C /* PasswordMonitorHelperApp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C75A048B2F2B37CD009BC04C /* Exceptions for "PasswordMonitorHelperApp" folder in "PasswordMonitorHelperApp" target */,
+			);
+			path = PasswordMonitorHelperApp;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -149,15 +94,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C72340942F27411100C53976 /* Frameworks */ = {
+		C72340B92F28192F00C53976 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C72340D62F28207000C53976 /* PasswordMonitorCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C72340B92F28192F00C53976 /* Frameworks */ = {
+		C75A047B2F2B3784009BC04C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -171,8 +115,8 @@
 			isa = PBXGroup;
 			children = (
 				C72340872F263E5400C53976 /* PasswordMonitor */,
-				C72340982F27411100C53976 /* PasswordMonitorHelper */,
 				C72340BD2F28192F00C53976 /* PasswordMonitorCore */,
+				C75A047F2F2B3784009BC04C /* PasswordMonitorHelperApp */,
 				C72340D52F28207000C53976 /* Frameworks */,
 				C72340862F263E5400C53976 /* Products */,
 			);
@@ -182,8 +126,8 @@
 			isa = PBXGroup;
 			children = (
 				C72340852F263E5400C53976 /* PasswordMonitor.app */,
-				C72340972F27411100C53976 /* PasswordMonitorHelper */,
 				C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */,
+				C75A047E2F2B3784009BC04C /* PasswordMonitorHelperApp.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -216,7 +160,6 @@
 				C72340822F263E5400C53976 /* Frameworks */,
 				C72340832F263E5400C53976 /* Resources */,
 				C72340D02F281BDF00C53976 /* CopyFiles */,
-				C72340FE2F2825B100C53976 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -232,33 +175,6 @@
 			productName = PasswordMonitor;
 			productReference = C72340852F263E5400C53976 /* PasswordMonitor.app */;
 			productType = "com.apple.product-type.application";
-		};
-		C72340962F27411100C53976 /* PasswordMonitorHelper */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = C723409B2F27411100C53976 /* Build configuration list for PBXNativeTarget "PasswordMonitorHelper" */;
-			buildPhases = (
-				C72340932F27411100C53976 /* Sources */,
-				C72340942F27411100C53976 /* Frameworks */,
-				C72340952F27411100C53976 /* CopyFiles */,
-				C72340B32F27462900C53976 /* CopyFiles */,
-				C72340D22F281CF200C53976 /* ShellScript */,
-				C72340DB2F28212900C53976 /* CopyFiles */,
-				C72340FB2F28248100C53976 /* CopyFiles */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				C72340D92F28207000C53976 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				C72340982F27411100C53976 /* PasswordMonitorHelper */,
-			);
-			name = PasswordMonitorHelper;
-			packageProductDependencies = (
-			);
-			productName = PasswordMonitorHelper;
-			productReference = C72340972F27411100C53976 /* PasswordMonitorHelper */;
-			productType = "com.apple.product-type.tool";
 		};
 		C72340BB2F28192F00C53976 /* PasswordMonitorCore */ = {
 			isa = PBXNativeTarget;
@@ -283,6 +199,28 @@
 			productReference = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		C75A047D2F2B3784009BC04C /* PasswordMonitorHelperApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C75A04882F2B3786009BC04C /* Build configuration list for PBXNativeTarget "PasswordMonitorHelperApp" */;
+			buildPhases = (
+				C75A047A2F2B3784009BC04C /* Sources */,
+				C75A047B2F2B3784009BC04C /* Frameworks */,
+				C75A047C2F2B3784009BC04C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C75A047F2F2B3784009BC04C /* PasswordMonitorHelperApp */,
+			);
+			name = PasswordMonitorHelperApp;
+			packageProductDependencies = (
+			);
+			productName = PasswordMonitorHelperApp;
+			productReference = C75A047E2F2B3784009BC04C /* PasswordMonitorHelperApp.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -299,11 +237,10 @@
 					C72340842F263E5400C53976 = {
 						CreatedOnToolsVersion = 26.2;
 					};
-					C72340962F27411100C53976 = {
-						CreatedOnToolsVersion = 26.2;
-						LastSwiftMigration = 2620;
-					};
 					C72340BB2F28192F00C53976 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					C75A047D2F2B3784009BC04C = {
 						CreatedOnToolsVersion = 26.2;
 					};
 				};
@@ -324,8 +261,8 @@
 			projectRoot = "";
 			targets = (
 				C72340842F263E5400C53976 /* PasswordMonitor */,
-				C72340962F27411100C53976 /* PasswordMonitorHelper */,
 				C72340BB2F28192F00C53976 /* PasswordMonitorCore */,
+				C75A047D2F2B3784009BC04C /* PasswordMonitorHelperApp */,
 			);
 		};
 /* End PBXProject section */
@@ -345,38 +282,17 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		C72340D22F281CF200C53976 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
+		C75A047C2F2B3784009BC04C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Frameworks\"\ncp -R \"${BUILT_PRODUCTS_DIR}/PasswordMonitorCore.framework\" \\\n    \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Frameworks/\"\n";
 		};
-/* End PBXShellScriptBuildPhase section */
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C72340812F263E5400C53976 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		C72340932F27411100C53976 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -390,6 +306,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C75A047A2F2B3784009BC04C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -397,11 +320,6 @@
 			isa = PBXTargetDependency;
 			target = C72340BB2F28192F00C53976 /* PasswordMonitorCore */;
 			targetProxy = C72340C22F28192F00C53976 /* PBXContainerItemProxy */;
-		};
-		C72340D92F28207000C53976 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = C72340BB2F28192F00C53976 /* PasswordMonitorCore */;
-			targetProxy = C72340D82F28207000C53976 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -618,87 +536,6 @@
 			};
 			name = Release;
 		};
-		C723409C2F27411100C53976 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				AUTOMATION_APPLE_EVENTS = YES;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = SY8DWFNG8P;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
-				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
-				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
-				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
-				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
-				ENABLE_RESOURCE_ACCESS_CONTACTS = YES;
-				ENABLE_RESOURCE_ACCESS_LOCATION = YES;
-				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = YES;
-				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
-				ENABLE_RESOURCE_ACCESS_USB = NO;
-				FRAMEWORK_SEARCH_PATHS = "$(BUILT_PRODUCTS_DIR)";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"@executable_path/../Frameworks\n@loader_path/../Frameworks",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = YES;
-				RUNTIME_EXCEPTION_ALLOW_JIT = YES;
-				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = YES;
-				RUNTIME_EXCEPTION_DEBUGGING_TOOL = YES;
-				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = YES;
-				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				WRAPPER_EXTENSION = app;
-			};
-			name = Debug;
-		};
-		C723409D2F27411100C53976 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				AUTOMATION_APPLE_EVENTS = YES;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = SY8DWFNG8P;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
-				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
-				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
-				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
-				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
-				ENABLE_RESOURCE_ACCESS_CONTACTS = YES;
-				ENABLE_RESOURCE_ACCESS_LOCATION = YES;
-				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = YES;
-				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
-				ENABLE_RESOURCE_ACCESS_USB = NO;
-				FRAMEWORK_SEARCH_PATHS = "$(BUILT_PRODUCTS_DIR)";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"@executable_path/../Frameworks\n@loader_path/../Frameworks",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = YES;
-				RUNTIME_EXCEPTION_ALLOW_JIT = YES;
-				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = YES;
-				RUNTIME_EXCEPTION_DEBUGGING_TOOL = YES;
-				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = YES;
-				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				WRAPPER_EXTENSION = app;
-			};
-			name = Release;
-		};
 		C72340C72F28192F00C53976 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -777,6 +614,74 @@
 			};
 			name = Release;
 		};
+		C75A04862F2B3786009BC04C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SY8DWFNG8P;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.popo.PasswordMonitorHelperApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C75A04872F2B3786009BC04C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SY8DWFNG8P;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.popo.PasswordMonitorHelperApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -798,20 +703,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C723409B2F27411100C53976 /* Build configuration list for PBXNativeTarget "PasswordMonitorHelper" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				C723409C2F27411100C53976 /* Debug */,
-				C723409D2F27411100C53976 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		C72340C62F28192F00C53976 /* Build configuration list for PBXNativeTarget "PasswordMonitorCore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C72340C72F28192F00C53976 /* Debug */,
 				C72340C82F28192F00C53976 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C75A04882F2B3786009BC04C /* Build configuration list for PBXNativeTarget "PasswordMonitorHelperApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C75A04862F2B3786009BC04C /* Debug */,
+				C75A04872F2B3786009BC04C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

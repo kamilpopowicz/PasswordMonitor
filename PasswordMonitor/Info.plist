@@ -11,10 +11,10 @@
 	<false/>
 	<!-- Pozwala na otwieranie okien -->
 
-	<key>SMAuthorizedClients</key>
-	<array>
-	    <string>anchor apple generic and identifier "com.company.PasswordMonitor.Helper"</string>
-	</array>
+    <key>SMLoginItemIdentifiers</key>
+    <array>
+        <string>com.popo.PasswordMonitorHelperApp</string>
+    </array>
 
 </dict>
 </plist>
