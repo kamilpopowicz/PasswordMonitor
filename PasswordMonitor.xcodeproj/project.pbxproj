@@ -10,6 +10,7 @@
 		C72340C42F28192F00C53976 /* PasswordMonitorCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; };
 		C72340D12F281BF800C53976 /* PasswordMonitorCore.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C75A04AF2F2C0D7C009BC04C /* PasswordMonitorHelperApp.app in CopyFiles */ = {isa = PBXBuildFile; fileRef = C75A047E2F2B3784009BC04C /* PasswordMonitorHelperApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C75A04B72F2C1F8F009BC04C /* TODO.md in Sources */ = {isa = PBXBuildFile; fileRef = C75A04B62F2C1F89009BC04C /* TODO.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +50,7 @@
 		C72340852F263E5400C53976 /* PasswordMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PasswordMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PasswordMonitorCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		C75A047E2F2B3784009BC04C /* PasswordMonitorHelperApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PasswordMonitorHelperApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C75A04B62F2C1F89009BC04C /* TODO.md */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TODO.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -124,6 +126,7 @@
 		C723407C2F263E5400C53976 = {
 			isa = PBXGroup;
 			children = (
+				C75A04B62F2C1F89009BC04C /* TODO.md */,
 				C72340872F263E5400C53976 /* PasswordMonitor */,
 				C72340BD2F28192F00C53976 /* PasswordMonitorCore */,
 				C75A047F2F2B3784009BC04C /* PasswordMonitorHelperApp */,
@@ -299,6 +302,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C75A04B72F2C1F8F009BC04C /* TODO.md in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

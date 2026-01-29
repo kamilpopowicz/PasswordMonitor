@@ -13,7 +13,6 @@ struct SettingsView: View {
     @State private var domainName = "BP-ITAKA"
     @State private var maxPasswordAge = 30
     @State private var warningThreshold = 7
-    @State private var hoursToCheck: [Int] = [8, 9, 10, 11, 12, 13, 14 ,15 ,16 ,17 ,19 ,20]
     @State private var showAlert = false
     @State private var alertMessage = ""
     
