@@ -41,37 +41,62 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func registerHelperService() {
-        // UŻYJ loginItem() zamiast agent()
-        let service = SMAppService.loginItem(identifier: "popo.PasswordMonitorHelperApp")
+        let helperBundleID = "popo.PasswordMonitorHelperApp"
+        let service = SMAppService.loginItem(identifier: helperBundleID)
         
-        print("Helper bundle path:")
+        // Debug info
         let bundleURL = Bundle.main.bundleURL
             .appendingPathComponent("Contents/Library/LoginItems/PasswordMonitorHelperApp.app")
-        print("  \(bundleURL.path)")
-        print("  Exists: \(FileManager.default.fileExists(atPath: bundleURL.path))")
         
-        print("Service status: \(service.status.rawValue)")
+        print("Expected Bundle ID: \(helperBundleID)")
+        print("Helper bundle path: \(bundleURL.path)")
+        print("Exists: \(FileManager.default.fileExists(atPath: bundleURL.path))")
+        print("Initial Service status: \(service.status.rawValue)")
         
         do {
             switch service.status {
             case .notRegistered:
                 try service.register()
-                print("✅ Helper service registered")
+                print("✅ Helper service registered (was not registered)")
+                
             case .enabled:
                 print("✅ Helper service already enabled")
+                
             case .requiresApproval:
                 print("⚠️ Helper requires user approval in System Settings")
-                // Pokaż alert użytkownikowi
                 showApprovalAlert()
+                
             case .notFound:
-                print("❌ Helper bundle not found - check embed settings")
+                // 🎯 TO JEST KLUCZOWE: notFound = nigdy nie rejestrowany, więc rejestruj!
+                print("ℹ️ Service not found in system database (never registered before)")
+                print("Attempting registration...")
+                
+                try service.register()
+                
+                // Sprawdź status ponownie po rejestracji
+                let newStatus = service.status
+                print("Status after register: \(newStatus.rawValue)")
+                
+                if newStatus == .enabled {
+                    print("✅ Helper service registered successfully")
+                } else if newStatus == .requiresApproval {
+                    print("⚠️ Registration requires user approval")
+                    showApprovalAlert()
+                } else {
+                    print("⚠️ Unexpected status after registration: \(newStatus.rawValue)")
+                }
+                
             @unknown default:
                 print("⚠️ Unknown status: \(service.status)")
             }
         } catch {
             print("❌ Failed to register helper: \(error.localizedDescription)")
+            // Dodaj pełny opis błędu
+            let nsError = error as NSError
+            print("Error domain: \(nsError.domain), code: \(nsError.code)")
         }
     }
+
     
     private func showApprovalAlert() {
         DispatchQueue.main.async {

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>popo.PasswordMonitorHelperApp</string>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>Application is agent (UIElement)</key>
 	<true/>
 	<key>LSBackgroundOnly</key>
