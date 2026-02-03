@@ -8,6 +8,7 @@
 import SwiftUI
 import ServiceManagement
 import PasswordMonitorCore
+import Combine
 
 @main
 struct PasswordMonitorApp: App {
@@ -31,13 +32,44 @@ struct PasswordMonitorApp: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    private var cancellables = Set<AnyCancellable>()
+    private let passwordChecker = PasswordChecker()
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        print("🚀 Aplikacja uruchomiona")
         
-        // WAIT - daj systemowi czas na rozpoznanie bundle structure
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.registerHelperService()
+        // Początkowe sprawdzenie hasła
+        Task {
+            await passwordChecker.checkPasswordExpiration()
         }
+        
+        // Obserwuj zmiany daty wygaśnięcia
+        passwordChecker.$expirationDate
+            .receive(on: DispatchQueue.main)
+            .sink { date in
+                guard let date = date else { return }
+                print("📅 Zaktualizowano datę wygaśnięcia: \(date)")
+                
+                // Aktualizuj NotificationManager
+                NotificationManager.shared.updateExpirationDate(date)
+                
+                // Sprawdź czy pokazać powiadomienie
+                NotificationManager.shared.checkAndShowNotificationIfNeeded()
+            }
+            .store(in: &cancellables)
+        
+        // Obserwuj wybudzenie komputera (KLUCZOWE)
+        NotificationCenter.default.publisher(for: NSWorkspace.didWakeNotification)
+            .sink { [weak self] _ in
+                print("💻 Wybudzenie systemu - sprawdzam powiadomienie")
+                
+                // Sprawdź ponownie hasło (na wypadek zmian w tle)
+                Task { await self?.passwordChecker.checkPasswordExpiration() }
+                
+                // Wymuś sprawdzenie powiadomienia
+                NotificationManager.shared.checkAndShowNotificationIfNeeded()
+            }
+            .store(in: &cancellables)
     }
     
     private func registerHelperService() {
@@ -96,7 +128,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             print("Error domain: \(nsError.domain), code: \(nsError.code)")
         }
     }
-
+    
     
     private func showApprovalAlert() {
         DispatchQueue.main.async {

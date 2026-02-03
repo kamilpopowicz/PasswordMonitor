@@ -46,7 +46,7 @@ struct MenuBarView: View {
             
             if let info = passwordInfo, info.daysUntilExpiration <= 7 {
                 Button("Zmień hasło") {
-                    NotificationManager().openPasswordSettings()
+//                    NotificationManager().openPasswordSettings()
                 }
             }
             
@@ -67,12 +67,24 @@ struct MenuBarView: View {
             
             Divider()
             
+            Button("Test powiadomienia") {
+                // Ustaw datę wygaśnięcia na teraz + 23h (urgent mode)
+                let testDate = Date().addingTimeInterval(23 * 3600)
+                NotificationManager.shared.updateExpirationDate(testDate)
+                NotificationManager.shared.checkAndShowNotificationIfNeeded()
+            }
+            .buttonStyle(.bordered)
+            .tint(.orange)
+            
+            Divider()
+            
             Button("Zamknij") {
                 NSApplication.shared.terminate(nil)
             }
         }
         .padding()
         .frame(width: 250)
+        .modifier(MainAppIntegration())
         .onAppear {
             checkPasswordNow()
         }
@@ -99,16 +111,10 @@ struct MenuBarView: View {
                     
                     // Pokaż alert jeśli trzeba
                     if manager.shouldShowWarning(passwordInfo: info) {
-                        let notifManager = NotificationManager()
-                        if notifManager.shouldShowTodayNotification() {
-                            if notifManager.showPasswordWarning(
-                                daysLeft: info.daysUntilExpiration,
-                                expiryDate: info.expiryDate
-                            ) {
-                                notifManager.openPasswordSettings()
-                            }
-                            notifManager.markNotificationShown()
-                        }
+                        NotificationManager.shared.updateExpirationDate(info.expiryDate)
+                        
+                        // Sprawdź czy pokazać powiadomienie
+                        NotificationManager.shared.checkAndShowNotificationIfNeeded()
                     }
                 }
             } catch {
