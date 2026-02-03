@@ -5,7 +5,6 @@
 //  Created by Kamil Popowicz on 02/02/2026.
 //
 
-
 import SwiftUI
 import AppKit
 
@@ -16,11 +15,10 @@ final class PasswordExpirationAlert {
     private let expirationDate: Date
     private let onSnooze: () -> Void
     private let onChangePassword: () -> Void
-    
+
     private var window: NSPanel?
-    private var countdownTimer: Timer?
     private var hostingController: NSHostingController<AlertContentView>?
-    
+
     /// Tworzy okienko powiadomienia
     /// - Parameters:
     ///   - expirationDate: Data wygaśnięcia hasła
@@ -35,13 +33,12 @@ final class PasswordExpirationAlert {
         self.onSnooze = onSnooze
         self.onChangePassword = onChangePassword
     }
-    
+
     /// Pokazuje okienko na wierzchu wszystkich innych okien
     func show() {
         let hoursRemaining = expirationDate.timeIntervalSinceNow / 3600
         let isUrgent = hoursRemaining <= 24
-        
-        // Tworzymy View SwiftUI zawierające UI okienka
+
         let contentView = AlertContentView(
             expirationDate: expirationDate,
             isUrgent: isUrgent,
@@ -54,91 +51,64 @@ final class PasswordExpirationAlert {
                 self?.onChangePassword()
             }
         )
-        
-        hostingController = NSHostingController(rootView: contentView)
-        guard let hostingView = hostingController?.view else { return }
-        
-        // Oblicz rozmiar na podstawie zawartości
-        hostingView.layoutSubtreeIfNeeded()
+
+        let hostingController = NSHostingController(rootView: contentView)
+        self.hostingController = hostingController
+
+        let hostingView = hostingController.view
+
         let contentSize = hostingView.fittingSize
-        
-        // Tworzymy panel (utility window) zawsze na wierzchu
-        window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: contentSize.width, height: contentSize.height),
+
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: max(380, contentSize.width), height: max(220, contentSize.height)),
             styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        
-        window?.title = "Password Monitor"
-        window?.titleVisibility = .hidden
-        window?.titlebarAppearsTransparent = true
-        window?.isMovable = false // Nie można przesuwać - zawsze na środku ekranu
-        window?.level = .floating // Zawsze na wierzchu
-        window?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window?.contentView = hostingView
-        window?.isReleasedWhenClosed = false
-        
-        // Wyśrodkuj na ekranie
+        self.window = panel
+
+        panel.title = "Password Monitor"
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.isMovable = false
+        panel.level = .floating
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.contentView = hostingView
+        panel.isReleasedWhenClosed = false
+        panel.isRestorable = false
+
         if let screen = NSScreen.main {
             let screenRect = screen.visibleFrame
-            let windowRect = window?.frame ?? .zero
+            let windowRect = panel.frame
             let x = screenRect.midX - windowRect.width / 2
             let y = screenRect.midY - windowRect.height / 2
-            window?.setFrameOrigin(NSPoint(x: x, y: y))
+            panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
-        
-        window?.makeKeyAndOrderFront(nil)
-        
-        // Animacja pojawienia się
-        window?.alphaValue = 0
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.2
-            window?.animator().alphaValue = 1
-        }
-    }
-    
-    /// Zamyka okienko
-    func close() {
-        countdownTimer?.invalidate()
-        countdownTimer = nil
-        
-        Task { @MainActor in
-            guard let window = self.window else {
-                self.hostingController = nil
-                return
-            }
-            
-            // Używamy continuation zamiast completionHandler
-            await withCheckedContinuation { continuation in
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.15
-                    window.animator().alphaValue = 0
-                } completionHandler: {
-                    window.close()
-                    continuation.resume()
-                }
-            }
-            
-            self.window = nil
-            self.hostingController = nil
-        }
+
+        panel.alphaValue = 1.0
+        panel.makeKeyAndOrderFront(nil)
     }
 
+    /// Zamyka okienko
+    func close() {
+        window?.close()
+        window = nil
+        hostingController = nil
+    }
 }
 
 // MARK: - SwiftUI Content View
 
-/// Zawartość okienka alertu
+/// Zawartość okienka alertu (UI)
 private struct AlertContentView: View {
     let expirationDate: Date
     let isUrgent: Bool
     let onSnooze: () -> Void
     let onChangePassword: () -> Void
-    
+
     @State private var timeRemaining: TimeInterval
     @State private var timer: Timer?
-    
+
     init(
         expirationDate: Date,
         isUrgent: Bool,
@@ -149,64 +119,57 @@ private struct AlertContentView: View {
         self.isUrgent = isUrgent
         self.onSnooze = onSnooze
         self.onChangePassword = onChangePassword
-        self._timeRemaining = State(initialValue: expirationDate.timeIntervalSinceNow)
+        _timeRemaining = State(initialValue: expirationDate.timeIntervalSinceNow)
     }
-    
+
     var body: some View {
-        VStack(spacing: 20) {
-            // Ikona ostrzeżenia
+        VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
                 .foregroundColor(isUrgent ? .red : .orange)
-            
-            // Tytuł
+
             Text("Twoje hasło wygasa!")
                 .font(.title2)
                 .fontWeight(.bold)
-            
-            // Opis
-            Text("Twoje hasło do domeny wygasa \(formattedExpirationDate()). Zmień je aby uniknąć problemów z logowaniem.")
+
+            // Opis z zawijaniem tekstu
+            Text("Twoje hasło do domeny wygasa \(formattedExpirationDate()). Zmień je, aby uniknąć problemów z logowaniem.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
-                .frame(maxWidth: 350)
-            
-            // 🔴 Live timer (widoczny tylko gdy < 24h)
-            if isUrgent {
-                VStack(spacing: 8) {
-                    Text("Pozostało czasu:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text(formattedTimeRemaining())
-                        .font(.system(size: 36, weight: .bold, design: .monospaced))
-                        .foregroundColor(.red)
-                        .onAppear {
-                            startTimer()
-                        }
-                        .onDisappear {
-                            timer?.invalidate()
-                        }
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 20)
-                .background(Color.red.opacity(0.1))
-                .cornerRadius(8)
+                .frame(maxWidth: 320)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Live timer – zawsze pokazuje rzeczywisty czas do wygaśnięcia
+            VStack(spacing: 8) {
+                Text(timeRemaining > 86400 ? "Pozostało:" : "Pozostało czasu:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text(formattedTimeRemaining())
+                    .font(.system(size: isUrgent ? 36 : 28, weight: .bold, design: .monospaced))
+                    .foregroundColor(isUrgent ? .red : .primary)
+                    .onAppear { startTimer() }
+                    .onDisappear { stopTimer() }
             }
-            
-            // Przyciski
+            .padding(.vertical, 10)
+            .padding(.horizontal, 20)
+            .background((isUrgent ? Color.red : Color.blue).opacity(0.1))
+            .cornerRadius(8)
+
             HStack(spacing: 12) {
-                // 🔴 Odłóż (czerwony, wyłączony gdy < 24h)
+                // "Odłóż" – niedostępny tylko gdy hasło wygasa za ≤ 24h
                 Button(action: onSnooze) {
                     Text("Odłóż")
                         .frame(minWidth: 100)
                 }
                 .buttonStyle(.bordered)
                 .tint(.red)
-                .disabled(isUrgent) // Nieaktywny gdy < 24h
-                .help(isUrgent ? "Nie można odłożyć gdy hasło wygasa za mniej niż 24h" : "Przypomnij za 3 godziny")
-                
-                // 🔵 Zmień hasło (niebieski)
+                .disabled(isUrgent)
+                .opacity(isUrgent ? 0.5 : 1.0)
+                .help(isUrgent ? "Nie można odłożyć, gdy hasło wygasa za mniej niż 24h" : "Przypomnij za 3 godziny")
+
+                // "Zmień hasło" – na razie tylko log + zamknięcie okna
                 Button(action: onChangePassword) {
                     Text("Zmień hasło")
                         .frame(minWidth: 100)
@@ -217,12 +180,12 @@ private struct AlertContentView: View {
             }
             .padding(.top, 10)
         }
-        .padding(30)
-        .frame(minWidth: 400)
+        .padding(24)
+        .frame(minWidth: 380, maxWidth: 420)
     }
-    
+
     // MARK: - Helpers
-    
+
     private func formattedExpirationDate() -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -230,25 +193,41 @@ private struct AlertContentView: View {
         formatter.locale = Locale(identifier: "pl_PL")
         return formatter.string(from: expirationDate)
     }
-    
+
+    /// Pokazuje Xd Yh Zm Ts jeśli > 24h, inaczej HH:MM:SS
     private func formattedTimeRemaining() -> String {
-        let totalSeconds = max(0, timeRemaining)
-        let hours = Int(totalSeconds) / 3600
-        let minutes = Int(totalSeconds) % 3600 / 60
-        let seconds = Int(totalSeconds) % 60
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        let totalSeconds = max(0, Int(timeRemaining))
+
+        if totalSeconds > 86400 {
+            let days = totalSeconds / 86400
+            let remAfterDays = totalSeconds % 86400
+            let hours = remAfterDays / 3600
+            let minutes = (remAfterDays % 3600) / 60
+            let seconds = remAfterDays % 60
+            return "\(days)d \(hours)h \(minutes)m \(seconds)s"
+        } else {
+            let hours = totalSeconds / 3600
+            let minutes = (totalSeconds % 3600) / 60
+            let seconds = totalSeconds % 60
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
     }
-    
+
     private func startTimer() {
+        stopTimer()
+        // Timer na głównej pętli, bez Task/Actor – prościej i bez ostrzeżeń Swift 6
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            Task { @MainActor in
-                timeRemaining = expirationDate.timeIntervalSinceNow
-                if timeRemaining <= 0 {
-                    timer?.invalidate()
-                    timeRemaining = 0
-                }
+            timeRemaining = expirationDate.timeIntervalSinceNow
+            if timeRemaining <= 0 {
+                stopTimer()
+                timeRemaining = 0
             }
         }
+    }
+
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
     }
 }
 
@@ -256,8 +235,8 @@ private struct AlertContentView: View {
 
 #Preview {
     AlertContentView(
-        expirationDate: Date().addingTimeInterval(23 * 3600), // 23h do końca (urgent)
-        isUrgent: true,
+        expirationDate: Date().addingTimeInterval(3 * 24 * 3600),
+        isUrgent: false,
         onSnooze: {},
         onChangePassword: {}
     )

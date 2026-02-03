@@ -1,3 +1,10 @@
+//
+//  PasswordCache.swift
+//  PasswordMonitorCore
+//
+//  Created by Kamil Popowicz on 03/02/2026.
+//
+
 import Foundation
 
 /// Cache informacji o haśle zapisany w UserDefaults (lokalnie na Macu)
@@ -27,13 +34,15 @@ public final class PasswordCache {
 
         do {
             var info = try JSONDecoder().decode(PasswordInfo.self, from: data)
-            // Upewnij się, że flaga isFromCache jest ustawiona
+
+            // Upewnij się, że przy odczycie oznaczamy dane jako pochodzące z cache
             info = PasswordInfo(
                 lastSetDate: info.lastSetDate,
-                expiryDate: info.expiryDate,
                 daysUntilExpiration: info.daysUntilExpiration,
+                expiryDate: info.expiryDate,
                 isFromCache: true
             )
+
             return info
         } catch {
             print("⚠️ PasswordCache: błąd odczytu cache: \(error)")

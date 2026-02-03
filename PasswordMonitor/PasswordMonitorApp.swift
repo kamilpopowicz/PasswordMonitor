@@ -32,44 +32,14 @@ struct PasswordMonitorApp: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    private var cancellables = Set<AnyCancellable>()
-    private let passwordChecker = PasswordChecker()
-    
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("🚀 Aplikacja uruchomiona")
-        
-        // Początkowe sprawdzenie hasła
-        Task {
-            await passwordChecker.checkPasswordExpiration()
-        }
-        
-        // Obserwuj zmiany daty wygaśnięcia
-        passwordChecker.$expirationDate
-            .receive(on: DispatchQueue.main)
-            .sink { date in
-                guard let date = date else { return }
-                print("📅 Zaktualizowano datę wygaśnięcia: \(date)")
-                
-                // Aktualizuj NotificationManager
-                NotificationManager.shared.updateExpirationDate(date)
-                
-                // Sprawdź czy pokazać powiadomienie
-                NotificationManager.shared.checkAndShowNotificationIfNeeded()
-            }
-            .store(in: &cancellables)
-        
-        // Obserwuj wybudzenie komputera (KLUCZOWE)
-        NotificationCenter.default.publisher(for: NSWorkspace.didWakeNotification)
-            .sink { [weak self] _ in
-                print("💻 Wybudzenie systemu - sprawdzam powiadomienie")
-                
-                // Sprawdź ponownie hasło (na wypadek zmian w tle)
-                Task { await self?.passwordChecker.checkPasswordExpiration() }
-                
-                // Wymuś sprawdzenie powiadomienia
-                NotificationManager.shared.checkAndShowNotificationIfNeeded()
-            }
-            .store(in: &cancellables)
+
+        // Rejestracja helpera
+        registerHelperService()
+
+        // Natychmiastowe sprawdzenie ważności hasła po starcie
+        runInitialPasswordCheck()
     }
     
     private func registerHelperService() {
@@ -154,4 +124,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+    
+    private func runInitialPasswordCheck() {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let manager = ActiveDirectoryManager()
+            let username = NSUserName()
+
+            do {
+                let info = try manager.getPasswordInfo(for: username)
+
+                DispatchQueue.main.async {
+                    // Log informacyjny
+                    print("🔐 [Init] Hasło wygasa za \(info.daysUntilExpiration) dni (expiry: \(info.expiryDate))")
+
+                    // Jeśli wg Twojej logiki trzeba ostrzec – przekaż datę do NotificationManager
+                    if manager.shouldShowWarning(passwordInfo: info) {
+                        NotificationManager.shared.updateExpirationDate(info.expiryDate)
+                        NotificationManager.shared.checkAndShowNotificationIfNeeded()
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    print("❌ [Init] Błąd sprawdzania hasła: \(error)")
+                }
+            }
+        }
+    }
+
 }

@@ -151,12 +151,27 @@ final class NotificationManager: ObservableObject {
             onChangePassword: { [weak self] in
                 print("🔐 Użytkownik wybrał 'Zmień hasło'")
                 // TODO: Otwórz panel zmiany hasła systemowego
-                // NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/Accounts.prefPane"))
+                NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/TouchID.prefPane"))
                 self?.dismissNotification()
             }
         )
         
         currentAlert = alert
+        alert.show()
+    }
+    
+    /// Pokazuje testowe powiadomienie, bez zmiany stanu (nie rusza daty, snooze ani flagi 'już pokazane')
+    func showTestNotification(expirationDate: Date) {
+        let alert = PasswordExpirationAlert(
+            expirationDate: expirationDate,
+            onSnooze: { },
+            onChangePassword: { [weak self] in
+                print("🔐 [TEST] Użytkownik wybrał 'Zmień hasło'")
+                // TODO: Otwórz panel zmiany hasła systemowego
+                NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/TouchID.prefPane"))
+                self?.dismissNotification()
+            }
+        )
         alert.show()
     }
     
