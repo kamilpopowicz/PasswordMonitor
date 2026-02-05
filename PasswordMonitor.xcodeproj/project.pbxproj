@@ -60,14 +60,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C7113AF42F31614900201B8D /* Exceptions for "PasswordMonitorCore" folder in "PasswordMonitor" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				NotificationManager.swift,
-				PasswordExpirationAlert.swift,
-			);
-			target = C72340842F263E5400C53976 /* PasswordMonitor */;
-		};
 		C75A048B2F2B37CD009BC04C /* Exceptions for "PasswordMonitorHelperApp" folder in "PasswordMonitorHelperApp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -85,9 +77,6 @@
 		};
 		C72340BD2F28192F00C53976 /* PasswordMonitorCore */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				C7113AF42F31614900201B8D /* Exceptions for "PasswordMonitorCore" folder in "PasswordMonitor" target */,
-			);
 			path = PasswordMonitorCore;
 			sourceTree = "<group>";
 		};
@@ -492,6 +481,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -539,6 +529,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -580,6 +571,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
@@ -620,6 +612,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
@@ -670,6 +663,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitorHelperApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -722,6 +716,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitorHelperApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";

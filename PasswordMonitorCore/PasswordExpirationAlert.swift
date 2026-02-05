@@ -133,7 +133,7 @@ private struct AlertContentView: View {
                 .fontWeight(.bold)
 
             // Opis z zawijaniem tekstu
-            Text("Twoje hasło do domeny wygasa \(formattedExpirationDate()). Zmień je, aby uniknąć problemów z logowaniem.")
+            Text(smartAdviceText())
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -185,6 +185,21 @@ private struct AlertContentView: View {
     }
 
     // MARK: - Helpers
+    
+    private func smartAdviceText() -> String {
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: expirationDate).day ?? 0
+
+        switch days {
+        case ..<0:
+            return "Twoje hasło już wygasło. Zmień je natychmiast, aby uniknąć problemów z logowaniem."
+        case 0...1:
+            return "Twoje hasło wygasa dzisiaj. Najlepiej zmień je od razu, żeby uniknąć blokady konta."
+        case 2...7:
+            return "Twoje hasło wygaśnie w ciągu tygodnia. Zaplanuj zmianę hasła jeszcze przed upływem tego terminu."
+        default:
+            return "Twoje hasło jest jeszcze ważne, ale polityka firmy wymaga zmiany co 30 dni. Zmień je z wyprzedzeniem."
+        }
+    }
 
     private func formattedExpirationDate() -> String {
         let formatter = DateFormatter()

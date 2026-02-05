@@ -12,8 +12,8 @@ import AppKit
 
 /// Zarządza powiadomieniami o wygaśnięciu hasła
 @MainActor
-final class NotificationManager: ObservableObject {
-    static let shared = NotificationManager()
+public final class NotificationManager: ObservableObject {
+    public static let shared = NotificationManager()
     
     // MARK: - State
     
@@ -36,6 +36,9 @@ final class NotificationManager: ObservableObject {
     /// Data wygaśnięcia hasła (ustawiana z zewnątrz przez MainApp)
     private var currentExpirationDate: Date?
     
+    /// Timer do jednorazowego sprawdzenia po zmianie hasła (30 minut)
+    private var passwordChangeCheckTimer: Timer?
+    
     // MARK: - Initialization
     
     private init() {
@@ -46,13 +49,13 @@ final class NotificationManager: ObservableObject {
     // MARK: - Public API
     
     /// Aktualizuje datę wygaśnięcia hasła (wywoływane gdy zmieni się status hasła)
-    func updateExpirationDate(_ date: Date?) {
+    public func updateExpirationDate(_ date: Date?) {
         currentExpirationDate = date
         print("📅 NotificationManager: Data wygaśnięcia zaktualizowana na \(date?.formatted() ?? "nil")")
     }
     
     /// Sprawdza czy powinniśmy pokazać powiadomienie (wywoływane cyklicznie)
-    func checkAndShowNotificationIfNeeded() {
+    public func checkAndShowNotificationIfNeeded() {
         guard let expirationDate = currentExpirationDate else {
             print("⏭️ Brak daty wygaśnięcia hasła")
             return
@@ -149,10 +152,11 @@ final class NotificationManager: ObservableObject {
                 self.snooze(passwordExpirationDate: passwordExpirationDate)
             },
             onChangePassword: { [weak self] in
+                guard let self = self else { return }
                 print("🔐 Użytkownik wybrał 'Zmień hasło'")
-                // TODO: Otwórz panel zmiany hasła systemowego
-                NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/TouchID.prefPane"))
-                self?.dismissNotification()
+                PasswordChangeHelper.openSystemPasswordSettings()
+                self.schedulePasswordChangeVerification()
+                self.dismissNotification()
             }
         )
         
@@ -161,7 +165,7 @@ final class NotificationManager: ObservableObject {
     }
     
     /// Pokazuje testowe powiadomienie, bez zmiany stanu (nie rusza daty, snooze ani flagi 'już pokazane')
-    func showTestNotification(expirationDate: Date) {
+    public func showTestNotification(expirationDate: Date) {
         let alert = PasswordExpirationAlert(
             expirationDate: expirationDate,
             onSnooze: { },
@@ -174,6 +178,48 @@ final class NotificationManager: ObservableObject {
         )
         alert.show()
     }
+    
+    /// Po kliknięciu „Zmień hasło” zaplanuj sprawdzenie za 30 minut,
+    /// czy data wygaśnięcia hasła uległa zmianie.
+    private func schedulePasswordChangeVerification() {
+        guard let previousExpiry = currentExpirationDate else {
+            print("ℹ️ Brak currentExpirationDate – nie planuję weryfikacji zmiany hasła")
+            return
+        }
+
+        // Anuluj ewentualny poprzedni timer
+        passwordChangeCheckTimer?.invalidate()
+
+        let interval: TimeInterval = 30 * 60 // 30 minut
+        passwordChangeCheckTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
+            Task.detached {
+                let manager = ActiveDirectoryManager()
+                let username = NSUserName()
+
+                do {
+                    let info = try manager.getPasswordInfo(for: username)
+                    await MainActor.run {
+                        let newExpiry = info.expiryDate
+
+                        if newExpiry > previousExpiry {
+                            print("✅ Wydaje się, że hasło zostało zmienione (nowa data wygaśnięcia: \(newExpiry))")
+                            self.updateExpirationDate(newExpiry)
+                            self.hasShownNotificationToday = false
+                        } else {
+                            print("⚠️ Po 30 minutach hasło wygląda na niezmienione (expiry nadal \(newExpiry))")
+                        }
+                    }
+                } catch {
+                    await MainActor.run {
+                        print("❌ Błąd ponownego sprawdzenia hasła po 30 minutach: \(error)")
+                    }
+                }
+            }
+        }
+
+        print("⏱️ Zaplanowano weryfikację zmiany hasła za 30 minut")
+    }
+
     
     /// Ustawia timer resetujący flagę o północy
     private func setupMidnightReset() {
@@ -208,7 +254,7 @@ final class NotificationManager: ObservableObject {
     
     /// Rozpoczyna sprawdzanie co minutę czy nadszedł czas powiadomienia
     private func startCheckingForNotificationTime() {
-        checkTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+        checkTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { _ in
             Task { @MainActor in
                 self.checkAndShowNotificationIfNeeded()
             }

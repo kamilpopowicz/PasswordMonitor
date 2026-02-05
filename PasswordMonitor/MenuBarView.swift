@@ -58,8 +58,8 @@ struct MenuBarView: View {
             if let info = passwordInfo, info.daysUntilExpiration <= 28 {
                 Button("Zmień hasło") {
                     print("🔐 Użytkownik wybrał 'Zmień hasło'")
-                    // TODO: Otwórz panel zmiany hasła systemowego
-                    NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/TouchID.prefPane"))
+                    PasswordChangeHelper.openSystemPasswordSettings()
+//                    NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/TouchID.prefPane"))
                 }
             }
 
