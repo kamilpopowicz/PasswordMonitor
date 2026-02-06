@@ -32,11 +32,26 @@ struct PasswordMonitorApp: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    private var wakeObserver: Any?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("🚀 Aplikacja uruchomiona")
 
         // Rejestracja helpera
         registerHelperService()
+        
+        // Obserwacja NSWorkspace.didWakeNotification, która po wybudzeniu systemu wywoła sprawdzenie
+        wakeObserver = NotificationCenter.default.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            print("💻 Wybudzenie systemu – sprawdzam powiadomienie")
+
+            Task { @MainActor in
+                NotificationManager.shared.checkAndShowNotificationIfNeeded()
+            }
+        }
 
         // Natychmiastowe sprawdzenie ważności hasła po starcie
         runInitialPasswordCheck()
