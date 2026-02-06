@@ -4,7 +4,7 @@
 //
 //  Created by Kamil Popowicz on 26/01/2026.
 //
-  
+
 import SwiftUI
 import ServiceManagement
 import PasswordMonitorCore
@@ -23,20 +23,38 @@ struct PasswordMonitorApp: App {
         }
         .menuBarExtraStyle(.window)
         
-        // Settings window
-        Settings {
+        Window("Ustawienia", id: "settings-window") {
             SettingsView()
                 .environmentObject(appState)
+        }
+        .windowResizability(.contentMinSize)
+        
+        // Skróty i menu
+        .commands {
+            AppCommands()
+        }
+    }
+}
+
+struct AppCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+    
+    var body: some Commands {
+        CommandGroup(replacing: .appSettings) {
+            Button("Ustawienia…") {
+                openWindow(id: "settings-window")
+            }
+            .keyboardShortcut(",", modifiers: .command)
         }
     }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var wakeObserver: Any?
-
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("🚀 Aplikacja uruchomiona")
-
+        
         // Rejestracja helpera
         registerHelperService()
         
@@ -47,12 +65,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             queue: .main
         ) { _ in
             print("💻 Wybudzenie systemu – sprawdzam powiadomienie")
-
+            
             Task { @MainActor in
                 NotificationManager.shared.checkAndShowNotificationIfNeeded()
             }
         }
-
+        
         // Natychmiastowe sprawdzenie ważności hasła po starcie
         runInitialPasswordCheck()
     }
@@ -144,14 +162,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.global(qos: .userInitiated).async {
             let manager = ActiveDirectoryManager()
             let username = NSUserName()
-
+            
             do {
                 let info = try manager.getPasswordInfo(for: username)
-
+                
                 DispatchQueue.main.async {
                     // Log informacyjny
                     print("🔐 [Init] Hasło wygasa za \(info.daysUntilExpiration) dni (expiry: \(info.expiryDate))")
-
+                    
                     // Jeśli wg Twojej logiki trzeba ostrzec – przekaż datę do NotificationManager
                     if manager.shouldShowWarning(passwordInfo: info) {
                         NotificationManager.shared.updateExpirationDate(info.expiryDate)
@@ -165,5 +183,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
-
+    
 }

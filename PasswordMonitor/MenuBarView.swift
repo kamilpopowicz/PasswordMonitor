@@ -12,6 +12,7 @@ import Combine
 
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.openWindow) private var openWindow
 
     @State private var passwordInfo: PasswordInfo?
     @State private var isChecking = false
@@ -55,13 +56,12 @@ struct MenuBarView: View {
             }
             .disabled(isChecking)
 
-            if let info = passwordInfo, info.daysUntilExpiration <= 28 {
-                Button("Zmień hasło") {
-                    print("🔐 Użytkownik wybrał 'Zmień hasło'")
-                    PasswordChangeHelper.openSystemPasswordSettings()
-//                    NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/TouchID.prefPane"))
-                }
+            Button("Zmień hasło") {
+                print("🔐 Użytkownik wybrał 'Zmień hasło' z MenuBar")
+                PasswordChangeHelper.openSystemPasswordSettings()
             }
+            .disabled(!canChangePasswordNow)
+            .opacity(canChangePasswordNow ? 1.0 : 0.5)
 
             Divider()
 
@@ -75,9 +75,8 @@ struct MenuBarView: View {
                     .font(.caption)
             }
 
-            // Link do ustawień
-            SettingsLink {
-                Text("Ustawienia...")
+            Button("Ustawienia...") {
+                openWindow(id: "settings-window")
             }
             .controlSize(.regular)
 
@@ -136,6 +135,13 @@ struct MenuBarView: View {
                 }
             }
         }
+    }
+    
+    /// Czy przycisk „Zmień hasło” ma być aktywny
+    private var canChangePasswordNow: Bool {
+        guard let info = passwordInfo else { return false }
+        // Zachowujemy dotychczasową logikę: aktywuj od 28 dni przed deadlinem
+        return info.daysUntilExpiration <= 28
     }
 }
 
