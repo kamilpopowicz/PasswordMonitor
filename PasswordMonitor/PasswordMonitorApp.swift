@@ -14,18 +14,23 @@ import Combine
 struct PasswordMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
-    
+    @State private var languageSettings = LanguageSettings()
+
     var body: some Scene {
         // Menu bar extra (macOS 13+)
         MenuBarExtra("Password Monitor", systemImage: "lock.shield") {
             MenuBarView()
                 .environmentObject(appState)
+                .environment(languageSettings)
+                .environment(\.locale, languageSettings.locale)
         }
         .menuBarExtraStyle(.window)
-        
+
         Window("Ustawienia", id: "settings-window") {
             SettingsView()
                 .environmentObject(appState)
+                .environment(languageSettings)
+                .environment(\.locale, languageSettings.locale)
         }
         .windowResizability(.contentMinSize)
         

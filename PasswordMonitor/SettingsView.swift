@@ -17,7 +17,8 @@ private enum SettingsKeys {
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    
+    @Environment(LanguageSettings.self) private var languageSettings
+
     // EDYTOWANE wartości (UI)
     @State private var launchAtLogin = false
     @State private var domainName = ""
@@ -102,6 +103,24 @@ struct SettingsView: View {
                                     }
                                 }
                         }
+                    }
+
+                    // MARK: Język / Language
+                    Section(header: Text("language_settings_title").font(.headline)) {
+                        // Create local Bindable for @Observable binding
+                        @Bindable var settings = languageSettings
+
+                        Picker("Language", selection: $settings.selectedLanguage) {
+                            ForEach(LanguageSettings.AppLanguage.allCases) { language in
+                                Text(language.displayName)
+                                    .tag(language)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        Text("language_change_footnote")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
                     // MARK: Informacje
