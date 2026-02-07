@@ -21,7 +21,7 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Status
             if let info = passwordInfo {
-                Text("Hasło wygasa za:")
+                Text("Password expires in:")
                     .font(.headline)
 
                 Text("\(info.daysUntilExpiration) dni")
@@ -44,19 +44,19 @@ struct MenuBarView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                Text("Sprawdź status hasła")
+                Text("Check password status")
                     .font(.headline)
             }
 
             Divider()
 
             // Akcje
-            Button("Sprawdź teraz") {
+            Button("Check now") {
                 checkPasswordNow()
             }
             .disabled(isChecking)
 
-            Button("Zmień hasło") {
+            Button("Change password") {
                 print("🔐 Użytkownik wybrał 'Zmień hasło' z MenuBar")
                 PasswordChangeHelper.openSystemPasswordSettings()
             }

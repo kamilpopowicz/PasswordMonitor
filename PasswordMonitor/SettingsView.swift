@@ -17,13 +17,14 @@ private enum SettingsKeys {
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(LanguageSettings.self) private var languageSettings
+    @EnvironmentObject var languageSettings: LanguageSettings
 
     // EDYTOWANE wartości (UI)
     @State private var launchAtLogin = false
     @State private var domainName = ""
     @State private var maxPasswordAge = 30
     @State private var warningThreshold = 7
+    @State private var selectedLanguage: LanguageSettings.AppLanguage = .english
 
     // Godzina w UI
     @State private var notificationHourString = "09:00"
@@ -107,10 +108,7 @@ struct SettingsView: View {
 
                     // MARK: Język / Language
                     Section(header: Text("language_settings_title").font(.headline)) {
-                        // Create local Bindable for @Observable binding
-                        @Bindable var settings = languageSettings
-
-                        Picker("Language", selection: $settings.selectedLanguage) {
+                        Picker("Language", selection: $selectedLanguage) {
                             ForEach(LanguageSettings.AppLanguage.allCases) { language in
                                 Text(language.displayName)
                                     .tag(language)
@@ -180,6 +178,7 @@ struct SettingsView: View {
             || warningThreshold != storedWarningThreshold
             || notificationHourString != storedNotificationHour
             || launchAtLogin != savedLaunchAtLogin
+            || selectedLanguage != languageSettings.selectedLanguage
     }
 
     // MARK: - Helpers
@@ -222,6 +221,7 @@ struct SettingsView: View {
         warningThreshold = storedWarningThreshold
         notificationHourString = storedNotificationHour
         notificationDate = timeStringToDate(notificationHourString) ?? Date()
+        selectedLanguage = languageSettings.selectedLanguage
 
         // Helper service status
         let service = SMAppService.loginItem(identifier: helperBundleID)
@@ -270,13 +270,15 @@ struct SettingsView: View {
         // Zastosuj stan helpera
         toggleLaunchAtLogin(launchAtLogin)
 
+        // Ustaw język na wybrany po zapisie
+        languageSettings.selectedLanguage = selectedLanguage
+
         // Ponownie wczytaj, żeby zsynchronizować helperStatus i wyzerować "dirty"
-        loadSettings()
+        dismiss()
     }
 
     /// Odrzuca zmiany i przywraca stan zapisany
     private func cancelChanges() {
-        loadSettings()
         dismiss()
     }
 }

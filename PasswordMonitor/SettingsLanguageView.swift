@@ -8,16 +8,13 @@
 import SwiftUI
 
 struct SettingsLanguageView: View {
-    @Environment(LanguageSettings.self) private var languageSettings
+    @EnvironmentObject var languageSettings: LanguageSettings
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        // Create Bindable wrapper to enable $ binding syntax for @Observable
-        @Bindable var settings = languageSettings
-
         Form {
             Section {
-                Picker("Language", selection: $settings.selectedLanguage) {
+                Picker("Language", selection: $languageSettings.selectedLanguage) {
                     ForEach(LanguageSettings.AppLanguage.allCases) { language in
                         Text(language.displayName)
                             .tag(language)
@@ -36,5 +33,5 @@ struct SettingsLanguageView: View {
 
 #Preview {
     SettingsLanguageView()
-        .environment(LanguageSettings())
+        .environmentObject(LanguageSettings())
 }

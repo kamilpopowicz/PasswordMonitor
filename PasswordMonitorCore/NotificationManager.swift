@@ -19,6 +19,16 @@ public final class NotificationManager: ObservableObject {
     
     /// Czy w danym dniu już pokazaliśmy powiadomienie (reset o północy)
     @Published private var hasShownNotificationToday = false
+
+    /// Sprawdza czy powiadomienie już dziś pokazane (dla helpera)
+    public var isNotificationShownToday: Bool {
+        return hasShownNotificationToday
+    }
+
+    /// Oznacza powiadomienie jako pokazane dzisiaj (używane przez helper)
+    public func markNotificationAsShown() {
+        hasShownNotificationToday = true
+    }
     
     /// Czy powiadomienie jest obecnie w trybie snooze (odłożone)
     @Published private var isSnoozed = false

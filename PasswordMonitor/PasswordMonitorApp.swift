@@ -21,7 +21,7 @@ struct PasswordMonitorApp: App {
         MenuBarExtra("Password Monitor", systemImage: "lock.shield") {
             MenuBarView()
                 .environmentObject(appState)
-                .environment(languageSettings)
+                .environmentObject(languageSettings)
                 .environment(\.locale, languageSettings.locale)
         }
         .menuBarExtraStyle(.window)
@@ -29,7 +29,7 @@ struct PasswordMonitorApp: App {
         Window("Ustawienia", id: "settings-window") {
             SettingsView()
                 .environmentObject(appState)
-                .environment(languageSettings)
+                .environmentObject(languageSettings)
                 .environment(\.locale, languageSettings.locale)
         }
         .windowResizability(.contentMinSize)

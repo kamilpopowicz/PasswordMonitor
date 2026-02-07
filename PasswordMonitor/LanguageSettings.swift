@@ -7,16 +7,16 @@
 
 import SwiftUI
 import NaturalLanguage
+import Combine
 
 /// Centralized language manager for the app
 /// Persists user selection to UserDefaults and provides observable locale
-@Observable
-final class LanguageSettings {
+final class LanguageSettings: ObservableObject {
     private let languageKey = "appLanguage"
     private let defaults = UserDefaults.standard
 
     /// Backing storage for language code - must be stored property for @Observable bindings
-    private var storedLanguage: String
+    @Published private var storedLanguage: String
 
     /// Current locale used by SwiftUI environment
     var locale: Locale {
