@@ -16,6 +16,33 @@ struct PasswordMonitorApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var languageSettings = LanguageSettings()
 
+    private var menuBarIconImage: NSImage {
+        let targetSize = NSSize(width: 18, height: 18)
+        guard let source = NSApp.applicationIconImage else {
+            return NSImage(size: targetSize)
+        }
+
+        let image = NSImage(size: targetSize)
+        image.lockFocus()
+        let sourceSize = source.size
+        let aspect = min(targetSize.width / sourceSize.width, targetSize.height / sourceSize.height)
+        let drawSize = NSSize(width: sourceSize.width * aspect, height: sourceSize.height * aspect)
+        let drawRect = NSRect(
+            x: (targetSize.width - drawSize.width) * 0.5,
+            y: (targetSize.height - drawSize.height) * 0.5,
+            width: drawSize.width,
+            height: drawSize.height
+        )
+        source.draw(
+            in: drawRect,
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1.0
+        )
+        image.unlockFocus()
+        return image
+    }
+
     var body: some Scene {
         // Menu bar extra (macOS 13+)
         MenuBarExtra {
@@ -24,8 +51,7 @@ struct PasswordMonitorApp: App {
                 .environmentObject(languageSettings)
                 .environment(\.locale, languageSettings.locale)
         } label: {
-            Image(nsImage: NSApp.applicationIconImage)
-                .renderingMode(.template)
+            Image(nsImage: menuBarIconImage)
         }
         .menuBarExtraStyle(.window)
 

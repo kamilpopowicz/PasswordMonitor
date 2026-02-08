@@ -49,6 +49,10 @@ public class ActiveDirectoryManager {
     /// 3. Gdy oba źródła zawiodą – próbuje z cache
     public func getPasswordInfo(for username: String) throws -> PasswordInfo {
         // 1. Najpierw próba z AD
+        guard let domainName = resolvedDomainName() else {
+            Logger.shared.logLocalized("log_ad_no_domain_configured")
+            throw ADError.invalidData
+        }
         if checkADConnectivity() {
             do {
                 let info = try getPasswordInfoFromAD(username: username)
