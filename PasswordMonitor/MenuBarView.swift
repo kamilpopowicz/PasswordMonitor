@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 import ServiceManagement
 import PasswordMonitorCore
 import Combine
@@ -152,12 +153,12 @@ struct MenuBarView: View {
 
 class AppState: ObservableObject {
     @Published var launchAtLogin = false
-    @Published var showMenuBar = false
     private var windowCount = 0
     private var alertVisible = false
     private var alertObserver: Any?
 
     init() {
+        NSApp.setActivationPolicy(.accessory)
         alertObserver = NotificationCenter.default.addObserver(
             forName: .passwordAlertVisibilityChanged,
             object: nil,
@@ -178,15 +179,16 @@ class AppState: ObservableObject {
 
     func windowOpened() {
         windowCount += 1
-        updateShowMenuBar()
+        updateActivationPolicy()
     }
 
     func windowClosed() {
         windowCount = max(0, windowCount - 1)
-        updateShowMenuBar()
+        updateActivationPolicy()
     }
 
-    private func updateShowMenuBar() {
-        showMenuBar = (windowCount > 0) || alertVisible
+    private func updateActivationPolicy() {
+        let shouldShowDock = (windowCount > 0) || alertVisible
+        NSApp.setActivationPolicy(shouldShowDock ? .regular : .accessory)
     }
 }
