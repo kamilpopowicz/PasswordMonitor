@@ -18,13 +18,15 @@ struct PasswordMonitorApp: App {
 
     var body: some Scene {
         // Menu bar extra (macOS 13+)
-        MenuBarExtra("app_name", systemImage: "lock.shield") {
-            MenuBarView()
-                .environmentObject(appState)
-                .environmentObject(languageSettings)
-                .environment(\.locale, languageSettings.locale)
+        if appState.showMenuBar {
+            MenuBarExtra("app_name", systemImage: "lock.shield") {
+                MenuBarView()
+                    .environmentObject(appState)
+                    .environmentObject(languageSettings)
+                    .environment(\.locale, languageSettings.locale)
+            }
+            .menuBarExtraStyle(.window)
         }
-        .menuBarExtraStyle(.window)
 
         Window("settings_window_title", id: "settings-window") {
             SettingsView()
@@ -36,6 +38,7 @@ struct PasswordMonitorApp: App {
 
         Window("logs_window_title", id: "logs-window") {
             LogsView()
+                .environmentObject(appState)
                 .environment(\.locale, languageSettings.locale)
         }
         .windowResizability(.contentMinSize)

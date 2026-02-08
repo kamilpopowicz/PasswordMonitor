@@ -19,6 +19,7 @@ private enum SettingsKeys {
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var appState: AppState
     @EnvironmentObject var languageSettings: LanguageSettings
 
     // EDYTOWANE wartości (UI)
@@ -44,7 +45,7 @@ struct SettingsView: View {
     private let helperBundleID = "popo.PasswordMonitorHelperApp"
 
     // ZAPISANE wartości (AppStorage)
-    @AppStorage(SettingsKeys.domainName) private var storedDomainName = "BP-ITAKA"
+    @AppStorage(SettingsKeys.domainName) private var storedDomainName = ""
     @AppStorage(SettingsKeys.maxPasswordAge) private var storedMaxPasswordAge = 30
     @AppStorage(SettingsKeys.warningThreshold) private var storedWarningThreshold = 7
     @AppStorage(SettingsKeys.notificationHour) private var storedNotificationHour = "09:00"
@@ -195,6 +196,10 @@ struct SettingsView: View {
         .frame(minWidth: 480, minHeight: 360)
         .onAppear {
             loadSettings()
+            appState.windowOpened()
+        }
+        .onDisappear {
+            appState.windowClosed()
         }
         .alert("helper_alert_title", isPresented: $showAlert) {
             Button("common_ok") {}
@@ -260,6 +265,9 @@ struct SettingsView: View {
     }
 
     private func loadSettings() {
+        if storedDomainName == "BP-ITAKA" {
+            storedDomainName = ""
+        }
         // AppStorage -> edytowane wartości
         domainName = storedDomainName
         maxPasswordAge = storedMaxPasswordAge
@@ -352,4 +360,6 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
+        .environmentObject(AppState())
+        .environmentObject(LanguageSettings())
 }

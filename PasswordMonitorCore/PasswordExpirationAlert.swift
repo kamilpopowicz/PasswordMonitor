@@ -8,6 +8,10 @@
 import SwiftUI
 import AppKit
 
+extension Notification.Name {
+    static let passwordAlertVisibilityChanged = Notification.Name("PasswordMonitor.PasswordAlertVisibilityChanged")
+}
+
 /// Modalne okienko powiadomienia o wygaśnięciu hasła
 /// Zawsze na wierzchu, nie da się ukryć, z live licznikiem odliczającym
 @MainActor
@@ -36,6 +40,12 @@ final class PasswordExpirationAlert {
 
     /// Pokazuje okienko na wierzchu wszystkich innych okien
     func show() {
+        NotificationCenter.default.post(
+            name: .passwordAlertVisibilityChanged,
+            object: nil,
+            userInfo: ["isVisible": true]
+        )
+
         let hoursRemaining = expirationDate.timeIntervalSinceNow / 3600
         let isUrgent = hoursRemaining <= 24
 
@@ -94,6 +104,11 @@ final class PasswordExpirationAlert {
         window?.close()
         window = nil
         hostingController = nil
+        NotificationCenter.default.post(
+            name: .passwordAlertVisibilityChanged,
+            object: nil,
+            userInfo: ["isVisible": false]
+        )
     }
 }
 

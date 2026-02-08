@@ -150,7 +150,43 @@ struct MenuBarView: View {
     }
 }
 
-// Trzymasz to już w projekcie – zostawiam bez zmian
 class AppState: ObservableObject {
     @Published var launchAtLogin = false
+    @Published private(set) var showMenuBar = false
+    private var windowCount = 0
+    private var alertVisible = false
+    private var alertObserver: Any?
+
+    init() {
+        alertObserver = NotificationCenter.default.addObserver(
+            forName: .passwordAlertVisibilityChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            let isVisible = (notification.userInfo?["isVisible"] as? Bool) ?? false
+            self.alertVisible = isVisible
+            self.updateShowMenuBar()
+        }
+    }
+
+    deinit {
+        if let alertObserver {
+            NotificationCenter.default.removeObserver(alertObserver)
+        }
+    }
+
+    func windowOpened() {
+        windowCount += 1
+        updateShowMenuBar()
+    }
+
+    func windowClosed() {
+        windowCount = max(0, windowCount - 1)
+        updateShowMenuBar()
+    }
+
+    private func updateShowMenuBar() {
+        showMenuBar = (windowCount > 0) || alertVisible
+    }
 }

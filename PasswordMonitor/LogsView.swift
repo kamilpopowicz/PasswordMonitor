@@ -2,6 +2,7 @@ import SwiftUI
 import PasswordMonitorCore
 
 struct LogsView: View {
+    @EnvironmentObject var appState: AppState
     @StateObject private var logStore = LogStore()
     @State private var searchText = ""
     @State private var selectedLevel: Logger.Level? = nil
@@ -109,9 +110,11 @@ struct LogsView: View {
         .frame(minWidth: 640, minHeight: 400)
         .onAppear {
             logStore.start()
+            appState.windowOpened()
         }
         .onDisappear {
             logStore.stop()
+            appState.windowClosed()
         }
     }
 
@@ -161,4 +164,5 @@ private struct LegendDot: View {
 
 #Preview {
     LogsView()
+        .environmentObject(AppState())
 }
