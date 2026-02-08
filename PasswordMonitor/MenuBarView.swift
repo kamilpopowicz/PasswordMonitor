@@ -167,7 +167,7 @@ class AppState: ObservableObject {
             guard let self else { return }
             let isVisible = (notification.userInfo?["isVisible"] as? Bool) ?? false
             self.alertVisible = isVisible
-            self.updateShowMenuBar()
+            self.updateActivationPolicy()
         }
     }
 

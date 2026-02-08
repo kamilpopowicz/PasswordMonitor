@@ -621,6 +621,23 @@
         }
       }
     },
+    "log_ad_no_domain_configured": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No AD domain configured"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie skonfigurowano domeny AD"
+          }
+        }
+      }
+    },
     "log_ad_read_error %@": {
       "extractionState": "stale",
       "localizations": {

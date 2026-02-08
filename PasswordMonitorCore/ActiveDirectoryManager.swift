@@ -10,7 +10,6 @@ import Foundation
 /// Zarządza odczytem informacji o haśle z AD / lokalnego katalogu
 public class ActiveDirectoryManager {
 
-    private let domainName = "BP-ITAKA"   // Twoja domena
     private let maxPasswordAge = 30       // Dni
     private let warningThreshold = 7      // Ostrzegaj od 7 dni
 
@@ -20,6 +19,11 @@ public class ActiveDirectoryManager {
 
     /// Sprawdza połączenie z AD
     func checkADConnectivity() -> Bool {
+        guard let domainName = resolvedDomainName() else {
+            Logger.shared.logLocalized("log_ad_no_domain_configured")
+            return false
+        }
+
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
         task.arguments = ["/Active Directory/\(domainName)/All Domains", "list", "/Users"]
@@ -88,6 +92,11 @@ public class ActiveDirectoryManager {
 
     /// Pobiera SMBPasswordLastSet z AD
     private func getPasswordInfoFromAD(username: String) throws -> PasswordInfo {
+        guard let domainName = resolvedDomainName() else {
+            Logger.shared.logLocalized("log_ad_no_domain_configured")
+            throw ADError.invalidData
+        }
+
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
         task.arguments = [
@@ -205,6 +214,12 @@ public class ActiveDirectoryManager {
         }
 
         return calculateExpirationInfo(from: lastSetDate)
+    }
+
+    private func resolvedDomainName() -> String? {
+        let raw = UserDefaults.standard.string(forKey: "ad_domain") ?? ""
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     // MARK: - Wspólna logika wygasania

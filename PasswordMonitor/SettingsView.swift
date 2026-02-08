@@ -265,9 +265,6 @@ struct SettingsView: View {
     }
 
     private func loadSettings() {
-        if storedDomainName == "BP-ITAKA" {
-            storedDomainName = ""
-        }
         // AppStorage -> edytowane wartości
         domainName = storedDomainName
         maxPasswordAge = storedMaxPasswordAge
