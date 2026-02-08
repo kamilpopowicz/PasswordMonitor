@@ -14,11 +14,11 @@ import Combine
 struct PasswordMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
-    @State private var languageSettings = LanguageSettings()
+    @StateObject private var languageSettings = LanguageSettings()
 
     var body: some Scene {
         // Menu bar extra (macOS 13+)
-        MenuBarExtra("Password Monitor", systemImage: "lock.shield") {
+        MenuBarExtra("app_name", systemImage: "lock.shield") {
             MenuBarView()
                 .environmentObject(appState)
                 .environmentObject(languageSettings)
@@ -26,10 +26,16 @@ struct PasswordMonitorApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("Ustawienia", id: "settings-window") {
+        Window("settings_window_title", id: "settings-window") {
             SettingsView()
                 .environmentObject(appState)
                 .environmentObject(languageSettings)
+                .environment(\.locale, languageSettings.locale)
+        }
+        .windowResizability(.contentMinSize)
+
+        Window("logs_window_title", id: "logs-window") {
+            LogsView()
                 .environment(\.locale, languageSettings.locale)
         }
         .windowResizability(.contentMinSize)
@@ -46,10 +52,14 @@ struct AppCommands: Commands {
     
     var body: some Commands {
         CommandGroup(replacing: .appSettings) {
-            Button("Ustawienia…") {
+            Button("settings_menu_title") {
                 openWindow(id: "settings-window")
             }
             .keyboardShortcut(",", modifiers: .command)
+
+            Button("menu_logs") {
+                openWindow(id: "logs-window")
+            }
         }
     }
 }
@@ -58,7 +68,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var wakeObserver: Any?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("🚀 Aplikacja uruchomiona")
+        Logger.shared.logLocalized("log_app_launched")
         
         // Rejestracja helpera
         registerHelperService()
@@ -69,7 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { _ in
-            print("💻 Wybudzenie systemu – sprawdzam powiadomienie")
+            Logger.shared.logLocalized("log_system_wake_check")
             
             Task { @MainActor in
                 NotificationManager.shared.checkAndShowNotificationIfNeeded()
@@ -88,52 +98,52 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let bundleURL = Bundle.main.bundleURL
             .appendingPathComponent("Contents/Library/LoginItems/PasswordMonitorHelperApp.app")
         
-        print("Expected Bundle ID: \(helperBundleID)")
-        print("Helper bundle path: \(bundleURL.path)")
-        print("Exists: \(FileManager.default.fileExists(atPath: bundleURL.path))")
-        print("Initial Service status: \(service.status.rawValue)")
+        Logger.shared.logLocalized("log_helper_expected_bundle_id %@", helperBundleID)
+        Logger.shared.logLocalized("log_helper_bundle_path %@", bundleURL.path)
+        Logger.shared.logLocalized("log_helper_bundle_exists %@", String(FileManager.default.fileExists(atPath: bundleURL.path)))
+        Logger.shared.logLocalized("log_helper_initial_status %@", String(service.status.rawValue))
         
         do {
             switch service.status {
             case .notRegistered:
                 try service.register()
-                print("✅ Helper service registered (was not registered)")
+                Logger.shared.logLocalized("log_helper_registered_not_registered")
                 
             case .enabled:
-                print("✅ Helper service already enabled")
+                Logger.shared.logLocalized("log_helper_already_enabled")
                 
             case .requiresApproval:
-                print("⚠️ Helper requires user approval in System Settings")
+                Logger.shared.logLocalized("log_helper_requires_approval")
                 showApprovalAlert()
                 
             case .notFound:
                 // 🎯 TO JEST KLUCZOWE: notFound = nigdy nie rejestrowany, więc rejestruj!
-                print("ℹ️ Service not found in system database (never registered before)")
-                print("Attempting registration...")
+                Logger.shared.logLocalized("log_helper_not_found")
+                Logger.shared.logLocalized("log_helper_attempting_registration")
                 
                 try service.register()
                 
                 // Sprawdź status ponownie po rejestracji
                 let newStatus = service.status
-                print("Status after register: \(newStatus.rawValue)")
+                Logger.shared.logLocalized("log_helper_status_after_register %@", String(newStatus.rawValue))
                 
                 if newStatus == .enabled {
-                    print("✅ Helper service registered successfully")
+                    Logger.shared.logLocalized("log_helper_registered_successfully")
                 } else if newStatus == .requiresApproval {
-                    print("⚠️ Registration requires user approval")
+                    Logger.shared.logLocalized("log_helper_registration_requires_approval")
                     showApprovalAlert()
                 } else {
-                    print("⚠️ Unexpected status after registration: \(newStatus.rawValue)")
+                    Logger.shared.logLocalized("log_helper_unexpected_status_after_register %@", String(newStatus.rawValue))
                 }
                 
             @unknown default:
-                print("⚠️ Unknown status: \(service.status)")
+                Logger.shared.logLocalized("log_helper_unknown_status %@", String(describing: service.status))
             }
         } catch {
-            print("❌ Failed to register helper: \(error.localizedDescription)")
+            Logger.shared.logLocalized("log_helper_register_failed %@", error.localizedDescription)
             // Dodaj pełny opis błędu
             let nsError = error as NSError
-            print("Error domain: \(nsError.domain), code: \(nsError.code)")
+            Logger.shared.logLocalized("log_helper_register_error_domain %@ %ld", nsError.domain, nsError.code)
         }
     }
     
@@ -141,15 +151,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func showApprovalAlert() {
         DispatchQueue.main.async {
             let alert = NSAlert()
-            alert.messageText = "Wymagane pozwolenie"
-            alert.informativeText = """
-            Aby włączyć automatyczne sprawdzanie hasła, zatwierdź aplikację w:
-            
-            System Settings → General → Login Items → Allow in Background
-            """
+            alert.messageText = LanguageSettings.localizedString("permission_required_title")
+            alert.informativeText = LanguageSettings.localizedString("permission_required_message")
             alert.alertStyle = .informational
-            alert.addButton(withTitle: "Otwórz Settings")
-            alert.addButton(withTitle: "Później")
+            alert.addButton(withTitle: LanguageSettings.localizedString("open_settings_button"))
+            alert.addButton(withTitle: LanguageSettings.localizedString("later_button"))
             
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
@@ -173,7 +179,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 
                 DispatchQueue.main.async {
                     // Log informacyjny
-                    print("🔐 [Init] Hasło wygasa za \(info.daysUntilExpiration) dni (expiry: \(info.expiryDate))")
+                    Logger.shared.logLocalized("log_init_password_expiry %@ %@", String(info.daysUntilExpiration), String(describing: info.expiryDate))
                     
                     // Jeśli wg Twojej logiki trzeba ostrzec – przekaż datę do NotificationManager
                     if manager.shouldShowWarning(passwordInfo: info) {
@@ -183,7 +189,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             } catch {
                 DispatchQueue.main.async {
-                    print("❌ [Init] Błąd sprawdzania hasła: \(error)")
+                    Logger.shared.logLocalized("log_init_password_check_error %@", String(describing: error))
                 }
             }
         }

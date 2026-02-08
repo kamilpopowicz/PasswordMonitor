@@ -60,14 +60,14 @@ final class PasswordExpirationAlert {
         let contentSize = hostingView.fittingSize
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: max(380, contentSize.width), height: max(220, contentSize.height)),
+            contentRect: NSRect(x: 0, y: 0, width: max(420, contentSize.width), height: max(240, contentSize.height)),
             styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         self.window = panel
 
-        panel.title = "Password Monitor"
+        panel.title = String(localized: "app_name")
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovable = false
@@ -128,12 +128,12 @@ private struct AlertContentView: View {
                 .font(.system(size: 48))
                 .foregroundColor(isUrgent ? .red : .orange)
 
-            Text("Twoje hasło wygasa!")
+            Text("alert_title_expiring")
                 .font(.title2)
                 .fontWeight(.bold)
 
             // Opis z zawijaniem tekstu
-            Text(smartAdviceText())
+            Text(smartAdviceTextKey())
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -142,15 +142,28 @@ private struct AlertContentView: View {
 
             // Live timer – zawsze pokazuje rzeczywisty czas do wygaśnięcia
             VStack(spacing: 8) {
-                Text(timeRemaining > 86400 ? "Pozostało:" : "Pozostało czasu:")
+                Text(remainingTitleKey)
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                Text(formattedTimeRemaining())
-                    .font(.system(size: isUrgent ? 36 : 28, weight: .bold, design: .monospaced))
-                    .foregroundColor(isUrgent ? .red : .primary)
+                if let lines = formattedTimeRemainingLines() {
+                    VStack(spacing: 2) {
+                        Text(lines.line1)
+                            .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
+                            .foregroundColor(isUrgent ? .red : .primary)
+                        Text(lines.line2)
+                            .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
+                            .foregroundColor(isUrgent ? .red : .primary)
+                    }
                     .onAppear { startTimer() }
                     .onDisappear { stopTimer() }
+                } else {
+                    Text(formattedTimeRemaining())
+                        .font(.system(size: isUrgent ? 34 : 28, weight: .bold, design: .monospaced))
+                        .foregroundColor(isUrgent ? .red : .primary)
+                        .onAppear { startTimer() }
+                        .onDisappear { stopTimer() }
+                }
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 20)
@@ -160,18 +173,20 @@ private struct AlertContentView: View {
             HStack(spacing: 12) {
                 // "Odłóż" – niedostępny tylko gdy hasło wygasa za ≤ 24h
                 Button(action: onSnooze) {
-                    Text("Odłóż")
+                    Text("alert_snooze")
                         .frame(minWidth: 100)
                 }
                 .buttonStyle(.bordered)
                 .tint(.red)
                 .disabled(isUrgent)
                 .opacity(isUrgent ? 0.5 : 1.0)
-                .help(isUrgent ? "Nie można odłożyć, gdy hasło wygasa za mniej niż 24h" : "Przypomnij za 3 godziny")
+                .help(isUrgent
+                      ? Text("alert_snooze_help_disabled")
+                      : Text("alert_snooze_help_enabled"))
 
                 // "Zmień hasło" – na razie tylko log + zamknięcie okna
                 Button(action: onChangePassword) {
-                    Text("Zmień hasło")
+                    Text("alert_change_password")
                         .frame(minWidth: 100)
                 }
                 .buttonStyle(.borderedProminent)
@@ -181,24 +196,30 @@ private struct AlertContentView: View {
             .padding(.top, 10)
         }
         .padding(24)
-        .frame(minWidth: 380, maxWidth: 420)
+        .frame(width: 420)
     }
 
     // MARK: - Helpers
     
-    private func smartAdviceText() -> String {
+    private func smartAdviceTextKey() -> LocalizedStringKey {
         let days = Calendar.current.dateComponents([.day], from: Date(), to: expirationDate).day ?? 0
 
         switch days {
         case ..<0:
-            return "Twoje hasło już wygasło. Zmień je natychmiast, aby uniknąć problemów z logowaniem."
+            return LocalizedStringKey("alert_advice_expired")
         case 0...1:
-            return "Twoje hasło wygasa dzisiaj. Najlepiej zmień je od razu, żeby uniknąć blokady konta."
+            return LocalizedStringKey("alert_advice_today")
         case 2...7:
-            return "Twoje hasło wygaśnie w ciągu tygodnia. Zaplanuj zmianę hasła jeszcze przed upływem tego terminu."
+            return LocalizedStringKey("alert_advice_week")
         default:
-            return "Twoje hasło jest jeszcze ważne, ale polityka firmy wymaga zmiany co 30 dni. Zmień je z wyprzedzeniem."
+            return LocalizedStringKey("alert_advice_default")
         }
+    }
+
+    private var remainingTitleKey: LocalizedStringKey {
+        timeRemaining > 86400
+            ? LocalizedStringKey("alert_remaining_title_long")
+            : LocalizedStringKey("alert_remaining_title_short")
     }
 
     private func formattedExpirationDate() -> String {
@@ -219,13 +240,40 @@ private struct AlertContentView: View {
             let hours = remAfterDays / 3600
             let minutes = (remAfterDays % 3600) / 60
             let seconds = remAfterDays % 60
-            return "\(days)d \(hours)h \(minutes)m \(seconds)s"
+            let dayText = Logger.localizedString("unit_day %lld", days)
+            let hourText = Logger.localizedString("unit_hour %lld", hours)
+            let minuteText = Logger.localizedString("unit_minute %lld", minutes)
+            let secondText = Logger.localizedString("unit_second %lld", seconds)
+            return "\(dayText) \(hourText) \(minuteText) \(secondText)"
         } else {
             let hours = totalSeconds / 3600
             let minutes = (totalSeconds % 3600) / 60
             let seconds = totalSeconds % 60
-            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+            return Logger.localizedString(
+                "alert_remaining_short_format",
+                hours,
+                minutes,
+                seconds
+            )
         }
+    }
+
+    private func formattedTimeRemainingLines() -> (line1: String, line2: String)? {
+        let totalSeconds = max(0, Int(timeRemaining))
+        guard totalSeconds > 86400 else { return nil }
+
+        let days = totalSeconds / 86400
+        let remAfterDays = totalSeconds % 86400
+        let hours = remAfterDays / 3600
+        let minutes = (remAfterDays % 3600) / 60
+        let seconds = remAfterDays % 60
+
+        let dayText = Logger.localizedString("unit_day %lld", days)
+        let hourText = Logger.localizedString("unit_hour %lld", hours)
+        let minuteText = Logger.localizedString("unit_minute %lld", minutes)
+        let secondText = Logger.localizedString("unit_second %lld", seconds)
+
+        return ("\(dayText) \(hourText)", "\(minuteText) \(secondText)")
     }
 
     private func startTimer() {
@@ -249,10 +297,18 @@ private struct AlertContentView: View {
 // MARK: - Preview
 
 #Preview {
-    AlertContentView(
-        expirationDate: Date().addingTimeInterval(3 * 24 * 3600),
-        isUrgent: false,
-        onSnooze: {},
-        onChangePassword: {}
-    )
+    Group {
+        AlertContentView(
+            expirationDate: Date().addingTimeInterval(3 * 24 * 3600),
+            isUrgent: false,
+            onSnooze: {},
+            onChangePassword: {}
+        )
+        AlertContentView(
+            expirationDate: Date().addingTimeInterval(999 * 24 * 3600),
+            isUrgent: false,
+            onSnooze: {},
+            onChangePassword: {}
+        )
+    }
 }

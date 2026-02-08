@@ -14,7 +14,7 @@ struct SettingsLanguageView: View {
     var body: some View {
         Form {
             Section {
-                Picker("Language", selection: $languageSettings.selectedLanguage) {
+                Picker("language_picker_label", selection: $languageSettings.selectedLanguage) {
                     ForEach(LanguageSettings.AppLanguage.allCases) { language in
                         Text(language.displayName)
                             .tag(language)

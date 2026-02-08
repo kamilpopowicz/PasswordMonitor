@@ -14,6 +14,8 @@ import Combine
 final class LanguageSettings: ObservableObject {
     private let languageKey = "appLanguage"
     private let defaults = UserDefaults.standard
+    private static let cacheLock = NSLock()
+    private static var cachedBundle: (code: String, bundle: Bundle)?
 
     /// Backing storage for language code - must be stored property for @Observable bindings
     @Published private var storedLanguage: String
@@ -70,5 +72,40 @@ final class LanguageSettings: ObservableObject {
         case "en": return .english
         default: return nil
         }
+    }
+
+    /// Returns a localized string for the currently selected app language.
+    /// - Parameters:
+    ///   - key: Localization key in `Localizable.xcstrings`.
+    ///   - arguments: Optional format arguments for `%@` / `%d` placeholders.
+    static func localizedString(_ key: String, _ arguments: CVarArg...) -> String {
+        let languageCode = UserDefaults.standard.string(forKey: "appLanguage")
+            ?? Locale.current.language.languageCode?.identifier
+            ?? "en"
+
+        let bundle = localizedBundle(for: languageCode)
+        let format = bundle.localizedString(forKey: key, value: nil, table: nil)
+
+        guard !arguments.isEmpty else { return format }
+
+        return String(format: format, locale: Locale(identifier: languageCode), arguments: arguments)
+    }
+
+    private static func localizedBundle(for languageCode: String) -> Bundle {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+
+        if let cached = cachedBundle, cached.code == languageCode {
+            return cached.bundle
+        }
+
+        if let path = Bundle.main.path(forResource: languageCode, ofType: "lproj"),
+           let bundle = Bundle(path: path) {
+            cachedBundle = (languageCode, bundle)
+            return bundle
+        }
+
+        cachedBundle = (languageCode, .main)
+        return .main
     }
 }

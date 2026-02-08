@@ -7,6 +7,8 @@
 
 import SwiftUI
 import ServiceManagement
+import Combine
+import PasswordMonitorCore
 
 private enum SettingsKeys {
     static let domainName = "ad_domain"
@@ -25,6 +27,11 @@ struct SettingsView: View {
     @State private var maxPasswordAge = 30
     @State private var warningThreshold = 7
     @State private var selectedLanguage: LanguageSettings.AppLanguage = .english
+    @State private var languageAssistText = ""
+    @State private var languageAssistCancellable: AnyCancellable?
+    @State private var showLanguageSuggestion = false
+    @State private var suggestedLanguage: LanguageSettings.AppLanguage?
+    @State private var lastSuggestedLanguage: LanguageSettings.AppLanguage?
 
     // Godzina w UI
     @State private var notificationHourString = "09:00"
@@ -48,39 +55,39 @@ struct SettingsView: View {
             ScrollView {
                 Form {
                     // MARK: Powiadomienia
-                    Section(header: Text("Powiadomienia").font(.headline)) {
+                    Section(header: Text("settings_section_notifications").font(.headline)) {
                         DatePicker(
-                            "Godzina powiadomienia",
+                            "settings_notification_time",
                             selection: $notificationDate,
                             displayedComponents: .hourAndMinute
                         )
                         .onChange(of: notificationDate) { _, newValue in
                             // Konwersja Date -> String "HH:mm" dla EDYTOWANEJ wartości
                             notificationHourString = dateToTimeString(newValue) ?? "09:00"
-                            print("🕘 Godzina powiadomienia zmieniona na: \(notificationHourString)")
+                            Logger.shared.logLocalized("log_settings_notification_time_changed %@", notificationHourString)
                         }
 
-                        Text("Powiadomienie wyświetli się codziennie o ustalonej godzinie")
+                        Text("settings_notification_footnote")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
 
                     // MARK: Startup
-                    Section(header: Text("Startup").font(.headline)) {
-                        Toggle("Uruchom przy logowaniu", isOn: $launchAtLogin)
+                    Section(header: Text("settings_section_startup").font(.headline)) {
+                        Toggle("settings_launch_at_login", isOn: $launchAtLogin)
 
-                        Text("Password Monitor (Helper service) będzie sprawdzał hasło codziennie o \(notificationHourString)")
+                        Text(LanguageSettings.localizedString("settings_helper_desc %@", notificationHourString))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
 
                     // MARK: Active Directory
-                    Section(header: Text("Active Directory").font(.headline)) {
-                        TextField("Nazwa domeny", text: $domainName)
+                    Section(header: Text("settings_section_ad").font(.headline)) {
+                        TextField("settings_domain_name", text: $domainName)
                             .textFieldStyle(.roundedBorder)
 
                         HStack {
-                            Text("Maksymalny wiek hasła (dni)")
+                            Text("settings_max_password_age")
                             Spacer()
                             TextField("", value: $maxPasswordAge, format: .number)
                                 .frame(width: 60)
@@ -92,7 +99,7 @@ struct SettingsView: View {
                         }
 
                         HStack {
-                            Text("Próg ostrzeżenia (dni)")
+                            Text("settings_warning_threshold")
                             Spacer()
                             TextField("", value: $warningThreshold, format: .number)
                                 .frame(width: 60)
@@ -108,7 +115,7 @@ struct SettingsView: View {
 
                     // MARK: Język / Language
                     Section(header: Text("language_settings_title").font(.headline)) {
-                        Picker("Language", selection: $selectedLanguage) {
+                        Picker("language_picker_label", selection: $selectedLanguage) {
                             ForEach(LanguageSettings.AppLanguage.allCases) { language in
                                 Text(language.displayName)
                                     .tag(language)
@@ -120,23 +127,49 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                    
+                    // MARK: Language Assist (On-Device)
+                    Section(header: Text("language_assist_title").font(.headline)) {
+                        ZStack(alignment: .topLeading) {
+                            TextEditor(text: $languageAssistText)
+                                .font(.body)
+                                .frame(minHeight: 80)
+                                .padding(4)
+                                .background(Color(NSColor.textBackgroundColor))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                .onChange(of: languageAssistText) { _, newValue in
+                                    debounceLanguageAssistChange(newValue)
+                                }
+
+                            if languageAssistText.isEmpty {
+                                Text("language_assist_placeholder")
+                                    .foregroundColor(.secondary)
+                                    .padding(8)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+
+                        Text("language_assist_footnote")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
 
                     // MARK: Informacje
-                    Section(header: Text("Informacje").font(.headline)) {
+                    Section(header: Text("settings_section_info").font(.headline)) {
                         HStack {
-                            Text("Wersja")
+                            Text("settings_version")
                             Spacer()
                             Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                                 .foregroundColor(.secondary)
                         }
 
                         HStack {
-                            Text("Status Helper Service")
+                            Text("settings_helper_status")
                             Spacer()
                             Circle()
                                 .fill(helperStatusColor)
                                 .frame(width: 10, height: 10)
-                            Text(helperStatusDescription)
+                            Text(helperStatusDescriptionKey)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -148,10 +181,10 @@ struct SettingsView: View {
             // Dolny pasek przycisków
             HStack {
                 Spacer()
-                Button("Anuluj") {
+                Button("common_cancel") {
                     cancelChanges()
                 }
-                Button("Zapisz") {
+                Button("common_save") {
                     saveChanges()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -163,10 +196,22 @@ struct SettingsView: View {
         .onAppear {
             loadSettings()
         }
-        .alert("Helper Service", isPresented: $showAlert) {
-            Button("OK") {}
+        .alert("helper_alert_title", isPresented: $showAlert) {
+            Button("common_ok") {}
         } message: {
             Text(alertMessage)
+        }
+        .alert("language_suggestion_title", isPresented: $showLanguageSuggestion) {
+            Button("language_suggestion_switch") {
+                guard let suggestedLanguage else { return }
+                selectedLanguage = suggestedLanguage
+                languageSettings.selectedLanguage = suggestedLanguage
+            }
+            Button("language_suggestion_keep", role: .cancel) {}
+        } message: {
+            if let suggestedLanguage {
+                Text(LanguageSettings.localizedString("language_suggestion_message %@", suggestedLanguage.displayName))
+            }
         }
     }
 
@@ -204,13 +249,13 @@ struct SettingsView: View {
         }
     }
 
-    private var helperStatusDescription: String {
+    private var helperStatusDescriptionKey: LocalizedStringKey {
         switch helperStatus {
-        case .enabled: return "Aktywny"
-        case .notRegistered: return "Nie zarejestrowany"
-        case .requiresApproval: return "Wymaga zatwierdzenia"
-        case .notFound: return "Nie znaleziono"
-        @unknown default: return "Nieznany"
+        case .enabled: return LocalizedStringKey("status_active")
+        case .notRegistered: return LocalizedStringKey("status_not_registered")
+        case .requiresApproval: return LocalizedStringKey("status_requires_approval")
+        case .notFound: return LocalizedStringKey("status_not_found")
+        @unknown default: return LocalizedStringKey("status_unknown")
         }
     }
 
@@ -228,7 +273,7 @@ struct SettingsView: View {
         helperStatus = service.status
         launchAtLogin = (service.status == .enabled)
 
-        print("📊 Settings loaded - Notification time: \(notificationHourString)")
+        Logger.shared.logLocalized("log_settings_loaded_notification_time %@", notificationHourString)
     }
 
     private func toggleLaunchAtLogin(_ enabled: Bool) {
@@ -236,27 +281,49 @@ struct SettingsView: View {
         do {
             if enabled {
                 try service.register()
-                print("✅ Helper registered")
+                Logger.shared.logLocalized("log_helper_registered")
                 helperStatus = service.status
                 if helperStatus == .requiresApproval {
-                    alertMessage = "Otwórz System Settings → Ogólne → Elementy logowania i zatwierdź PasswordMonitorHelperApp"
+                    alertMessage = LanguageSettings.localizedString("helper_requires_approval")
                 } else {
-                    alertMessage = "Helper service aktywowany. Zostanie uruchomiony przy następnym logowaniu."
+                    alertMessage = LanguageSettings.localizedString("helper_enabled")
                 }
             } else {
                 try service.unregister()
                 helperStatus = .notRegistered
-                print("✅ Helper unregistered")
-                alertMessage = "Helper service wyłączony"
+                Logger.shared.logLocalized("log_helper_unregistered")
+                alertMessage = LanguageSettings.localizedString("helper_disabled")
             }
             showAlert = true
         } catch {
-            print("❌ Błąd toggle: \(error.localizedDescription)")
-            alertMessage = "Błąd: \(error.localizedDescription)"
+            Logger.shared.logLocalized("log_helper_toggle_error %@", error.localizedDescription)
+            alertMessage = LanguageSettings.localizedString("error_prefix %@", error.localizedDescription)
             showAlert = true
             launchAtLogin = !enabled
             helperStatus = service.status
         }
+    }
+
+    private func handleLanguageAssistChange(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 20 else { return }
+
+        guard let detected = languageSettings.detectLanguage(for: trimmed) else { return }
+        guard detected != selectedLanguage else { return }
+        guard detected != lastSuggestedLanguage else { return }
+
+        lastSuggestedLanguage = detected
+        suggestedLanguage = detected
+        showLanguageSuggestion = true
+    }
+
+    private func debounceLanguageAssistChange(_ text: String) {
+        languageAssistCancellable?.cancel()
+        languageAssistCancellable = Just(text)
+            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
+            .sink { value in
+                handleLanguageAssistChange(value)
+            }
     }
 
     /// Zapisuje wprowadzone zmiany do AppStorage i helpera

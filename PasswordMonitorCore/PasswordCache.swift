@@ -22,7 +22,7 @@ public final class PasswordCache {
             let data = try JSONEncoder().encode(info)
             UserDefaults.standard.set(data, forKey: infoKey)
         } catch {
-            print("⚠️ PasswordCache: błąd zapisu cache: \(error)")
+            Logger.shared.logLocalized("log_cache_save_error %@", String(describing: error))
         }
     }
 
@@ -45,7 +45,7 @@ public final class PasswordCache {
 
             return info
         } catch {
-            print("⚠️ PasswordCache: błąd odczytu cache: \(error)")
+            Logger.shared.logLocalized("log_cache_read_error %@", String(describing: error))
             return nil
         }
     }

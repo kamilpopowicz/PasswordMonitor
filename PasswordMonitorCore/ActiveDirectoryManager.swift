@@ -52,11 +52,11 @@ public class ActiveDirectoryManager {
                 PasswordCache.shared.save(info)
                 return info
             } catch {
-                print("⚠️ ActiveDirectoryManager: błąd odczytu z AD: \(error)")
+                Logger.shared.logLocalized("log_ad_read_error %@", String(describing: error))
                 // Lecimy dalej do lokalnego fallbacku
             }
         } else {
-            print("⚠️ Brak połączenia z domeną \(domainName)")
+            Logger.shared.logLocalized("log_ad_no_connection %@", domainName)
         }
 
         // 2. Fallback do lokalnego Open Directory
@@ -66,12 +66,12 @@ public class ActiveDirectoryManager {
             PasswordCache.shared.save(info)
             return info
         } catch {
-            print("⚠️ ActiveDirectoryManager: błąd odczytu lokalnego: \(error)")
+            Logger.shared.logLocalized("log_ad_local_read_error %@", String(describing: error))
         }
 
         // 3. Ostateczny fallback: cache
         if let cached = PasswordCache.shared.load() {
-            print("ℹ️ ActiveDirectoryManager: używam danych z cache (ostatnio znane wartości)")
+            Logger.shared.logLocalized("log_ad_using_cache")
             return cached
         }
 
@@ -108,11 +108,11 @@ public class ActiveDirectoryManager {
         // DEBUG stderr
         let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
         if let errorOutput = String(data: errorData, encoding: .utf8), !errorOutput.isEmpty {
-            print("dscl stderr: \(errorOutput)")
+            Logger.shared.logLocalized("log_dscl_stderr %@", errorOutput)
         }
 
         guard task.terminationStatus == 0 else {
-            print("dscl exit code: \(task.terminationStatus)")
+            Logger.shared.logLocalized("log_dscl_exit_code %d", task.terminationStatus)
             throw ADError.commandFailed("dscl failed with code \(task.terminationStatus)")
         }
 
@@ -122,16 +122,16 @@ public class ActiveDirectoryManager {
         }
 
         // DEBUG stdout
-        print("dscl output: \(output)")
+        Logger.shared.logLocalized("log_dscl_output %@", output)
 
         // Parse: "SMBPasswordLastSet: 133123456789012345"
         let lines = output.components(separatedBy: .newlines)
         guard let lastSetLine = lines.first(where: { $0.contains("SMBPasswordLastSet") }) else {
-            print("SMBPasswordLastSet not found in output")
+            Logger.shared.logLocalized("log_dscl_password_last_set_missing")
             throw ADError.invalidData
         }
 
-        print("Found line: \(lastSetLine)")
+        Logger.shared.logLocalized("log_dscl_found_line %@", lastSetLine)
 
         let components = lastSetLine.components(separatedBy: ":")
         guard
@@ -139,17 +139,17 @@ public class ActiveDirectoryManager {
             let lastSetRaw = components.last?.trimmingCharacters(in: .whitespacesAndNewlines),
             let lastSetInt = Int64(lastSetRaw)
         else {
-            print("Failed to parse: \(lastSetLine)")
+            Logger.shared.logLocalized("log_dscl_parse_failed %@", lastSetLine)
             throw ADError.invalidData
         }
 
-        print("Parsed timestamp: \(lastSetInt)")
+        Logger.shared.logLocalized("log_dscl_parsed_timestamp %lld", lastSetInt)
 
         // Konwersja Windows FILETIME → UNIX timestamp
         let unixTimestamp = (lastSetInt / 10_000_000) - 11_644_473_600
         let lastSetDate = Date(timeIntervalSince1970: TimeInterval(unixTimestamp))
 
-        print("Converted to date: \(lastSetDate)")
+        Logger.shared.logLocalized("log_dscl_converted_date %@", String(describing: lastSetDate))
 
         return calculateExpirationInfo(from: lastSetDate)
     }

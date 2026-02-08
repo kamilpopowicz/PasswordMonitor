@@ -61,23 +61,23 @@ public final class NotificationManager: ObservableObject {
     /// Aktualizuje datę wygaśnięcia hasła (wywoływane gdy zmieni się status hasła)
     public func updateExpirationDate(_ date: Date?) {
         currentExpirationDate = date
-        print("📅 NotificationManager: Data wygaśnięcia zaktualizowana na \(date?.formatted() ?? "nil")")
+        Logger.shared.logLocalized("log_notification_expiration_updated %@", date?.formatted() ?? "nil")
     }
     
     /// Sprawdza czy powinniśmy pokazać powiadomienie (wywoływane cyklicznie)
     public func checkAndShowNotificationIfNeeded() {
         guard let expirationDate = currentExpirationDate else {
-            print("⏭️ Brak daty wygaśnięcia hasła")
+            Logger.shared.logLocalized("log_notification_no_expiration_date")
             return
         }
         
         guard !hasShownNotificationToday else {
-            print("⏭️ Powiadomienie już dziś pokazane")
+            Logger.shared.logLocalized("log_notification_already_shown_today")
             return
         }
         
         guard !isSnoozed || hasSnoozeExpired() else {
-            print("⏭️ W trybie snooze do \(snoozeEndTime?.formatted() ?? "unknown")")
+            Logger.shared.logLocalized("log_notification_snooze_until %@", snoozeEndTime?.formatted() ?? "unknown")
             return
         }
         
@@ -86,11 +86,11 @@ public final class NotificationManager: ObservableObject {
         
         // Czy nadszedł czas powiadomienia (lub minął i komputer był uśpiony)?
         if now >= notificationTime {
-            print("🔔 Czas powiadomienia! Wygaśnięcie: \(expirationDate)")
+            Logger.shared.logLocalized("log_notification_time_reached %@", String(describing: expirationDate))
             showNotification(passwordExpirationDate: expirationDate)
         } else {
             let diff = notificationTime.timeIntervalSince(now)
-            print("⏰ Do powiadomienia pozostało \(Int(diff / 60)) minut")
+            Logger.shared.logLocalized("log_notification_minutes_remaining %d", Int(diff / 60))
         }
     }
     
@@ -100,7 +100,7 @@ public final class NotificationManager: ObservableObject {
         
         // Nie można odłożyć jeśli hasło wygasa za < 24h
         guard hoursToExpiration > 24 else {
-            print("🚫 Nie można odłożyć - hasło wygasa za \(Int(hoursToExpiration))h (< 24h)")
+            Logger.shared.logLocalized("log_notification_snooze_blocked %d", Int(hoursToExpiration))
             return
         }
         
@@ -112,14 +112,14 @@ public final class NotificationManager: ObservableObject {
         currentAlert?.close()
         currentAlert = nil
         
-        print("😴 Snooze aktywowany do \(snoozeEndTime!.formatted())")
+        Logger.shared.logLocalized("log_notification_snooze_enabled %@", snoozeEndTime!.formatted())
     }
     
     /// Ręczne zamknięcie powiadomienia (np. po kliknięciu "Zmień hasło")
     func dismissNotification() {
         currentAlert?.close()
         currentAlert = nil
-        print("✅ Powiadomienie zamknięte przez użytkownika")
+        Logger.shared.logLocalized("log_notification_closed_by_user")
     }
     
     // MARK: - Private Methods
@@ -149,7 +149,7 @@ public final class NotificationManager: ObservableObject {
     /// Pokazuje okienko powiadomienia
     private func showNotification(passwordExpirationDate: Date) {
         guard currentAlert == nil else {
-            print("⚠️ Okienko już otwarte")
+            Logger.shared.logLocalized("log_notification_window_already_open")
             return
         }
         
@@ -163,7 +163,7 @@ public final class NotificationManager: ObservableObject {
             },
             onChangePassword: { [weak self] in
                 guard let self = self else { return }
-                print("🔐 Użytkownik wybrał 'Zmień hasło'")
+                Logger.shared.logLocalized("log_notification_change_password_selected")
                 PasswordChangeHelper.openSystemPasswordSettings()
                 self.schedulePasswordChangeVerification()
                 self.dismissNotification()
@@ -180,7 +180,7 @@ public final class NotificationManager: ObservableObject {
             expirationDate: expirationDate,
             onSnooze: { },
             onChangePassword: { [weak self] in
-                print("🔐 [TEST] Użytkownik wybrał 'Zmień hasło'")
+                Logger.shared.logLocalized("log_notification_test_change_password_selected")
                 // TODO: Otwórz panel zmiany hasła systemowego
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/TouchID.prefPane"))
                 self?.dismissNotification()
@@ -193,7 +193,7 @@ public final class NotificationManager: ObservableObject {
     /// czy data wygaśnięcia hasła uległa zmianie.
     private func schedulePasswordChangeVerification() {
         guard let previousExpiry = currentExpirationDate else {
-            print("ℹ️ Brak currentExpirationDate – nie planuję weryfikacji zmiany hasła")
+            Logger.shared.logLocalized("log_notification_no_current_expiration")
             return
         }
 
@@ -212,22 +212,22 @@ public final class NotificationManager: ObservableObject {
                         let newExpiry = info.expiryDate
 
                         if newExpiry > previousExpiry {
-                            print("✅ Wydaje się, że hasło zostało zmienione (nowa data wygaśnięcia: \(newExpiry))")
+                            Logger.shared.logLocalized("log_notification_password_changed %@", String(describing: newExpiry))
                             self.updateExpirationDate(newExpiry)
                             self.hasShownNotificationToday = false
                         } else {
-                            print("⚠️ Po 30 minutach hasło wygląda na niezmienione (expiry nadal \(newExpiry))")
+                            Logger.shared.logLocalized("log_notification_password_unchanged %@", String(describing: newExpiry))
                         }
                     }
                 } catch {
                     await MainActor.run {
-                        print("❌ Błąd ponownego sprawdzenia hasła po 30 minutach: \(error)")
+                        Logger.shared.logLocalized("log_notification_recheck_error %@", String(describing: error))
                     }
                 }
             }
         }
 
-        print("⏱️ Zaplanowano weryfikację zmiany hasła za 30 minut")
+        Logger.shared.logLocalized("log_notification_recheck_scheduled")
     }
 
     
@@ -248,12 +248,12 @@ public final class NotificationManager: ObservableObject {
         
         let hours = Int(interval) / 3600
         let minutes = (Int(interval) % 3600) / 60
-        print("🌙 Następny reset o północy za \(hours)h \(minutes)min")
+        Logger.shared.logLocalized("log_notification_midnight_reset_in %d %d", hours, minutes)
         
         // Timer jednorazowy do północy
         Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
             Task { @MainActor in
-                print("🌙 Północ - reset flagi powiadomienia")
+                Logger.shared.logLocalized("log_notification_midnight_reset")
                 self.hasShownNotificationToday = false
                 self.isSnoozed = false
                 self.snoozeEndTime = nil

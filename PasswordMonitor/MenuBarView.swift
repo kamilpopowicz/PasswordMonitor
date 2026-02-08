@@ -21,16 +21,16 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Status
             if let info = passwordInfo {
-                Text("Password expires in:")
+                Text("menu_password_expires_title")
                     .font(.headline)
 
-                Text("\(info.daysUntilExpiration) dni")
+                Text(LanguageSettings.localizedString("days_remaining %lld", info.daysUntilExpiration))
                     .font(.title2)
                     .foregroundColor(info.daysUntilExpiration <= 7 ? .red : .green)
 
                 Divider()
 
-                Text("Ostatnia zmiana:")
+                Text("menu_last_change_title")
                     .font(.caption)
 
                 Text(info.lastSetDate, style: .date)
@@ -38,26 +38,26 @@ struct MenuBarView: View {
                 
                 // ostrzeżenie, jeśli dane są z cache (domena niedostępna)
                 if info.isFromCache {
-                    Text("Brak połączenia z domeną. Połącz się z VPN przed zmianą hasła.")
+                    Text("menu_domain_warning")
                         .font(.caption)
                         .foregroundColor(.red)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                Text("Check password status")
+                Text("menu_check_status")
                     .font(.headline)
             }
 
             Divider()
 
             // Akcje
-            Button("Check now") {
+            Button("menu_check_now") {
                 checkPasswordNow()
             }
             .disabled(isChecking)
 
-            Button("Change password") {
-                print("🔐 Użytkownik wybrał 'Zmień hasło' z MenuBar")
+            Button("menu_change_password") {
+                Logger.shared.logLocalized("log_menu_change_password_selected")
                 PasswordChangeHelper.openSystemPasswordSettings()
             }
             .disabled(!canChangePasswordNow)
@@ -71,19 +71,24 @@ struct MenuBarView: View {
                     .fill(helperServiceColor)
                     .frame(width: 8, height: 8)
 
-                Text("Background service")
+                Text("menu_background_service")
                     .font(.caption)
             }
 
-            Button("Ustawienia...") {
+            Button("menu_settings") {
                 openWindow(id: "settings-window")
+            }
+            .controlSize(.regular)
+
+            Button("menu_logs") {
+                openWindow(id: "logs-window")
             }
             .controlSize(.regular)
 
             Divider()
 
             // Test powiadomienia (wywołuje NotificationManager z datą testową)
-            Button("Test powiadomienia") {
+            Button("menu_test_notification") {
                 let testDate = Date().addingTimeInterval(23 * 3600)
                 NotificationManager.shared.showTestNotification(expirationDate: testDate)
             }
@@ -92,7 +97,7 @@ struct MenuBarView: View {
 
             Divider()
 
-            Button("Zamknij") {
+            Button("menu_quit") {
                 NSApplication.shared.terminate(nil)
             }
         }
@@ -131,7 +136,7 @@ struct MenuBarView: View {
             } catch {
                 DispatchQueue.main.async {
                     self.isChecking = false
-                    print("❌ Error: \(error)")
+                    Logger.shared.logLocalized("log_menu_check_error %@", String(describing: error))
                 }
             }
         }
