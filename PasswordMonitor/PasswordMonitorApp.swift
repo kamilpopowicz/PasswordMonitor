@@ -18,15 +18,13 @@ struct PasswordMonitorApp: App {
 
     var body: some Scene {
         // Menu bar extra (macOS 13+)
-        if appState.showMenuBar {
-            MenuBarExtra("app_name", systemImage: "lock.shield") {
-                MenuBarView()
-                    .environmentObject(appState)
-                    .environmentObject(languageSettings)
-                    .environment(\.locale, languageSettings.locale)
-            }
-            .menuBarExtraStyle(.window)
+        MenuBarExtra("app_name", systemImage: "lock.shield", isInserted: $appState.showMenuBar) {
+            MenuBarView()
+                .environmentObject(appState)
+                .environmentObject(languageSettings)
+                .environment(\.locale, languageSettings.locale)
         }
+        .menuBarExtraStyle(.window)
 
         Window("settings_window_title", id: "settings-window") {
             SettingsView()

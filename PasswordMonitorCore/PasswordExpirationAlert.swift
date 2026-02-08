@@ -8,7 +8,7 @@
 import SwiftUI
 import AppKit
 
-extension Notification.Name {
+public extension Notification.Name {
     static let passwordAlertVisibilityChanged = Notification.Name("PasswordMonitor.PasswordAlertVisibilityChanged")
 }
 

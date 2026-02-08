@@ -152,7 +152,7 @@ struct MenuBarView: View {
 
 class AppState: ObservableObject {
     @Published var launchAtLogin = false
-    @Published private(set) var showMenuBar = false
+    @Published var showMenuBar = false
     private var windowCount = 0
     private var alertVisible = false
     private var alertObserver: Any?
