@@ -74,19 +74,30 @@ struct SettingsView: View {
                         Text("settings_notification_footnote")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .italic()
                     }
 
                     // MARK: Startup
                     Section(header: Text("settings_section_startup").font(.headline)) {
                         Toggle("settings_launch_at_login", isOn: $launchAtLogin)
 
-                        Text(LanguageSettings.localizedString("settings_helper_desc %@", notificationHourString))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(LanguageSettings.localizedString("settings_helper_desc %@", notificationHourString))
+                            Text("settings_background_helper_info")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .italic()
+                    }
 
-                        Text("settings_background_helper_info")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    // MARK: Test powiadomień
+                    Section {
+                        Button("menu_test_notification") {
+                            let testDate = Date().addingTimeInterval(23 * 3600)
+                            NotificationManager.shared.showTestNotification(expirationDate: testDate)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.orange)
                     }
 
                     // MARK: Active Directory
@@ -134,6 +145,7 @@ struct SettingsView: View {
                         Text("language_change_footnote")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .italic()
                     }
                     
                     // MARK: Language Assist (On-Device)
@@ -160,6 +172,7 @@ struct SettingsView: View {
                         Text("language_assist_footnote")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .italic()
                     }
 
                     // MARK: Prywatność / Logi
@@ -169,6 +182,7 @@ struct SettingsView: View {
                         Text("settings_minimal_logging_footnote")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .italic()
                     }
 
                     // MARK: Informacje

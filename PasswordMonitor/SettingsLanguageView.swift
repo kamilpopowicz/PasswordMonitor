@@ -27,6 +27,7 @@ struct SettingsLanguageView: View {
                 } footer: {
                     Text("language_change_footnote")
                         .font(.caption)
+                        .italic()
                 }
             }
             .frame(minWidth: 300, minHeight: 120)

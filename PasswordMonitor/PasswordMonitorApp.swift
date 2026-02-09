@@ -90,6 +90,7 @@ struct AppCommands: Commands {
             Button("menu_logs") {
                 openWindow(id: "logs-window")
             }
+            .keyboardShortcut("l", modifiers: .command)
         }
     }
 }

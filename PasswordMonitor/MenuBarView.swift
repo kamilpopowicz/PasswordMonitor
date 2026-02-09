@@ -88,25 +88,18 @@ struct MenuBarView: View {
 
             Divider()
 
-            // Test powiadomienia (wywołuje NotificationManager z datą testową)
-            Button("menu_test_notification") {
-                let testDate = Date().addingTimeInterval(23 * 3600)
-                NotificationManager.shared.showTestNotification(expirationDate: testDate)
-            }
-            .buttonStyle(.bordered)
-            .tint(.orange)
-
-            Divider()
-
             Button("menu_quit") {
                 NSApplication.shared.terminate(nil)
             }
 
             Divider()
 
-            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            VStack(spacing: 2) {
+                Text("Copyright (c) 2026 Kamil Popowicz.")
+                Text("All rights reserved.")
+            }
+            .font(.caption2)
+            .foregroundColor(.secondary)
         }
         .padding()
         .frame(width: 250)

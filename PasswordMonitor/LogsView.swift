@@ -15,63 +15,77 @@ struct LogsView: View {
     @State private var selectedLevel: Logger.Level? = nil
     @State private var isAutoScrollEnabled = true
     @State private var autoScrollOverride: Bool? = nil
+    @State private var showSearchField = false
+    private let searchColumnWidth: CGFloat = 260
+    private let searchButtonWidth: CGFloat = 28
+    private let searchButtonSpacing: CGFloat = 6
+    private let levelsColumnWidth: CGFloat = 430
+    private let minWindowWidth: CGFloat = 730
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("logs_title")
-                    .font(.headline)
-                Spacer()
-                Picker("logs_level_filter", selection: $selectedLevel) {
-                    Text("logs_level_all").tag(Logger.Level?.none)
-                    Text("logs_level_debug").tag(Logger.Level?.some(.debug))
-                    Text("logs_level_info").tag(Logger.Level?.some(.info))
-                    Text("logs_level_warning").tag(Logger.Level?.some(.warning))
-                    Text("logs_level_error").tag(Logger.Level?.some(.error))
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        (Text("logs_level_filter") + Text(":"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Picker("", selection: $selectedLevel) {
+                            Text("logs_level_all").tag(Logger.Level?.none)
+                            Text("logs_level_info").tag(Logger.Level?.some(.info))
+                            Text("logs_level_warning").tag(Logger.Level?.some(.warning))
+                            Text("logs_level_error").tag(Logger.Level?.some(.error))
+                            Text("logs_level_debug").tag(Logger.Level?.some(.debug))
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .frame(width: levelsColumnWidth - 80, alignment: .leading)
+                    }
+
+                    HStack(spacing: 8) {
+                        (Text("logs_legend") + Text(":"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        LegendDot(color: .primary, labelKey: "logs_level_info")
+                        LegendDot(color: .orange, labelKey: "logs_level_warning")
+                        LegendDot(color: .red, labelKey: "logs_level_error")
+                        LegendDot(color: .secondary, labelKey: "logs_level_debug")
+                    }
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 360)
-                HStack(spacing: 8) {
-                    Text("logs_legend")
+                .frame(width: levelsColumnWidth, alignment: .leading)
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    HStack(spacing: searchButtonSpacing) {
+                        SearchField(text: $searchText, placeholder: String(localized: "logs_search_placeholder"))
+                            .frame(width: showSearchField ? (searchColumnWidth - searchButtonWidth - searchButtonSpacing) : 0)
+                            .opacity(showSearchField ? 1 : 0)
+                            .clipped()
+                            .animation(.easeInOut(duration: 0.18), value: showSearchField)
+                            .allowsHitTesting(showSearchField)
+
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                showSearchField.toggle()
+                                if !showSearchField { searchText = "" }
+                            }
+                        } label: {
+                            Image(systemName: showSearchField ? "xmark" : "magnifyingglass")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .frame(width: searchButtonWidth)
+                    }
+                    .frame(width: searchColumnWidth, alignment: .trailing)
+
+                    Text("logs_privacy_notice")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    LegendDot(color: .red, labelKey: "logs_level_error")
-                    LegendDot(color: .orange, labelKey: "logs_level_warning")
-                    LegendDot(color: .secondary, labelKey: "logs_level_debug")
-                    LegendDot(color: .primary, labelKey: "logs_level_info")
+                        .italic()
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: searchColumnWidth, alignment: .trailing)
                 }
             }
             .padding()
-            
-            Text("logs_privacy_notice")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.horizontal)
-
-            HStack {
-                TextField("logs_search_placeholder", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-                Toggle("logs_autoscroll", isOn: Binding(
-                    get: { autoScrollOverride ?? isAutoScrollEnabled },
-                    set: { autoScrollOverride = $0 }
-                ))
-                Button("logs_only_errors") {
-                    selectedLevel = (selectedLevel == .error) ? nil : .error
-                }
-                Button("logs_copy_all") {
-                    logStore.copyAll()
-                }
-                Button("logs_export") {
-                    logStore.exportLog(content: filteredContent)
-                }
-                Button("logs_reveal") {
-                    logStore.revealInFinder()
-                }
-                Button("logs_clear") {
-                    logStore.clear()
-                }
-            }
-            .padding([.horizontal, .bottom])
 
             Divider()
 
@@ -119,12 +133,34 @@ struct LogsView: View {
                 }
             }
 
+            HStack {
+                Toggle("logs_autoscroll", isOn: Binding(
+                    get: { autoScrollOverride ?? isAutoScrollEnabled },
+                    set: { autoScrollOverride = $0 }
+                ))
+                Button("logs_only_errors") {
+                    selectedLevel = (selectedLevel == .error) ? nil : .error
+                }
+                Button("logs_copy_all") {
+                    logStore.copyAll()
+                }
+                Button("logs_clear") {
+                    logStore.clear()
+                }
+                Spacer()
+                Button("logs_reveal") {
+                    logStore.revealInFinder()
+                }
+            }
+            .padding([.horizontal, .top])
+
             Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
                 .font(.caption2)
                 .foregroundColor(.secondary)
-                .padding([.horizontal, .bottom])
+                .padding(.horizontal)
+                .padding(.vertical, 8)
         }
-        .frame(minWidth: 640, minHeight: 400)
+        .frame(minWidth: minWindowWidth, minHeight: 400)
         .onAppear {
             logStore.start()
             appState.windowOpened()
@@ -153,6 +189,44 @@ struct LogsView: View {
         if line.contains("[DEBUG]") { return .secondary }
         if line.contains("[INFO]") { return .primary }
         return .primary
+    }
+}
+
+private struct SearchField: NSViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    func makeNSView(context: Context) -> NSSearchField {
+        let field = NSSearchField()
+        field.placeholderString = placeholder
+        field.delegate = context.coordinator
+        field.sendsSearchStringImmediately = true
+        field.sendsWholeSearchString = true
+        return field
+    }
+
+    func updateNSView(_ nsView: NSSearchField, context: Context) {
+        if nsView.stringValue != text {
+            nsView.stringValue = text
+        }
+        nsView.placeholderString = placeholder
+    }
+
+    final class Coordinator: NSObject, NSSearchFieldDelegate {
+        @Binding var text: String
+
+        init(text: Binding<String>) {
+            _text = text
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let field = obj.object as? NSSearchField else { return }
+            text = field.stringValue
+        }
     }
 }
 
