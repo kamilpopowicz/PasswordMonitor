@@ -101,6 +101,12 @@ struct MenuBarView: View {
             Button("menu_quit") {
                 NSApplication.shared.terminate(nil)
             }
+
+            Divider()
+
+            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
         }
         .padding()
         .frame(width: 250)

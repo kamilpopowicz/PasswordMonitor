@@ -15,6 +15,7 @@ private enum SettingsKeys {
     static let maxPasswordAge = "max_password_age"
     static let warningThreshold = "warning_threshold"
     static let notificationHour = "notification_hour" // Format: "09:00"
+    static let minimalLogging = "minimal_logging"
 }
 
 struct SettingsView: View {
@@ -28,6 +29,7 @@ struct SettingsView: View {
     @State private var maxPasswordAge = 30
     @State private var warningThreshold = 7
     @State private var selectedLanguage: LanguageSettings.AppLanguage = .english
+    @State private var minimalLogging = true
     @State private var languageAssistText = ""
     @State private var languageAssistCancellable: AnyCancellable?
     @State private var showLanguageSuggestion = false
@@ -49,6 +51,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.maxPasswordAge) private var storedMaxPasswordAge = 30
     @AppStorage(SettingsKeys.warningThreshold) private var storedWarningThreshold = 7
     @AppStorage(SettingsKeys.notificationHour) private var storedNotificationHour = "09:00"
+    @AppStorage(SettingsKeys.minimalLogging) private var storedMinimalLogging = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -78,6 +81,10 @@ struct SettingsView: View {
                         Toggle("settings_launch_at_login", isOn: $launchAtLogin)
 
                         Text(LanguageSettings.localizedString("settings_helper_desc %@", notificationHourString))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Text("settings_background_helper_info")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -155,6 +162,15 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
 
+                    // MARK: Prywatność / Logi
+                    Section(header: Text("settings_section_privacy").font(.headline)) {
+                        Toggle("settings_minimal_logging", isOn: $minimalLogging)
+
+                        Text("settings_minimal_logging_footnote")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
                     // MARK: Informacje
                     Section(header: Text("settings_section_info").font(.headline)) {
                         HStack {
@@ -192,6 +208,11 @@ struct SettingsView: View {
                 .disabled(!isDirty)
             }
             .padding([.horizontal, .bottom])
+
+            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .padding(.bottom, 8)
         }
         .frame(minWidth: 480, minHeight: 360)
         .onAppear {
@@ -229,6 +250,7 @@ struct SettingsView: View {
             || notificationHourString != storedNotificationHour
             || launchAtLogin != savedLaunchAtLogin
             || selectedLanguage != languageSettings.selectedLanguage
+            || minimalLogging != storedMinimalLogging
     }
 
     // MARK: - Helpers
@@ -272,6 +294,7 @@ struct SettingsView: View {
         notificationHourString = storedNotificationHour
         notificationDate = timeStringToDate(notificationHourString) ?? Date()
         selectedLanguage = languageSettings.selectedLanguage
+        minimalLogging = storedMinimalLogging
 
         // Helper service status
         let service = SMAppService.loginItem(identifier: helperBundleID)
@@ -338,6 +361,7 @@ struct SettingsView: View {
         storedMaxPasswordAge = maxPasswordAge
         storedWarningThreshold = warningThreshold
         storedNotificationHour = notificationHourString
+        storedMinimalLogging = minimalLogging
 
         // Zastosuj stan helpera
         toggleLaunchAtLogin(launchAtLogin)

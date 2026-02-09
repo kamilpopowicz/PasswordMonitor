@@ -1,3 +1,10 @@
+//
+//  LogStore.swift
+//  PasswordMonitor
+//
+//  Created by Kamil Popowicz on 09/02/2026.
+//
+
 import Foundation
 import AppKit
 import Darwin

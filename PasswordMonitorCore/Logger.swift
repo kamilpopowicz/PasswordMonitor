@@ -34,12 +34,15 @@ public class Logger {
     }
     
     public func log(_ message: String, level: Level = .info) {
+        if Self.isMinimalLoggingEnabled, level == .debug { return }
+
         let timestamp = DateFormatter.localizedString(
             from: Date(),
             dateStyle: .short,
             timeStyle: .medium
         )
-        let logMessage = "[\(timestamp)] [\(level.rawValue)] \(message)\n"
+        let maskedMessage = Self.maskSensitive(message)
+        let logMessage = "[\(timestamp)] [\(level.rawValue)] \(maskedMessage)\n"
         
         if let data = logMessage.data(using: .utf8) {
             if FileManager.default.fileExists(atPath: logFileURL.path) {
@@ -112,5 +115,57 @@ public class Logger {
 
         cachedBundle = (languageCode, .main)
         return .main
+    }
+
+    private static var isMinimalLoggingEnabled: Bool {
+        let value = UserDefaults.standard.object(forKey: "minimal_logging") as? Bool
+        return value ?? true
+    }
+
+    private static func maskSensitive(_ input: String) -> String {
+        var result = input
+
+        let username = NSUserName()
+        if !username.isEmpty {
+            result = result.replacingOccurrences(of: username, with: "<user>")
+        }
+
+        let fullName = NSFullUserName()
+        if !fullName.isEmpty {
+            result = result.replacingOccurrences(of: fullName, with: "<user>")
+        }
+
+        let domain = UserDefaults.standard.string(forKey: "ad_domain") ?? ""
+        if !domain.isEmpty {
+            result = result.replacingOccurrences(of: domain, with: "<domain>")
+        }
+
+        // /Users/<name> → /Users/<user>
+        result = replaceRegex(
+            pattern: "/Users/[^/\\s]+",
+            in: result,
+            with: "/Users/<user>"
+        )
+
+        // Email masking
+        result = replaceRegex(
+            pattern: "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}",
+            in: result,
+            with: "<email>",
+            options: [.caseInsensitive]
+        )
+
+        return result
+    }
+
+    private static func replaceRegex(
+        pattern: String,
+        in input: String,
+        with replacement: String,
+        options: NSRegularExpression.Options = []
+    ) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else { return input }
+        let range = NSRange(input.startIndex..., in: input)
+        return regex.stringByReplacingMatches(in: input, options: [], range: range, withTemplate: replacement)
     }
 }

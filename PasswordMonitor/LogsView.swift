@@ -1,3 +1,10 @@
+//
+//  LogsView.swift
+//  PasswordMonitor
+//
+//  Created by Kamil Popowicz on 09/02/2026.
+//
+
 import SwiftUI
 import PasswordMonitorCore
 
@@ -35,6 +42,11 @@ struct LogsView: View {
                 }
             }
             .padding()
+            
+            Text("logs_privacy_notice")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.horizontal)
 
             HStack {
                 TextField("logs_search_placeholder", text: $searchText)
@@ -106,6 +118,11 @@ struct LogsView: View {
                     proxy.scrollTo("bottom", anchor: .bottom)
                 }
             }
+
+            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .padding([.horizontal, .bottom])
         }
         .frame(minWidth: 640, minHeight: 400)
         .onAppear {

@@ -2,6 +2,8 @@
 //  LanguageSettings.swift
 //  PasswordMonitor
 //
+//  Created by Kamil Popowicz on 09/02/2026.
+//
 //  Manages app language switching with runtime locale propagation.
 //
 

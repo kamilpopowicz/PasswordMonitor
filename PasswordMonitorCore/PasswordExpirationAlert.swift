@@ -209,6 +209,10 @@ private struct AlertContentView: View {
                 .keyboardShortcut(.defaultAction)
             }
             .padding(.top, 10)
+
+            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
         }
         .padding(24)
         .frame(width: 420)

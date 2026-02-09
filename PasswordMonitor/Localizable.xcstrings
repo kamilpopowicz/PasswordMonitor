@@ -1725,6 +1725,22 @@
         }
       }
     },
+    "logs_privacy_notice" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logs do not store sensitive personal data."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logi nie przechowują wrażliwych danych osobowych."
+          }
+        }
+      }
+    },
     "logs_export" : {
       "localizations" : {
         "en" : {
@@ -2193,6 +2209,23 @@
         }
       }
     },
+    "settings_background_helper_info" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The background helper runs only to check password expiration and show notifications."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper w tle działa wyłącznie do sprawdzania ważności hasła i wyświetlania powiadomień."
+          }
+        }
+      }
+    },
     "settings_helper_status" : {
       "localizations" : {
         "en" : {
@@ -2221,6 +2254,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Uruchom przy logowaniu"
+          }
+        }
+      }
+    },
+    "settings_minimal_logging" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimal logging (recommended)"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimalne logowanie (zalecane)"
+          }
+        }
+      }
+    },
+    "settings_minimal_logging_footnote" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Debug logs are disabled and sensitive data is masked."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logi debug są wyłączone, a dane wrażliwe są maskowane."
+          }
+        }
+      }
+    },
+    "settings_section_privacy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy & Logs"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prywatność i logi"
           }
         }
       }
