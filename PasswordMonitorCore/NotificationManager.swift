@@ -29,6 +29,13 @@ public final class NotificationManager: ObservableObject {
     public func markNotificationAsShown() {
         hasShownNotificationToday = true
     }
+
+    /// Resetuje dzienny licznik i snooze (np. po zmianie domeny).
+    public func resetDailyNotificationState() {
+        hasShownNotificationToday = false
+        isSnoozed = false
+        snoozeEndTime = nil
+    }
     
     /// Czy powiadomienie jest obecnie w trybie snooze (odłożone)
     @Published private var isSnoozed = false
@@ -83,6 +90,17 @@ public final class NotificationManager: ObservableObject {
         
         let notificationTime = getNotificationTime()
         let now = Date()
+
+        let warningThresholdDays = UserDefaults.standard.integer(forKey: "warning_threshold")
+        let thresholdDays = warningThresholdDays > 0 ? warningThresholdDays : 7
+        let daysRemaining = Calendar.current.dateComponents([.day], from: now, to: expirationDate).day ?? 0
+
+        // Jeśli hasło wygasa w progu ostrzeżenia, pokaż alert od razu (nie czekaj na godzinę).
+        if daysRemaining <= thresholdDays {
+            Logger.shared.logLocalized("log_notification_threshold_reached %d", daysRemaining)
+            showNotification(passwordExpirationDate: expirationDate)
+            return
+        }
         
         // Czy nadszedł czas powiadomienia (lub minął i komputer był uśpiony)?
         if now >= notificationTime {

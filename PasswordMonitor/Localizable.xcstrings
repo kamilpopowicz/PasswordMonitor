@@ -657,6 +657,91 @@
         }
       }
     },
+    "log_ad_nodes_detected %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AD nodes detected: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wykryte węzły AD: %@"
+          }
+        }
+      }
+    },
+    "log_ad_nodes_list_error %@ %d" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AD nodes list error: %@ (code %d)"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Błąd listy węzłów AD: %@ (kod %d)"
+          }
+        }
+      }
+    },
+    "log_ad_domain_requested %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requested AD node: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Żądany węzeł AD: %@"
+          }
+        }
+      }
+    },
+    "log_ad_node_selected %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AD node selected: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybrany węzeł AD: %@"
+          }
+        }
+      }
+    },
+    "log_ad_node_fallback %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AD node fallback: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapasowy węzeł AD: %@"
+          }
+        }
+      }
+    },
     "log_ad_read_error %@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -806,6 +891,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "dscl output: %@"
+          }
+        }
+      }
+    },
+    "log_dscl_local_output %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dscl local output: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dscl local output: %@"
           }
         }
       }
@@ -1609,6 +1711,23 @@
         }
       }
     },
+    "log_notification_threshold_reached %d" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notification threshold reached: %d days"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osiągnięto próg powiadomienia: %d dni"
+          }
+        }
+      }
+    },
     "log_notification_window_already_open" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2335,6 +2454,150 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Logi debug są wyłączone, a dane wrażliwe są maskowane."
+          }
+        }
+      }
+    },
+    "settings_reset_confirm_action" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetuj"
+          }
+        }
+      }
+    },
+    "settings_reset_confirm_message" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This will remove all saved settings for Password Monitor on this Mac."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To usunie wszystkie zapisane ustawienia Password Monitor na tym Macu."
+          }
+        }
+      }
+    },
+    "settings_reset_confirm_title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset Settings?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zresetować ustawienia?"
+          }
+        }
+      }
+    },
+    "settings_reset_defaults" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset settings to defaults"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetuj ustawienia do domyślnych"
+          }
+        }
+      }
+    },
+    "settings_delete_app" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete app"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usuń aplikację"
+          }
+        }
+      }
+    },
+    "settings_delete_confirm_title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Password Monitor?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usunąć Password Monitor?"
+          }
+        }
+      }
+    },
+    "settings_delete_confirm_message" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This will remove the app and all saved data on this Mac."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To usunie aplikację i wszystkie zapisane dane na tym Macu."
+          }
+        }
+      }
+    },
+    "settings_delete_confirm_yes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tak"
+          }
+        }
+      }
+    },
+    "log_settings_domain_check_error %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings domain check error: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Błąd sprawdzania domeny w ustawieniach: %@"
           }
         }
       }

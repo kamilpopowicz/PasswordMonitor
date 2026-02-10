@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.2
+- Added in-app reset and delete actions for settings and app data.
+- Fixed helper toggle behavior on Save to prevent unwanted UI reopen.
+- Added immediate password check after domain change.
+- Added localization check script to the build pipeline.
+
 ## PasswordMonitor 1.1
 - Added privacy-first logging with PII masking (usernames, domains, paths, emails).
 - Added Minimal Logging mode (debug logs disabled by default).

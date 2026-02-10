@@ -43,6 +43,8 @@ struct SettingsView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var helperStatus: SMAppService.Status = .notFound
+    @State private var showResetConfirm = false
+    @State private var showDeleteConfirm = false
 
     private let helperBundleID = "popo.PasswordMonitorHelperApp"
 
@@ -58,6 +60,19 @@ struct SettingsView: View {
             // Główna zawartość ustawień
             ScrollView {
                 Form {
+                    // MARK: Startup
+                    Section(header: Text("settings_section_startup").font(.headline)) {
+                        Toggle("settings_launch_at_login", isOn: $launchAtLogin)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(LanguageSettings.localizedString("settings_helper_desc %@", notificationHourString))
+                            Text("settings_background_helper_info")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .italic()
+                    }
+
                     // MARK: Powiadomienia
                     Section(header: Text("settings_section_notifications").font(.headline)) {
                         DatePicker(
@@ -75,23 +90,7 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .italic()
-                    }
 
-                    // MARK: Startup
-                    Section(header: Text("settings_section_startup").font(.headline)) {
-                        Toggle("settings_launch_at_login", isOn: $launchAtLogin)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(LanguageSettings.localizedString("settings_helper_desc %@", notificationHourString))
-                            Text("settings_background_helper_info")
-                        }
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .italic()
-                    }
-
-                    // MARK: Test powiadomień
-                    Section {
                         Button("menu_test_notification") {
                             let testDate = Date().addingTimeInterval(23 * 3600)
                             NotificationManager.shared.showTestNotification(expirationDate: testDate)
@@ -204,24 +203,52 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+
+                    // MARK: Actions
+                    Section {
+                        HStack {
+                            HStack(spacing: 8) {
+                                Button("settings_reset_defaults") {
+                                    showResetConfirm = true
+                                }
+                                Button("settings_delete_app") {
+                                    showDeleteConfirm = true
+                                }
+                                .foregroundColor(.red)
+                                .tint(.red)
+                            }
+                            Spacer()
+                            Button("common_cancel") {
+                                cancelChanges()
+                            }
+                            Button("common_save") {
+                                saveChanges()
+                            }
+                            .keyboardShortcut(.defaultAction)
+                            .disabled(!isDirty)
+                        }
+                    }
                 }
                 .formStyle(.grouped)
                 .padding()
             }
 
-            // Dolny pasek przycisków
-            HStack {
-                Spacer()
-                Button("common_cancel") {
-                    cancelChanges()
+            .alert("settings_reset_confirm_title", isPresented: $showResetConfirm) {
+                Button("settings_reset_confirm_action", role: .destructive) {
+                    resetDefaults()
                 }
-                Button("common_save") {
-                    saveChanges()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!isDirty)
+                Button("common_cancel", role: .cancel) {}
+            } message: {
+                Text("settings_reset_confirm_message")
             }
-            .padding([.horizontal, .bottom])
+            .alert("settings_delete_confirm_title", isPresented: $showDeleteConfirm) {
+                Button("settings_delete_confirm_yes", role: .destructive) {
+                    deleteAppAndData()
+                }
+                Button("common_cancel", role: .cancel) {}
+            } message: {
+                Text("settings_delete_confirm_message")
+            }
 
             Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
                 .font(.caption2)
@@ -318,29 +345,37 @@ struct SettingsView: View {
         Logger.shared.logLocalized("log_settings_loaded_notification_time %@", notificationHourString)
     }
 
-    private func toggleLaunchAtLogin(_ enabled: Bool) {
+    private func toggleLaunchAtLogin(_ enabled: Bool, showUserAlert: Bool = true) {
         let service = SMAppService.loginItem(identifier: helperBundleID)
         do {
             if enabled {
                 try service.register()
                 Logger.shared.logLocalized("log_helper_registered")
                 helperStatus = service.status
-                if helperStatus == .requiresApproval {
-                    alertMessage = LanguageSettings.localizedString("helper_requires_approval")
-                } else {
-                    alertMessage = LanguageSettings.localizedString("helper_enabled")
+                if showUserAlert {
+                    if helperStatus == .requiresApproval {
+                        alertMessage = LanguageSettings.localizedString("helper_requires_approval")
+                    } else {
+                        alertMessage = LanguageSettings.localizedString("helper_enabled")
+                    }
                 }
             } else {
                 try service.unregister()
                 helperStatus = .notRegistered
                 Logger.shared.logLocalized("log_helper_unregistered")
-                alertMessage = LanguageSettings.localizedString("helper_disabled")
+                if showUserAlert {
+                    alertMessage = LanguageSettings.localizedString("helper_disabled")
+                }
             }
-            showAlert = true
+            if showUserAlert {
+                showAlert = true
+            }
         } catch {
             Logger.shared.logLocalized("log_helper_toggle_error %@", error.localizedDescription)
-            alertMessage = LanguageSettings.localizedString("error_prefix %@", error.localizedDescription)
-            showAlert = true
+            if showUserAlert {
+                alertMessage = LanguageSettings.localizedString("error_prefix %@", error.localizedDescription)
+                showAlert = true
+            }
             launchAtLogin = !enabled
             helperStatus = service.status
         }
@@ -370,6 +405,8 @@ struct SettingsView: View {
 
     /// Zapisuje wprowadzone zmiany do AppStorage i helpera
     private func saveChanges() {
+        let domainChanged = (domainName != storedDomainName)
+
         // Zapisz do AppStorage
         storedDomainName = domainName
         storedMaxPasswordAge = maxPasswordAge
@@ -377,11 +414,33 @@ struct SettingsView: View {
         storedNotificationHour = notificationHourString
         storedMinimalLogging = minimalLogging
 
-        // Zastosuj stan helpera
-        toggleLaunchAtLogin(launchAtLogin)
+        // Zastosuj stan helpera tylko jeśli zmieniony
+        let savedLaunchAtLogin = (helperStatus == .enabled)
+        if launchAtLogin != savedLaunchAtLogin {
+            toggleLaunchAtLogin(launchAtLogin, showUserAlert: false)
+        }
 
         // Ustaw język na wybrany po zapisie
         languageSettings.selectedLanguage = selectedLanguage
+
+        if domainChanged {
+            DispatchQueue.global(qos: .userInitiated).async {
+                let manager = ActiveDirectoryManager()
+                let username = NSUserName()
+                do {
+                    let info = try manager.getPasswordInfo(for: username)
+                    DispatchQueue.main.async {
+                        NotificationManager.shared.updateExpirationDate(info.expiryDate)
+                        NotificationManager.shared.resetDailyNotificationState()
+                        NotificationManager.shared.checkAndShowNotificationIfNeeded()
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        Logger.shared.logLocalized("log_settings_domain_check_error %@", String(describing: error))
+                    }
+                }
+            }
+        }
 
         // Ponownie wczytaj, żeby zsynchronizować helperStatus i wyzerować "dirty"
         dismiss()
@@ -390,6 +449,61 @@ struct SettingsView: View {
     /// Odrzuca zmiany i przywraca stan zapisany
     private func cancelChanges() {
         dismiss()
+    }
+
+    private func resetDefaults() {
+        disableLaunchAtLoginIfNeeded()
+
+        let bundleID = Bundle.main.bundleIdentifier ?? "popo.PasswordMonitor"
+        UserDefaults.standard.removePersistentDomain(forName: bundleID)
+        UserDefaults.standard.synchronize()
+
+        storedDomainName = ""
+        storedMaxPasswordAge = 30
+        storedWarningThreshold = 7
+        storedNotificationHour = "09:00"
+        storedMinimalLogging = true
+
+        let systemLanguage = Locale.current.language.languageCode?.identifier ?? "en"
+        languageSettings.selectedLanguage = LanguageSettings.AppLanguage(rawValue: systemLanguage) ?? .english
+
+        loadSettings()
+    }
+
+    private func deleteAppAndData() {
+        disableLaunchAtLoginIfNeeded()
+        resetDefaults()
+
+        let fm = FileManager.default
+        let home = fm.homeDirectoryForCurrentUser
+
+        let paths: [URL] = [
+            home.appendingPathComponent(".password_monitor.log"),
+            home.appendingPathComponent("Library/Logs/popo.PasswordMonitor"),
+            home.appendingPathComponent("Library/Logs/PasswordMonitor"),
+            home.appendingPathComponent("Library/Caches/popo.PasswordMonitor"),
+            home.appendingPathComponent("Library/Caches/PasswordMonitor"),
+            home.appendingPathComponent("Library/Application Support/PasswordMonitor"),
+            home.appendingPathComponent("Library/Saved Application State/popo.PasswordMonitor.savedState"),
+            home.appendingPathComponent("Library/Preferences/popo.PasswordMonitor.plist"),
+            home.appendingPathComponent("Library/Containers/popo.PasswordMonitor"),
+            home.appendingPathComponent("Library/LaunchAgents/popo.PasswordMonitorHelperApp.plist"),
+            URL(fileURLWithPath: "/Applications/PasswordMonitor.app"),
+            home.appendingPathComponent("Desktop/PasswordMonitor/PasswordMonitor.app")
+        ]
+
+        for url in paths {
+            try? fm.removeItem(at: url)
+        }
+
+        NSApplication.shared.terminate(nil)
+    }
+
+    private func disableLaunchAtLoginIfNeeded() {
+        let service = SMAppService.loginItem(identifier: helperBundleID)
+        try? service.unregister()
+        helperStatus = service.status
+        launchAtLogin = false
     }
 }
 

@@ -19,7 +19,7 @@ public class ActiveDirectoryManager {
 
     /// Sprawdza połączenie z AD
     func checkADConnectivity() -> Bool {
-        guard let domainName = resolvedDomainName() else {
+        guard let domainName = resolvedADNodeName() else {
             Logger.shared.logLocalized("log_ad_no_domain_configured")
             return false
         }
@@ -49,7 +49,7 @@ public class ActiveDirectoryManager {
     /// 3. Gdy oba źródła zawiodą – próbuje z cache
     public func getPasswordInfo(for username: String) throws -> PasswordInfo {
         // 1. Najpierw próba z AD
-        guard let domainName = resolvedDomainName() else {
+        guard let domainName = resolvedADNodeName() else {
             Logger.shared.logLocalized("log_ad_no_domain_configured")
             throw ADError.invalidData
         }
@@ -96,7 +96,7 @@ public class ActiveDirectoryManager {
 
     /// Pobiera SMBPasswordLastSet z AD
     private func getPasswordInfoFromAD(username: String) throws -> PasswordInfo {
-        guard let domainName = resolvedDomainName() else {
+        guard let domainName = resolvedADNodeName() else {
             Logger.shared.logLocalized("log_ad_no_domain_configured")
             throw ADError.invalidData
         }
@@ -133,6 +133,7 @@ public class ActiveDirectoryManager {
         guard let output = String(data: data, encoding: .utf8) else {
             throw ADError.invalidData
         }
+        Logger.shared.logLocalized("log_dscl_local_output %@", output)
 
         // DEBUG stdout
         Logger.shared.logLocalized("log_dscl_output %@", output)
@@ -205,13 +206,12 @@ public class ActiveDirectoryManager {
             throw ADError.invalidData
         }
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM/dd/yyyy HH:mm:ss"
-
         let lastSetDate: Date
-        if let date = formatter.date(from: timeString) {
+        if let date = parseDateString(timeString) {
             lastSetDate = date
         } else if let timestamp = Double(timeString) {
+            lastSetDate = Date(timeIntervalSince1970: timestamp)
+        } else if let timestamp = firstNumericTimestamp(in: timeString) {
             lastSetDate = Date(timeIntervalSince1970: timestamp)
         } else {
             throw ADError.invalidData
@@ -224,6 +224,101 @@ public class ActiveDirectoryManager {
         let raw = UserDefaults.standard.string(forKey: "ad_domain") ?? ""
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func resolvedADNodeName() -> String? {
+        guard let requested = resolvedDomainName() else { return nil }
+        Logger.shared.logLocalized("log_ad_domain_requested %@", maskDomainPartial(requested))
+        let nodes = listADNodes()
+        if let match = nodes.first(where: { $0.caseInsensitiveCompare(requested) == .orderedSame }) {
+            Logger.shared.logLocalized("log_ad_node_selected %@", maskDomainPartial(match))
+            return match
+        }
+        if let fallback = nodes.first {
+            Logger.shared.logLocalized("log_ad_node_fallback %@", maskDomainPartial(fallback))
+            return fallback
+        }
+        return requested
+    }
+
+    private func listADNodes() -> [String] {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
+        task.arguments = ["/Active Directory", "-list", "/"]
+
+        let pipe = Pipe()
+        let errorPipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = errorPipe
+
+        do {
+            try task.run()
+            task.waitUntilExit()
+        } catch {
+            return []
+        }
+
+        guard task.terminationStatus == 0 else {
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+            Logger.shared.logLocalized("log_ad_nodes_list_error %@ %d", errorOutput.isEmpty ? "unknown" : errorOutput, task.terminationStatus)
+            return []
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else { return [] }
+        let nodes = output
+            .split(separator: "\n")
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        
+        let masked = nodes.map { maskDomainPartial($0) }.joined(separator: ", ")
+        Logger.shared.logLocalized("log_ad_nodes_detected %@", masked.isEmpty ? "<none>" : masked)
+        
+        return nodes
+    }
+
+    private func parseDateString(_ value: String) -> Date? {
+        let posix = Locale(identifier: "en_US_POSIX")
+
+        let formatter1 = DateFormatter()
+        formatter1.locale = posix
+        formatter1.dateFormat = "MM/dd/yyyy HH:mm:ss"
+        if let date = formatter1.date(from: value) { return date }
+
+        let formatter2 = DateFormatter()
+        formatter2.locale = posix
+        formatter2.dateFormat = "yyyy-MM-dd HH:mm:ss ZZZZZ"
+        if let date = formatter2.date(from: value) { return date }
+
+        let formatter3 = DateFormatter()
+        formatter3.locale = posix
+        formatter3.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        if let date = formatter3.date(from: value) { return date }
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = iso.date(from: value) { return date }
+        iso.formatOptions = [.withInternetDateTime]
+        return iso.date(from: value)
+    }
+
+    private func firstNumericTimestamp(in value: String) -> TimeInterval? {
+        let pattern = #"(?:\d{10,})"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return nil }
+        let range = NSRange(value.startIndex..., in: value)
+        guard let match = regex.firstMatch(in: value, options: [], range: range),
+              let r = Range(match.range, in: value) else { return nil }
+        return TimeInterval(value[r]) ?? nil
+    }
+
+    private func maskDomainPartial(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 3 else { return String(repeating: "*", count: max(1, trimmed.count)) }
+        let first = trimmed.prefix(1)
+        let last = trimmed.suffix(2)
+        let maskCount = max(0, trimmed.count - 3)
+        return "\(first)\(String(repeating: "*", count: maskCount))\(last)"
     }
 
     // MARK: - Wspólna logika wygasania
