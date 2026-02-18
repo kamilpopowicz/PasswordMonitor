@@ -123,6 +123,7 @@ private struct AlertContentView: View {
 
     @State private var timeRemaining: TimeInterval
     @State private var timer: Timer?
+    @State private var themeToken = UUID()
 
     init(
         expirationDate: Date,
@@ -141,7 +142,7 @@ private struct AlertContentView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
-                .foregroundColor(isUrgent ? .red : .orange)
+                .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.warning)
 
             Text("alert_title_expiring")
                 .font(.title2)
@@ -151,7 +152,7 @@ private struct AlertContentView: View {
             Text(smartAdviceTextKey())
                 .font(.body)
                 .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
+                .foregroundColor(PMTheme.textSecondary)
                 .frame(maxWidth: 320)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -159,31 +160,37 @@ private struct AlertContentView: View {
             VStack(spacing: 8) {
                 Text(remainingTitleKey)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(PMTheme.textSecondary)
 
                 if let lines = formattedTimeRemainingLines() {
                     VStack(spacing: 2) {
                         Text(lines.line1)
                             .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
-                            .foregroundColor(isUrgent ? .red : .primary)
+                            .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.textPrimary)
                         Text(lines.line2)
                             .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
-                            .foregroundColor(isUrgent ? .red : .primary)
+                            .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.textPrimary)
                     }
                     .onAppear { startTimer() }
                     .onDisappear { stopTimer() }
                 } else {
                     Text(formattedTimeRemaining())
                         .font(.system(size: isUrgent ? 34 : 28, weight: .bold, design: .monospaced))
-                        .foregroundColor(isUrgent ? .red : .primary)
+                        .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.textPrimary)
                         .onAppear { startTimer() }
                         .onDisappear { stopTimer() }
                 }
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 20)
-            .background((isUrgent ? Color.red : Color.blue).opacity(0.1))
-            .cornerRadius(8)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(PMTheme.fieldBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(isUrgent ? PMTheme.danger.opacity(0.6) : PMTheme.fieldStroke, lineWidth: 1)
+                    )
+            )
 
             HStack(spacing: 12) {
                 // "Odłóż" – niedostępny tylko gdy hasło wygasa za ≤ 24h
@@ -192,7 +199,7 @@ private struct AlertContentView: View {
                         .frame(minWidth: 100)
                 }
                 .buttonStyle(.bordered)
-                .tint(.red)
+                .tint(PMTheme.danger)
                 .disabled(isUrgent)
                 .opacity(isUrgent ? 0.5 : 1.0)
                 .help(isUrgent
@@ -205,17 +212,25 @@ private struct AlertContentView: View {
                         .frame(minWidth: 100)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.blue)
+                .tint(PMTheme.accent)
                 .keyboardShortcut(.defaultAction)
             }
             .padding(.top, 10)
 
             Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundColor(PMTheme.textSecondary)
+                .padding(.vertical, 12)
         }
         .padding(24)
+        .pmPanel()
+        .padding()
+        .id(themeToken)
+        .pmWindowBackground()
         .frame(width: 420)
+        .onReceive(NotificationCenter.default.publisher(for: .themeDidChange)) { _ in
+            themeToken = UUID()
+        }
     }
 
     // MARK: - Helpers

@@ -33,8 +33,9 @@ If you want automatic checks:
 - Scheduled background checks via login item helper
 - Alerts and snooze support for expiring passwords
 - Settings for notification time, warning threshold, and AD domain
-- Built‑in logs viewer with filtering, export, and copy
+- Built‑in logs viewer with filtering, copy, and Finder reveal
 - Runtime language switching (English/Polish)
+- Manual Light/Dark/Auto theme switching
 
 ## Tech Stack
 - Swift 5 / SwiftUI
@@ -57,7 +58,7 @@ If you want automatic checks:
 ---
 
 ## Logging
-Logs are stored locally and can be viewed in the **Logs** window. You can copy, filter, or export logs to a `.log` file.
+Logs are stored locally and can be viewed in the **Logs** window. You can copy or filter logs and reveal the log file in Finder.
 
 > Tip: For privacy, avoid sharing logs that may contain sensitive data.
 

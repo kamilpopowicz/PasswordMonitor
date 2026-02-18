@@ -16,6 +16,7 @@ import PasswordMonitorCore
 @MainActor
 final class LogStore: ObservableObject {
     @Published var content: String = ""
+    @Published var isLoading: Bool = false
 
     private let fileURL: URL
     private var source: DispatchSourceFileSystemObject?
@@ -84,7 +85,15 @@ final class LogStore: ObservableObject {
     }
 
     private func load() {
-        content = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
+        isLoading = true
+        let url = fileURL
+        Task.detached { [weak self] in
+            let text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+            await MainActor.run {
+                self?.content = text
+                self?.isLoading = false
+            }
+        }
     }
 
     private func startMonitoring() {

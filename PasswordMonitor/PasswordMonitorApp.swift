@@ -15,6 +15,7 @@ struct PasswordMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var languageSettings = LanguageSettings()
+    @StateObject private var themeManager = ThemeManager()
 
     private var menuBarIconImage: NSImage {
         let targetSize = NSSize(width: 18, height: 18)
@@ -48,8 +49,12 @@ struct PasswordMonitorApp: App {
         MenuBarExtra {
             MenuBarView()
                 .environmentObject(appState)
+                .environmentObject(themeManager)
                 .environmentObject(languageSettings)
                 .environment(\.locale, languageSettings.locale)
+                .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
+                .pmWindowBackground(reduced: themeManager.isApplyingTheme)
+                .pmThemeApplying(themeManager.isApplyingTheme)
         } label: {
             Image(nsImage: menuBarIconImage)
         }
@@ -58,15 +63,23 @@ struct PasswordMonitorApp: App {
         Window("settings_window_title", id: "settings-window") {
             SettingsView()
                 .environmentObject(appState)
+                .environmentObject(themeManager)
                 .environmentObject(languageSettings)
                 .environment(\.locale, languageSettings.locale)
+                .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
+                .pmWindowBackground(reduced: themeManager.isApplyingTheme)
+                .pmThemeApplying(themeManager.isApplyingTheme)
         }
         .windowResizability(.contentMinSize)
 
         Window("logs_window_title", id: "logs-window") {
             LogsView()
                 .environmentObject(appState)
+                .environmentObject(themeManager)
                 .environment(\.locale, languageSettings.locale)
+                .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
+                .pmWindowBackground(reduced: themeManager.isApplyingTheme)
+                .pmThemeApplying(themeManager.isApplyingTheme)
         }
         .windowResizability(.contentMinSize)
         

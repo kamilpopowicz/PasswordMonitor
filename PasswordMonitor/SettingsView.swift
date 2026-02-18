@@ -22,6 +22,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var languageSettings: LanguageSettings
+    @EnvironmentObject var themeManager: ThemeManager
 
     // EDYTOWANE wartości (UI)
     @State private var launchAtLogin = false
@@ -54,14 +55,28 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.warningThreshold) private var storedWarningThreshold = 7
     @AppStorage(SettingsKeys.notificationHour) private var storedNotificationHour = "09:00"
     @AppStorage(SettingsKeys.minimalLogging) private var storedMinimalLogging = true
-
     var body: some View {
         VStack(spacing: 0) {
-            // Główna zawartość ustawień
             ScrollView {
                 Form {
+                    // MARK: Appearance
+                    Section(header: Text("settings_section_appearance").font(.headline).foregroundColor(PMTheme.textSecondary)) {
+                        Picker("settings_theme_mode", selection: Binding(
+                            get: { themeManager.mode },
+                            set: { newValue in
+                                guard newValue != themeManager.mode else { return }
+                                themeManager.mode = newValue
+                            }
+                        )) {
+                            Text("theme_mode_auto").tag(PMTheme.ThemeMode.auto)
+                            Text("theme_mode_light").tag(PMTheme.ThemeMode.light)
+                            Text("theme_mode_dark").tag(PMTheme.ThemeMode.dark)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+
                     // MARK: Startup
-                    Section(header: Text("settings_section_startup").font(.headline)) {
+                    Section(header: Text("settings_section_startup").font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         Toggle("settings_launch_at_login", isOn: $launchAtLogin)
 
                         VStack(alignment: .leading, spacing: 4) {
@@ -69,12 +84,12 @@ struct SettingsView: View {
                             Text("settings_background_helper_info")
                         }
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(PMTheme.textSecondary)
                         .italic()
                     }
 
                     // MARK: Powiadomienia
-                    Section(header: Text("settings_section_notifications").font(.headline)) {
+                    Section(header: Text("settings_section_notifications").font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         DatePicker(
                             "settings_notification_time",
                             selection: $notificationDate,
@@ -88,7 +103,7 @@ struct SettingsView: View {
 
                         Text("settings_notification_footnote")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(PMTheme.textSecondary)
                             .italic()
 
                         Button("menu_test_notification") {
@@ -96,11 +111,11 @@ struct SettingsView: View {
                             NotificationManager.shared.showTestNotification(expirationDate: testDate)
                         }
                         .buttonStyle(.bordered)
-                        .tint(.orange)
+                        .tint(PMTheme.warning)
                     }
 
                     // MARK: Active Directory
-                    Section(header: Text("settings_section_ad").font(.headline)) {
+                    Section(header: Text("settings_section_ad").font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         TextField("settings_domain_name", text: $domainName)
                             .textFieldStyle(.roundedBorder)
 
@@ -132,7 +147,7 @@ struct SettingsView: View {
                     }
 
                     // MARK: Język / Language
-                    Section(header: Text("language_settings_title").font(.headline)) {
+                    Section(header: Text("language_settings_title").font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         Picker("language_picker_label", selection: $selectedLanguage) {
                             ForEach(LanguageSettings.AppLanguage.allCases) { language in
                                 Text(language.displayName)
@@ -143,26 +158,32 @@ struct SettingsView: View {
 
                         Text("language_change_footnote")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(PMTheme.textSecondary)
                             .italic()
                     }
                     
                     // MARK: Language Assist (On-Device)
-                    Section(header: Text("language_assist_title").font(.headline)) {
+                    Section(header: Text("language_assist_title").font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         ZStack(alignment: .topLeading) {
                             TextEditor(text: $languageAssistText)
                                 .font(.body)
                                 .frame(minHeight: 80)
-                                .padding(4)
-                                .background(Color(NSColor.textBackgroundColor))
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                .padding(6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(PMTheme.fieldBackground)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .stroke(PMTheme.fieldStroke, lineWidth: 1)
+                                        )
+                                )
                                 .onChange(of: languageAssistText) { _, newValue in
                                     debounceLanguageAssistChange(newValue)
                                 }
 
                             if languageAssistText.isEmpty {
                                 Text("language_assist_placeholder")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(PMTheme.textSecondary)
                                     .padding(8)
                                     .allowsHitTesting(false)
                             }
@@ -170,27 +191,27 @@ struct SettingsView: View {
 
                         Text("language_assist_footnote")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(PMTheme.textSecondary)
                             .italic()
                     }
 
                     // MARK: Prywatność / Logi
-                    Section(header: Text("settings_section_privacy").font(.headline)) {
+                    Section(header: Text("settings_section_privacy").font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         Toggle("settings_minimal_logging", isOn: $minimalLogging)
 
                         Text("settings_minimal_logging_footnote")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(PMTheme.textSecondary)
                             .italic()
                     }
 
                     // MARK: Informacje
-                    Section(header: Text("settings_section_info").font(.headline)) {
+                    Section(header: Text("settings_section_info").font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         HStack {
                             Text("settings_version")
                             Spacer()
                             Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(PMTheme.textSecondary)
                         }
 
                         HStack {
@@ -200,38 +221,43 @@ struct SettingsView: View {
                                 .fill(helperStatusColor)
                                 .frame(width: 10, height: 10)
                             Text(helperStatusDescriptionKey)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-
-                    // MARK: Actions
-                    Section {
-                        HStack {
-                            HStack(spacing: 8) {
-                                Button("settings_reset_defaults") {
-                                    showResetConfirm = true
-                                }
-                                Button("settings_delete_app") {
-                                    showDeleteConfirm = true
-                                }
-                                .foregroundColor(.red)
-                                .tint(.red)
-                            }
-                            Spacer()
-                            Button("common_cancel") {
-                                cancelChanges()
-                            }
-                            Button("common_save") {
-                                saveChanges()
-                            }
-                            .keyboardShortcut(.defaultAction)
-                            .disabled(!isDirty)
+                                .foregroundColor(PMTheme.textSecondary)
                         }
                     }
                 }
                 .formStyle(.grouped)
-                .padding()
+                .scrollContentBackground(.hidden)
             }
+            .padding()
+
+            Divider()
+
+            HStack {
+                HStack(spacing: 8) {
+                    Button("settings_reset_defaults") {
+                        showResetConfirm = true
+                    }
+                    .pmButton()
+                    Button("settings_delete_app") {
+                        showDeleteConfirm = true
+                    }
+                    .pmButton(role: .destructive)
+                }
+                Spacer()
+                Button("common_cancel") {
+                    cancelChanges()
+                }
+                .pmButton()
+                Button("common_save") {
+                    saveChanges()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!isDirty)
+                .pmButton(role: .primary)
+            }
+            .padding(.horizontal)
+            .padding(.top, 12)
+            .padding(.bottom, 12)
 
             .alert("settings_reset_confirm_title", isPresented: $showResetConfirm) {
                 Button("settings_reset_confirm_action", role: .destructive) {
@@ -252,10 +278,13 @@ struct SettingsView: View {
 
             Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
                 .font(.caption2)
-                .foregroundColor(.secondary)
-                .padding(.bottom, 8)
+                .foregroundColor(PMTheme.textSecondary)
+                .padding(.horizontal)
+                .padding(.vertical, 12)
         }
-        .frame(minWidth: 480, minHeight: 360)
+        .frame(minWidth: 520, minHeight: 380)
+        .pmPanel()
+        .padding()
         .onAppear {
             loadSettings()
             appState.windowOpened()
@@ -310,10 +339,10 @@ struct SettingsView: View {
 
     private var helperStatusColor: Color {
         switch helperStatus {
-        case .enabled: return .green
-        case .requiresApproval: return .orange
-        case .notRegistered, .notFound: return .red
-        @unknown default: return .gray
+        case .enabled: return PMTheme.success
+        case .requiresApproval: return PMTheme.warning
+        case .notRegistered, .notFound: return PMTheme.danger
+        @unknown default: return PMTheme.textMuted
         }
     }
 
@@ -442,8 +471,7 @@ struct SettingsView: View {
             }
         }
 
-        // Ponownie wczytaj, żeby zsynchronizować helperStatus i wyzerować "dirty"
-        dismiss()
+        // Pozostajemy w oknie – stan "dirty" wynika z aktualnych wartości
     }
 
     /// Odrzuca zmiany i przywraca stan zapisany

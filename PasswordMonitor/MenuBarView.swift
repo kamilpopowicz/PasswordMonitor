@@ -13,6 +13,7 @@ import Combine
 
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.openWindow) private var openWindow
 
     @State private var passwordInfo: PasswordInfo?
@@ -24,29 +25,33 @@ struct MenuBarView: View {
             if let info = passwordInfo {
                 Text("menu_password_expires_title")
                     .font(.headline)
+                    .foregroundColor(PMTheme.textSecondary)
 
                 Text(LanguageSettings.localizedString("days_remaining %lld", info.daysUntilExpiration))
                     .font(.title2)
-                    .foregroundColor(info.daysUntilExpiration <= 7 ? .red : .green)
+                    .foregroundColor(info.daysUntilExpiration <= 7 ? PMTheme.danger : PMTheme.success)
 
                 Divider()
 
                 Text("menu_last_change_title")
                     .font(.caption)
+                    .foregroundColor(PMTheme.textSecondary)
 
                 Text(info.lastSetDate, style: .date)
                     .font(.caption)
+                    .foregroundColor(PMTheme.textSecondary)
                 
                 // ostrzeżenie, jeśli dane są z cache (domena niedostępna)
                 if info.isFromCache {
                     Text("menu_domain_warning")
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(PMTheme.danger)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
                 Text("menu_check_status")
                     .font(.headline)
+                    .foregroundColor(PMTheme.textSecondary)
             }
 
             Divider()
@@ -74,6 +79,7 @@ struct MenuBarView: View {
 
                 Text("menu_background_service")
                     .font(.caption)
+                    .foregroundColor(PMTheme.textSecondary)
             }
 
             Button("menu_settings") {
@@ -99,10 +105,11 @@ struct MenuBarView: View {
                 Text("All rights reserved.")
             }
             .font(.caption2)
-            .foregroundColor(.secondary)
+            .foregroundColor(PMTheme.textSecondary)
+            .padding(.vertical, 12)
         }
-        .padding()
-        .frame(width: 250)
+        .pmPanel()
+        .frame(width: 260)
         .onAppear {
             checkPasswordNow()
         }
@@ -110,7 +117,7 @@ struct MenuBarView: View {
 
     private var helperServiceColor: Color {
         let service = SMAppService.loginItem(identifier: "popo.PasswordMonitorHelperApp")
-        return service.status == .enabled ? .green : .red
+        return service.status == .enabled ? PMTheme.success : PMTheme.danger
     }
 
     private func checkPasswordNow() {

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.3
+- Added app-wide theme switching with improved performance and a transition loader.
+- Unified button styling and disabled-state visuals.
+- Improved Logs rendering during theme changes to avoid heavy UI stalls.
+- Minor localization catalog cleanup.
+
 ## PasswordMonitor 1.2
 - Added in-app reset and delete actions for settings and app data.
 - Fixed helper toggle behavior on Save to prevent unwanted UI reopen.
