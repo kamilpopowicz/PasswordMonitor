@@ -35,20 +35,20 @@ struct SettingsLanguageView: View {
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .frame(minWidth: 320, minHeight: 140)
             .padding()
 
             Divider()
 
-            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
-                .font(.caption2)
-                .foregroundColor(PMTheme.textSecondary)
-                .padding(.horizontal)
-                .padding(.vertical, 12)
+            VStack(spacing: 2) {
+                Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+            }
+            .font(.caption2)
+            .foregroundColor(PMTheme.textSecondary)
+            .padding(.horizontal)
+            .padding(.vertical, 12)
         }
         .navigationTitle("language_settings_title")
-        .pmPanel()
-        .padding()
+        // Window panel and min size are applied at the Window level.
     }
 }
 

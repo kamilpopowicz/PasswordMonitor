@@ -155,6 +155,14 @@ public class Logger {
             options: [.caseInsensitive]
         )
 
+        // Domain / host masking
+        result = replaceRegex(
+            pattern: "\\b([A-Z0-9-]+\\.)+[A-Z]{2,}\\b",
+            in: result,
+            with: "<host>",
+            options: [.caseInsensitive]
+        )
+
         return result
     }
 

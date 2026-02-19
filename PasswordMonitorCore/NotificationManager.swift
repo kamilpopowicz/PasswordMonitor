@@ -161,7 +161,12 @@ public final class NotificationManager: ObservableObject {
     /// Sprawdza czy snooze się skończył
     private func hasSnoozeExpired() -> Bool {
         guard let endTime = snoozeEndTime else { return true }
-        return Date() >= endTime
+        let expired = Date() >= endTime
+        if expired {
+            isSnoozed = false
+            snoozeEndTime = nil
+        }
+        return expired
     }
     
     /// Pokazuje okienko powiadomienia
@@ -269,7 +274,8 @@ public final class NotificationManager: ObservableObject {
         Logger.shared.logLocalized("log_notification_midnight_reset_in %d %d", hours, minutes)
         
         // Timer jednorazowy do północy
-        Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
+        midnightTimer?.invalidate()
+        midnightTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
             Task { @MainActor in
                 Logger.shared.logLocalized("log_notification_midnight_reset")
                 self.hasShownNotificationToday = false
@@ -282,7 +288,8 @@ public final class NotificationManager: ObservableObject {
     
     /// Rozpoczyna sprawdzanie co minutę czy nadszedł czas powiadomienia
     private func startCheckingForNotificationTime() {
-        checkTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { _ in
+        checkTimer?.invalidate()
+        checkTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             Task { @MainActor in
                 self.checkAndShowNotificationIfNeeded()
             }

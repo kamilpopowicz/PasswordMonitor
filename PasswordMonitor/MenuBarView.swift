@@ -20,7 +20,7 @@ struct MenuBarView: View {
     @State private var isChecking = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             // Status
             if let info = passwordInfo {
                 Text("menu_password_expires_title")
@@ -61,6 +61,7 @@ struct MenuBarView: View {
                 checkPasswordNow()
             }
             .disabled(isChecking)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Button("menu_change_password") {
                 Logger.shared.logLocalized("log_menu_change_password_selected")
@@ -68,6 +69,7 @@ struct MenuBarView: View {
             }
             .disabled(!canChangePasswordNow)
             .opacity(canChangePasswordNow ? 1.0 : 0.5)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Divider()
 
@@ -81,22 +83,26 @@ struct MenuBarView: View {
                     .font(.caption)
                     .foregroundColor(PMTheme.textSecondary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Button("menu_settings") {
                 openWindow(id: "settings-window")
             }
             .controlSize(.regular)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Button("menu_logs") {
                 openWindow(id: "logs-window")
             }
             .controlSize(.regular)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Divider()
 
             Button("menu_quit") {
                 NSApplication.shared.terminate(nil)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Divider()
 
@@ -106,10 +112,13 @@ struct MenuBarView: View {
             }
             .font(.caption2)
             .foregroundColor(PMTheme.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .multilineTextAlignment(.center)
             .padding(.vertical, 12)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .pmPanel()
-        .frame(width: 260)
+        .frame(width: 260, alignment: .leading)
         .onAppear {
             checkPasswordNow()
         }

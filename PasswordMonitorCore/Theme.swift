@@ -155,6 +155,18 @@ public enum PMTheme {
         dark: NSColor(calibratedRed: 1.00, green: 1.00, blue: 1.00, alpha: 0.14)
     )
 
+    public static func resolvedTextPrimary(isDark: Bool) -> NSColor {
+        isDark
+            ? NSColor(calibratedRed: 0.93, green: 0.96, blue: 0.98, alpha: 1.0)
+            : NSColor(calibratedRed: 0.12, green: 0.18, blue: 0.26, alpha: 1.0)
+    }
+
+    public static func resolvedFieldBackground(isDark: Bool) -> NSColor {
+        isDark
+            ? NSColor(calibratedRed: 0.09, green: 0.13, blue: 0.19, alpha: 0.95)
+            : NSColor(calibratedRed: 0.94, green: 0.97, blue: 1.00, alpha: 0.95)
+    }
+
     public static let accent = oceanGlow
     public static let warning = dynamicColor(
         light: NSColor(calibratedRed: 0.86, green: 0.60, blue: 0.22, alpha: 1.0),
@@ -203,6 +215,25 @@ public extension View {
         modifier(PMPanelModifier())
     }
 
+    func pmWindowPanel() -> some View {
+        PMWindowPanelContainer {
+            self
+        }
+    }
+
+    func pmWindowMinSize() -> some View {
+        frame(
+            minWidth: PMLayout.windowMinWidth,
+            idealWidth: PMLayout.windowMinWidth,
+            maxWidth: .infinity,
+            minHeight: PMLayout.windowMinHeight,
+            idealHeight: PMLayout.windowMinHeight,
+            maxHeight: .infinity,
+            alignment: .center
+        )
+        .background(PMWindowMinSizeEnforcer(size: NSSize(width: PMLayout.windowMinWidth, height: PMLayout.windowMinHeight)))
+    }
+
     func pmWindowBackground(reduced: Bool = false) -> some View {
         background(
             ZStack {
@@ -243,6 +274,79 @@ public extension View {
                 .preferredColorScheme(scheme)
         } else {
             self.preferredColorScheme(nil)
+        }
+    }
+}
+
+public struct PMWindowPanelModifier: ViewModifier {
+    public init() {}
+
+    public func body(content: Content) -> some View {
+        PMWindowPanelContainer {
+            content
+        }
+    }
+}
+
+public struct PMWindowPanelContainer<Content: View>: View {
+    @Environment(\.pmIsApplyingTheme) private var isApplyingTheme
+    private let content: Content
+
+    public init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    public var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+        let fillStyle: AnyShapeStyle = isApplyingTheme
+            ? AnyShapeStyle(PMTheme.oceanDeep)
+            : AnyShapeStyle(PMTheme.panelGradient)
+        let highlightStyle: AnyShapeStyle = isApplyingTheme
+            ? AnyShapeStyle(Color.clear)
+            : AnyShapeStyle(PMTheme.panelHighlight)
+        let panel = shape
+            .fill(fillStyle)
+            .overlay(shape.fill(highlightStyle))
+            .overlay(shape.stroke(PMTheme.panelStroke, lineWidth: 1))
+            .shadow(
+                color: PMTheme.panelShadow.opacity(isApplyingTheme ? 0.15 : 1.0),
+                radius: isApplyingTheme ? 6 : 18,
+                x: 0,
+                y: isApplyingTheme ? 2 : 10
+            )
+
+        return ZStack(alignment: .topLeading) {
+            panel
+                .padding(PMLayout.windowPanelInset)
+            content
+                .padding(PMLayout.windowPanelInset)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+public enum PMLayout {
+    /// Global minimum window size for consistency across windows.
+    public static let windowMinWidth: CGFloat = 762
+    public static let windowMinHeight: CGFloat = 452
+    /// Global window panel inset for consistent padding and rounded panel placement.
+    public static let windowPanelInset: CGFloat = 16
+}
+
+private struct PMWindowMinSizeEnforcer: NSViewRepresentable {
+    let size: NSSize
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            view.window?.minSize = size
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            nsView.window?.minSize = size
         }
     }
 }

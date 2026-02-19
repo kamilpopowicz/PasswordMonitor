@@ -21,7 +21,6 @@ struct LogsView: View {
     private let searchButtonWidth: CGFloat = 28
     private let searchButtonSpacing: CGFloat = 6
     private let levelsColumnWidth: CGFloat = 430
-    private let minWindowWidth: CGFloat = 730
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,9 +46,9 @@ struct LogsView: View {
                         (Text("logs_legend") + Text(":"))
                             .font(.caption)
                             .foregroundColor(PMTheme.textSecondary)
-                        LegendDot(color: .primary, labelKey: "logs_level_info")
-                        LegendDot(color: .orange, labelKey: "logs_level_warning")
-                        LegendDot(color: .red, labelKey: "logs_level_error")
+                        LegendDot(color: PMTheme.textPrimary, labelKey: "logs_level_info")
+                        LegendDot(color: PMTheme.warning, labelKey: "logs_level_warning")
+                        LegendDot(color: PMTheme.danger, labelKey: "logs_level_error")
                         LegendDot(color: PMTheme.textMuted, labelKey: "logs_level_debug")
                     }
                 }
@@ -124,6 +123,8 @@ struct LogsView: View {
                             }
                             .padding()
                         }
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
                         .coordinateSpace(name: "logScroll")
                         .onPreferenceChange(BottomOffsetKey.self) { value in
                             // Jeśli użytkownik jest blisko dołu, utrzymujemy auto-scroll
@@ -146,6 +147,8 @@ struct LogsView: View {
                     LoadingOverlay()
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .layoutPriority(1)
 
             HStack {
                 Toggle("logs_autoscroll", isOn: Binding(
@@ -172,15 +175,15 @@ struct LogsView: View {
             }
             .padding([.horizontal, .top])
 
-            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
-                .font(.caption2)
-                .foregroundColor(PMTheme.textSecondary)
-                .padding(.horizontal)
-                .padding(.vertical, 12)
+            VStack(spacing: 2) {
+                Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+            }
+            .font(.caption2)
+            .foregroundColor(PMTheme.textSecondary)
+            .padding(.horizontal)
+            .padding(.vertical, 12)
         }
-        .pmPanel()
-        .padding()
-        .frame(minWidth: minWindowWidth, minHeight: 420)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             logStore.start()
             appState.windowOpened()
@@ -204,7 +207,7 @@ struct LogsView: View {
     }
 
     private func color(for line: String) -> Color {
-        if line.contains("[ERROR]") { return .red }
+        if line.contains("[ERROR]") { return PMTheme.danger }
         if line.contains("[WARN]") { return PMTheme.warning }
         if line.contains("[DEBUG]") { return PMTheme.textMuted }
         if line.contains("[INFO]") { return PMTheme.textPrimary }
@@ -244,12 +247,12 @@ private struct SearchField: NSViewRepresentable {
 
     private func applyAppearance(_ field: NSSearchField) {
         if isDark {
-            field.backgroundColor = NSColor(calibratedRed: 0.09, green: 0.13, blue: 0.19, alpha: 0.95)
-            field.textColor = NSColor(calibratedRed: 0.93, green: 0.96, blue: 0.98, alpha: 1.0)
+            field.backgroundColor = PMTheme.resolvedFieldBackground(isDark: true)
+            field.textColor = PMTheme.resolvedTextPrimary(isDark: true)
             field.appearance = NSAppearance(named: .darkAqua)
         } else {
-            field.backgroundColor = NSColor(calibratedRed: 0.94, green: 0.97, blue: 1.00, alpha: 0.95)
-            field.textColor = NSColor(calibratedRed: 0.12, green: 0.18, blue: 0.26, alpha: 1.0)
+            field.backgroundColor = PMTheme.resolvedFieldBackground(isDark: false)
+            field.textColor = PMTheme.resolvedTextPrimary(isDark: false)
             field.appearance = NSAppearance(named: .aqua)
         }
     }

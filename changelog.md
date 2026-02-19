@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.4
+- Unified window panel styling and minimum size across app windows.
+- Fixed menu bar window layout alignment.
+- Added host/domain masking for logs.
+- Improved notification/snooze stability and cleanup.
+- Added core test target with coverage for cache, parsing, and notifications.
+
 ## PasswordMonitor 1.3
 - Added app-wide theme switching with improved performance and a transition loader.
 - Unified button styling and disabled-state visuals.

@@ -34,6 +34,7 @@ If you want automatic checks:
 - Alerts and snooze support for expiring passwords
 - Settings for notification time, warning threshold, and AD domain
 - Built‑in logs viewer with filtering, copy, and Finder reveal
+- Privacy-safe log masking for host/domain values
 - Runtime language switching (English/Polish)
 - Manual Light/Dark/Auto theme switching
 

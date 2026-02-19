@@ -138,33 +138,7 @@ public class ActiveDirectoryManager {
         // DEBUG stdout
         Logger.shared.logLocalized("log_dscl_output %@", output)
 
-        // Parse: "SMBPasswordLastSet: 133123456789012345"
-        let lines = output.components(separatedBy: .newlines)
-        guard let lastSetLine = lines.first(where: { $0.contains("SMBPasswordLastSet") }) else {
-            Logger.shared.logLocalized("log_dscl_password_last_set_missing")
-            throw ADError.invalidData
-        }
-
-        Logger.shared.logLocalized("log_dscl_found_line %@", lastSetLine)
-
-        let components = lastSetLine.components(separatedBy: ":")
-        guard
-            components.count >= 2,
-            let lastSetRaw = components.last?.trimmingCharacters(in: .whitespacesAndNewlines),
-            let lastSetInt = Int64(lastSetRaw)
-        else {
-            Logger.shared.logLocalized("log_dscl_parse_failed %@", lastSetLine)
-            throw ADError.invalidData
-        }
-
-        Logger.shared.logLocalized("log_dscl_parsed_timestamp %lld", lastSetInt)
-
-        // Konwersja Windows FILETIME → UNIX timestamp
-        let unixTimestamp = (lastSetInt / 10_000_000) - 11_644_473_600
-        let lastSetDate = Date(timeIntervalSince1970: TimeInterval(unixTimestamp))
-
-        Logger.shared.logLocalized("log_dscl_converted_date %@", String(describing: lastSetDate))
-
+        let lastSetDate = try Self.parseSMBPasswordLastSet(from: output)
         return calculateExpirationInfo(from: lastSetDate)
     }
 
@@ -218,6 +192,38 @@ public class ActiveDirectoryManager {
         }
 
         return calculateExpirationInfo(from: lastSetDate)
+    }
+
+    // MARK: - Parsing (internal for tests)
+
+    /// Parse: "SMBPasswordLastSet: 133123456789012345"
+    static func parseSMBPasswordLastSet(from output: String) throws -> Date {
+        let lines = output.components(separatedBy: .newlines)
+        guard let lastSetLine = lines.first(where: { $0.contains("SMBPasswordLastSet") }) else {
+            Logger.shared.logLocalized("log_dscl_password_last_set_missing")
+            throw ADError.invalidData
+        }
+
+        Logger.shared.logLocalized("log_dscl_found_line %@", lastSetLine)
+
+        let components = lastSetLine.components(separatedBy: ":")
+        guard
+            components.count >= 2,
+            let lastSetRaw = components.last?.trimmingCharacters(in: .whitespacesAndNewlines),
+            let lastSetInt = Int64(lastSetRaw)
+        else {
+            Logger.shared.logLocalized("log_dscl_parse_failed %@", lastSetLine)
+            throw ADError.invalidData
+        }
+
+        Logger.shared.logLocalized("log_dscl_parsed_timestamp %lld", lastSetInt)
+
+        // Konwersja Windows FILETIME → UNIX timestamp
+        let unixTimestamp = (lastSetInt / 10_000_000) - 11_644_473_600
+        let lastSetDate = Date(timeIntervalSince1970: TimeInterval(unixTimestamp))
+
+        Logger.shared.logLocalized("log_dscl_converted_date %@", String(describing: lastSetDate))
+        return lastSetDate
     }
 
     private func resolvedDomainName() -> String? {

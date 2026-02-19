@@ -257,7 +257,7 @@ struct SettingsView: View {
             }
             .padding(.horizontal)
             .padding(.top, 12)
-            .padding(.bottom, 12)
+            .padding(.bottom, 0)
 
             .alert("settings_reset_confirm_title", isPresented: $showResetConfirm) {
                 Button("settings_reset_confirm_action", role: .destructive) {
@@ -276,15 +276,15 @@ struct SettingsView: View {
                 Text("settings_delete_confirm_message")
             }
 
-            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
-                .font(.caption2)
-                .foregroundColor(PMTheme.textSecondary)
-                .padding(.horizontal)
-                .padding(.vertical, 12)
+            VStack(spacing: 2) {
+                Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+            }
+            .font(.caption2)
+            .foregroundColor(PMTheme.textSecondary)
+            .padding(.horizontal)
+            .padding(.vertical, 12)
         }
-        .frame(minWidth: 520, minHeight: 380)
-        .pmPanel()
-        .padding()
+        // Window panel and min size are applied at the Window level.
         .onAppear {
             loadSettings()
             appState.windowOpened()
