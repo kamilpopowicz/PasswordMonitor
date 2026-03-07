@@ -69,12 +69,8 @@ struct PasswordMonitorApp: App {
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .pmWindowPanel()
-                .pmWindowMinSize()
         }
         .windowResizability(.contentMinSize)
-        .defaultSize(width: PMLayout.windowMinWidth, height: PMLayout.windowMinHeight)
 
         Window("logs_window_title", id: "logs-window") {
             LogsView()
@@ -84,12 +80,8 @@ struct PasswordMonitorApp: App {
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .pmWindowPanel()
-                .pmWindowMinSize()
         }
         .windowResizability(.contentMinSize)
-        .defaultSize(width: PMLayout.windowMinWidth, height: PMLayout.windowMinHeight)
         
         // Skróty i menu
         .commands {
