@@ -14,6 +14,8 @@ final class PasswordMonitorCoreTests: XCTestCase {
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: cacheKey)
         UserDefaults.standard.removeObject(forKey: "warning_threshold")
+        UserDefaults.standard.removeObject(forKey: "quiet_hours_start")
+        UserDefaults.standard.removeObject(forKey: "quiet_hours_end")
         super.tearDown()
     }
 
@@ -162,6 +164,93 @@ final class PasswordMonitorCoreTests: XCTestCase {
                 now: now,
                 expirationDate: expirationDate,
                 thresholdDays: 7
+            )
+        )
+    }
+
+    @MainActor
+    func testAutomaticNotificationsAreSuppressedDuringQuietHours() {
+        UserDefaults.standard.set("18:01", forKey: "quiet_hours_start")
+        UserDefaults.standard.set("05:59", forKey: "quiet_hours_end")
+        let quietTime = Date(timeIntervalSince1970: 20 * 3600)
+
+        XCTAssertTrue(
+            NotificationManager.isNotificationSuppressedForQuietHours(
+                reason: .automatic,
+                now: quietTime
+            )
+        )
+    }
+
+    @MainActor
+    func testScheduledNotificationsAreAllowedDuringQuietHours() {
+        UserDefaults.standard.set("18:01", forKey: "quiet_hours_start")
+        UserDefaults.standard.set("05:59", forKey: "quiet_hours_end")
+        let quietTime = Date(timeIntervalSince1970: 20 * 3600)
+
+        XCTAssertFalse(
+            NotificationManager.isNotificationSuppressedForQuietHours(
+                reason: .scheduledTime,
+                now: quietTime
+            )
+        )
+    }
+
+    @MainActor
+    func testAutomaticNotificationsRespectActiveSnooze() {
+        let now = Date(timeIntervalSince1970: 1000)
+        let snoozeEnd = now.addingTimeInterval(3600)
+
+        XCTAssertTrue(
+            NotificationManager.isNotificationSuppressedBySnooze(
+                reason: .automatic,
+                isSnoozed: true,
+                snoozeEndTime: snoozeEnd,
+                now: now
+            )
+        )
+    }
+
+    @MainActor
+    func testManualNotificationsAreAllowedDuringQuietHours() {
+        UserDefaults.standard.set("18:01", forKey: "quiet_hours_start")
+        UserDefaults.standard.set("05:59", forKey: "quiet_hours_end")
+        let quietTime = Date(timeIntervalSince1970: 20 * 3600)
+
+        XCTAssertFalse(
+            NotificationManager.isNotificationSuppressedForQuietHours(
+                reason: .manual,
+                now: quietTime
+            )
+        )
+    }
+
+    @MainActor
+    func testManualNotificationsBypassActiveSnooze() {
+        let now = Date(timeIntervalSince1970: 1000)
+        let snoozeEnd = now.addingTimeInterval(3600)
+
+        XCTAssertFalse(
+            NotificationManager.isNotificationSuppressedBySnooze(
+                reason: .manual,
+                isSnoozed: true,
+                snoozeEndTime: snoozeEnd,
+                now: now
+            )
+        )
+    }
+
+    @MainActor
+    func testScheduledNotificationsBypassActiveSnooze() {
+        let now = Date(timeIntervalSince1970: 1000)
+        let snoozeEnd = now.addingTimeInterval(3600)
+
+        XCTAssertFalse(
+            NotificationManager.isNotificationSuppressedBySnooze(
+                reason: .scheduledTime,
+                isSnoozed: true,
+                snoozeEndTime: snoozeEnd,
+                now: now
             )
         )
     }

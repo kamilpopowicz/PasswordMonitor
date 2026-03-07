@@ -515,22 +515,15 @@ struct SettingsView: View {
         languageSettings.selectedLanguage = selectedLanguage
 
         if domainChanged {
-            DispatchQueue.global(qos: .userInitiated).async {
-                let manager = ActiveDirectoryManager()
-                let username = NSUserName()
-                do {
-                    let info = try manager.getPasswordInfo(for: username)
-                    DispatchQueue.main.async {
-                        NotificationManager.shared.updateExpirationDate(info.expiryDate)
-                        NotificationManager.shared.resetDailyNotificationState()
-                        NotificationManager.shared.checkAndShowNotificationIfNeeded()
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        Logger.shared.logLocalized("log_settings_domain_check_error %@", String(describing: error))
-                    }
+            NotificationManager.shared.refreshPasswordStatus(
+                reason: .automatic,
+                onResult: { _ in
+                    NotificationManager.shared.resetDailyNotificationState()
+                },
+                onError: { error in
+                    Logger.shared.logLocalized("log_settings_domain_check_error %@", String(describing: error))
                 }
-            }
+            )
         }
 
         // Pozostajemy w oknie – stan "dirty" wynika z aktualnych wartości

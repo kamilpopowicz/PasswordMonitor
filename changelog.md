@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.5.2
+- Centralized password-status refresh so the app, helper, menu bar, and scheduled checks use the same fetch/update/alert path.
+- Fixed the menu bar open path so opening the menu no longer behaves like a manual alert trigger.
+- Updated quiet-hours and snooze behavior so manual checks and the configured notification time can intentionally break through, while automatic background checks still stay quiet.
+- Fixed the test alert so `Zakończ test` closes the test window correctly.
+- Cleaned up Polish and English UI copy for helper refresh and quiet-hours descriptions.
+
 ## PasswordMonitor 1.5.1
 - Fixed a day-count mismatch where the menu bar could show stale `days remaining` while the alert used the live expiry date.
 - Unified remaining-day calculations so the menu bar, alert, cache fallback, and warning logic all use the same expiry-date-based path.

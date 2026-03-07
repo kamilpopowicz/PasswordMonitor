@@ -126,7 +126,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             Logger.shared.logLocalized("log_system_wake_check")
             
             Task { @MainActor in
-                NotificationManager.shared.checkAndShowNotificationIfNeeded()
+                NotificationManager.shared.refreshPasswordStatus(
+                    reason: .automatic,
+                    onError: { error in
+                        Logger.shared.logLocalized("log_init_password_check_error %@", String(describing: error))
+                    }
+                )
             }
         }
         
@@ -214,26 +219,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func runInitialPasswordCheck() {
-        DispatchQueue.global(qos: .userInitiated).async {
-            let manager = ActiveDirectoryManager()
-            let username = NSUserName()
-            
-            do {
-                let info = try manager.getPasswordInfo(for: username)
-                
-                DispatchQueue.main.async {
-                    // Log informacyjny
-                    Logger.shared.logLocalized("log_init_password_expiry %@ %@", String(info.daysUntilExpiration), String(describing: info.expiryDate))
-                    
-                    NotificationManager.shared.updateExpirationDate(info.expiryDate)
-                    NotificationManager.shared.checkAndShowNotificationIfNeeded()
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    Logger.shared.logLocalized("log_init_password_check_error %@", String(describing: error))
-                }
+        NotificationManager.shared.refreshPasswordStatus(
+            reason: .automatic,
+            onResult: { info in
+                Logger.shared.logLocalized("log_init_password_expiry %@ %@", String(info.daysUntilExpiration), String(describing: info.expiryDate))
+            },
+            onError: { error in
+                Logger.shared.logLocalized("log_init_password_check_error %@", String(describing: error))
             }
-        }
+        )
     }
     
 }

@@ -122,7 +122,7 @@ struct MenuBarView: View {
         .pmPanel()
         .frame(width: 260, alignment: .leading)
         .onAppear {
-            checkPasswordNow()
+            refreshPasswordStatus(reason: .automatic)
         }
     }
 
@@ -132,29 +132,22 @@ struct MenuBarView: View {
     }
 
     private func checkPasswordNow() {
+        refreshPasswordStatus(reason: .manual)
+    }
+
+    private func refreshPasswordStatus(reason: NotificationManager.CheckReason) {
         isChecking = true
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            let manager = ActiveDirectoryManager()
-            let username = NSUserName()
-
-            do {
-                let info = try manager.getPasswordInfo(for: username)
-
-                DispatchQueue.main.async {
-                    self.passwordInfo = info
-                    self.isChecking = false
-
-                    NotificationManager.shared.updateExpirationDate(info.expiryDate)
-                    NotificationManager.shared.checkAndShowNotificationIfNeeded()
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.isChecking = false
-                    Logger.shared.logLocalized("log_menu_check_error %@", String(describing: error))
-                }
+        NotificationManager.shared.refreshPasswordStatus(
+            reason: reason,
+            onResult: { info in
+                self.passwordInfo = info
+                self.isChecking = false
+            },
+            onError: { error in
+                self.isChecking = false
+                Logger.shared.logLocalized("log_menu_check_error %@", String(describing: error))
             }
-        }
+        )
     }
     
     /// Czy przycisk „Zmień hasło” ma być aktywny

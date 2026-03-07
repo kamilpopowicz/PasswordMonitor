@@ -32,6 +32,7 @@ If you want automatic checks:
 - Menu bar UI with at‑a‑glance password status
 - Background helper checks on login, wake, hourly cadence, and the configured notification time
 - Alerts and snooze support for expiring passwords
+- Manual checks and the configured notification time can intentionally break through quiet hours and active snooze
 - Settings for notification time, warning threshold, AD domain, and quiet hours
 - Built‑in logs viewer with filtering, copy, and Finder reveal
 - Privacy-safe log masking for host/domain values
@@ -55,7 +56,8 @@ If you want automatic checks:
    - Warning threshold
    - Launch at login
 3. The app will check your password status and alert you as needed.
-4. Use **Logs** for troubleshooting or export.
+4. Automatic background checks respect quiet hours, but a manual check and the exact configured alert time can still show the alert when needed.
+5. Use **Logs** for troubleshooting or export.
 
 ---
 

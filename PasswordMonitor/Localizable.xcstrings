@@ -2296,13 +2296,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Password Monitor (Helper service) will check your password daily at %@"
+            "value": "The Password Monitor background helper checks your password status daily at %@"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Password Monitor (Helper service) b\u0119dzie sprawdza\u0142 has\u0142o codziennie o %@"
+            "value": "Helper dzia\u0142aj\u0105cy w tle codziennie sprawdza stan wa\u017cno\u015bci has\u0142a o %@"
           }
         }
       }
@@ -2312,13 +2312,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Helper Service Status"
+            "value": "Background Helper Status"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Status Helper Service"
+            "value": "Status helpera dzia\u0142aj\u0105cego w tle"
           }
         }
       }
@@ -3148,13 +3148,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Background password checks are skipped during quiet hours, but the scheduled check time still applies outside that window."
+            "value": "Background password checks are skipped during quiet hours. A check scheduled for the configured time can still run exactly at that time."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sprawdzanie hasla w tle jest pomijane w godzinach ciszy, ale ustawiona godzina sprawdzenia nadal obowiazuje poza tym oknem."
+            "value": "W godzinach ciszy sprawdzanie has\u0142a w tle jest pomijane. Sprawdzenie zaplanowane na ustawion\u0105 godzin\u0119 mo\u017ce jednak wykona\u0107 si\u0119 dok\u0142adnie o tej porze."
           }
         }
       }
@@ -3170,7 +3170,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wymus odswiezenie helpera"
+            "value": "Wymu\u015b od\u015bwie\u017cenie helpera"
           }
         }
       }
@@ -3186,7 +3186,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wyslano zadanie odswiezenia do helpera dzialajacego w tle."
+            "value": "Wys\u0142ano \u017c\u0105danie od\u015bwie\u017cenia do helpera dzia\u0142aj\u0105cego w tle."
           }
         }
       }

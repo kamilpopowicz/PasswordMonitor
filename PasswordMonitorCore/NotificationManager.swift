@@ -13,6 +13,12 @@ import AppKit
 /// Zarządza powiadomieniami o wygaśnięciu hasła
 @MainActor
 public final class NotificationManager: ObservableObject {
+    public enum CheckReason: String {
+        case automatic
+        case scheduledTime
+        case manual
+    }
+
     public static let shared = NotificationManager()
     
     // MARK: - State
@@ -43,6 +49,7 @@ public final class NotificationManager: ObservableObject {
     
     /// Aktualne okienko powiadomienia (jeśli widoczne)
     private var currentAlert: PasswordExpirationAlert?
+    private var currentTestAlert: PasswordExpirationAlert?
     
     /// Timer do resetu o północy
     private var midnightTimer: Timer?
@@ -69,6 +76,46 @@ public final class NotificationManager: ObservableObject {
         let daysRemaining = PasswordExpirationMath.daysRemaining(until: expirationDate, from: now)
         return daysRemaining <= thresholdDays
     }
+
+    static func isWithinQuietHours(now: Date, defaults: UserDefaults = .standard) -> Bool {
+        let startTime = (defaults.string(forKey: "quiet_hours_start")?.isEmpty == false)
+            ? defaults.string(forKey: "quiet_hours_start")!
+            : "18:01"
+        let endTime = (defaults.string(forKey: "quiet_hours_end")?.isEmpty == false)
+            ? defaults.string(forKey: "quiet_hours_end")!
+            : "05:59"
+
+        return HelperSchedule.isWithinQuietHours(
+            date: now,
+            startTime: startTime,
+            endTime: endTime
+        )
+    }
+
+    static func isNotificationSuppressedForQuietHours(
+        reason: CheckReason,
+        now: Date,
+        defaults: UserDefaults = .standard
+    ) -> Bool {
+        isWithinQuietHours(now: now, defaults: defaults) && reason == .automatic
+    }
+
+    static func isNotificationSuppressedBySnooze(
+        reason: CheckReason,
+        isSnoozed: Bool,
+        snoozeEndTime: Date?,
+        now: Date = Date()
+    ) -> Bool {
+        guard isSnoozed, let snoozeEndTime else {
+            return false
+        }
+
+        guard now < snoozeEndTime else {
+            return false
+        }
+
+        return reason == .automatic
+    }
     
     // MARK: - Initialization
     
@@ -89,9 +136,35 @@ public final class NotificationManager: ObservableObject {
             Logger.shared.log("Notification state updated: daysRemaining=\(daysRemaining), thresholdDays=\(thresholdDays)")
         }
     }
+
+    public func refreshPasswordStatus(
+        reason: CheckReason,
+        username: String = NSUserName(),
+        onResult: ((PasswordInfo) -> Void)? = nil,
+        onError: ((Error) -> Void)? = nil
+    ) {
+        Logger.shared.log("Password status refresh requested (reason=\(reason.rawValue), username=\(username))")
+
+        Task.detached(priority: .userInitiated) {
+            let manager = ActiveDirectoryManager()
+
+            do {
+                let info = try manager.getPasswordInfo(for: username)
+                await MainActor.run {
+                    self.updateExpirationDate(info.expiryDate)
+                    onResult?(info)
+                    self.checkAndShowNotificationIfNeeded(reason: reason)
+                }
+            } catch {
+                await MainActor.run {
+                    onError?(error)
+                }
+            }
+        }
+    }
     
     /// Sprawdza czy powinniśmy pokazać powiadomienie (wywoływane cyklicznie)
-    public func checkAndShowNotificationIfNeeded() {
+    public func checkAndShowNotificationIfNeeded(reason: CheckReason = .automatic) {
         guard let expirationDate = currentExpirationDate else {
             Logger.shared.logLocalized("log_notification_no_expiration_date")
             return
@@ -102,15 +175,35 @@ public final class NotificationManager: ObservableObject {
             return
         }
         
-        guard !isSnoozed || hasSnoozeExpired() else {
+        let now = Date()
+        let snoozeStillActive = !hasSnoozeExpired()
+
+        if Self.isNotificationSuppressedBySnooze(
+            reason: reason,
+            isSnoozed: isSnoozed,
+            snoozeEndTime: snoozeEndTime,
+            now: now
+        ) {
             Logger.shared.logLocalized("log_notification_snooze_until %@", snoozeEndTime?.formatted() ?? "unknown")
+            Logger.shared.log("Skipping notification because snooze is active (reason=\(reason.rawValue))")
             return
         }
-        
-        let now = Date()
+
+        if snoozeStillActive && reason != .automatic {
+            Logger.shared.log("Bypassing active snooze for notification (reason=\(reason.rawValue), snoozeUntil=\(snoozeEndTime?.formatted() ?? "unknown"))")
+            isSnoozed = false
+            snoozeEndTime = nil
+        }
+
         let thresholdDays = Self.resolvedWarningThreshold()
         let daysRemaining = PasswordExpirationMath.daysRemaining(until: expirationDate, from: now)
-        Logger.shared.log("Notification check: daysRemaining=\(daysRemaining), thresholdDays=\(thresholdDays), shownToday=\(hasShownNotificationToday), snoozed=\(isSnoozed)")
+        let isQuietHours = Self.isWithinQuietHours(now: now)
+        Logger.shared.log("Notification check: reason=\(reason.rawValue), daysRemaining=\(daysRemaining), thresholdDays=\(thresholdDays), shownToday=\(hasShownNotificationToday), snoozed=\(isSnoozed), quietHours=\(isQuietHours)")
+
+        if Self.isNotificationSuppressedForQuietHours(reason: reason, now: now) {
+            Logger.shared.log("Skipping notification during quiet hours (reason=\(reason.rawValue))")
+            return
+        }
 
         // Jeśli hasło wygasa w progu ostrzeżenia, pokaż alert od razu (nie czekaj na godzinę).
         if Self.isWithinWarningThreshold(now: now, expirationDate: expirationDate, thresholdDays: thresholdDays) {
@@ -148,6 +241,12 @@ public final class NotificationManager: ObservableObject {
         currentAlert?.close()
         currentAlert = nil
         Logger.shared.logLocalized("log_notification_closed_by_user")
+    }
+
+    func dismissTestNotification() {
+        currentTestAlert?.close()
+        currentTestAlert = nil
+        Logger.shared.log("Test notification closed")
     }
     
     // MARK: - Private Methods
@@ -193,17 +292,28 @@ public final class NotificationManager: ObservableObject {
     
     /// Pokazuje testowe powiadomienie, bez zmiany stanu (nie rusza daty, snooze ani flagi 'już pokazane')
     public func showTestNotification(expirationDate: Date) {
+        guard currentTestAlert == nil else {
+            Logger.shared.log("Test notification window already open")
+            return
+        }
+
         let alert = PasswordExpirationAlert(
             expirationDate: expirationDate,
             mode: .test,
-            onSnooze: { },
+            onSnooze: { [weak self] in
+                self?.dismissTestNotification()
+            },
             onChangePassword: { [weak self] in
                 Logger.shared.logLocalized("log_notification_test_change_password_selected")
                 // TODO: Otwórz panel zmiany hasła systemowego
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/TouchID.prefPane"))
-                self?.dismissNotification()
+                self?.dismissTestNotification()
+            },
+            onEndTest: { [weak self] in
+                self?.dismissTestNotification()
             }
         )
+        currentTestAlert = alert
         alert.show()
     }
     
@@ -220,28 +330,23 @@ public final class NotificationManager: ObservableObject {
 
         let interval: TimeInterval = 30 * 60 // 30 minut
         passwordChangeCheckTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
-            Task.detached {
-                let manager = ActiveDirectoryManager()
-                let username = NSUserName()
-
-                do {
-                    let info = try manager.getPasswordInfo(for: username)
-                    await MainActor.run {
+            Task { @MainActor in
+                self.refreshPasswordStatus(
+                    reason: .automatic,
+                    onResult: { info in
                         let newExpiry = info.expiryDate
 
                         if newExpiry > previousExpiry {
                             Logger.shared.logLocalized("log_notification_password_changed %@", String(describing: newExpiry))
-                            self.updateExpirationDate(newExpiry)
                             self.hasShownNotificationToday = false
                         } else {
                             Logger.shared.logLocalized("log_notification_password_unchanged %@", String(describing: newExpiry))
                         }
-                    }
-                } catch {
-                    await MainActor.run {
+                    },
+                    onError: { error in
                         Logger.shared.logLocalized("log_notification_recheck_error %@", String(describing: error))
                     }
-                }
+                )
             }
         }
 
@@ -286,13 +391,33 @@ public final class NotificationManager: ObservableObject {
         checkTimer?.invalidate()
         checkTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             Task { @MainActor in
-                self.checkAndShowNotificationIfNeeded()
+                let now = Date()
+                let reason: CheckReason = self.isScheduledNotificationMoment(now) ? .scheduledTime : .automatic
+                self.checkAndShowNotificationIfNeeded(reason: reason)
             }
         }
 
         
         // Sprawdź od razu przy starcie (na wypadek gdybyśmy uruchomili się po czasie)
-        checkAndShowNotificationIfNeeded()
+        checkAndShowNotificationIfNeeded(reason: .automatic)
+    }
+
+    private func isScheduledNotificationMoment(_ now: Date) -> Bool {
+        let configuredTime = (UserDefaults.standard.string(forKey: "notification_hour")?.isEmpty == false)
+            ? UserDefaults.standard.string(forKey: "notification_hour")!
+            : "09:00"
+
+        let parts = configuredTime.split(separator: ":")
+        guard
+            parts.count == 2,
+            let hour = Int(parts[0]),
+            let minute = Int(parts[1])
+        else {
+            return false
+        }
+
+        let components = Calendar.current.dateComponents([.hour, .minute], from: now)
+        return components.hour == hour && components.minute == minute
     }
     
     deinit {

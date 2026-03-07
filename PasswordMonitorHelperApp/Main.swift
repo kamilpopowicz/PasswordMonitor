@@ -106,24 +106,26 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         Task.detached(priority: .userInitiated) {
-            let manager = ActiveDirectoryManager()
-
-            do {
-                let info = try manager.getPasswordInfo(for: username)
-                await MainActor.run {
-                    Logger.shared.log("Helper fetched password status: daysRemaining=\(info.daysUntilExpiration), expiryDate=\(info.expiryDate)")
-                    NotificationManager.shared.updateExpirationDate(info.expiryDate)
-                    NotificationManager.shared.checkAndShowNotificationIfNeeded()
-                }
-            } catch {
-                await MainActor.run {
-                    Logger.shared.log("Helper refresh failed (reason=\(reason)): \(error)", level: .error)
-                }
+            await MainActor.run {
+                NotificationManager.shared.refreshPasswordStatus(
+                    reason: self.notificationCheckReason(for: reason),
+                    username: username,
+                    onResult: { info in
+                        Logger.shared.log("Helper fetched password status: daysRemaining=\(info.daysUntilExpiration), expiryDate=\(info.expiryDate)")
+                    },
+                    onError: { error in
+                        Logger.shared.log("Helper refresh failed (reason=\(reason)): \(error)", level: .error)
+                    }
+                )
             }
         }
     }
 
     private func shouldRefreshNow(reason: String) -> Bool {
+        if reason == HelperRefreshReason.scheduledTime.rawValue || reason == HelperRefreshReason.manual.rawValue {
+            return true
+        }
+
         let now = Date()
         guard !HelperSchedule.isWithinQuietHours(
             date: now,
@@ -135,6 +137,17 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         return true
+    }
+
+    private func notificationCheckReason(for refreshReason: String) -> NotificationManager.CheckReason {
+        switch refreshReason {
+        case HelperRefreshReason.scheduledTime.rawValue:
+            return .scheduledTime
+        case HelperRefreshReason.manual.rawValue:
+            return .manual
+        default:
+            return .automatic
+        }
     }
 
     private func notificationTimeString() -> String {

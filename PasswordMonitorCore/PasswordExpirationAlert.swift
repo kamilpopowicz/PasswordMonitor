@@ -25,6 +25,7 @@ final class PasswordExpirationAlert {
     private let mode: Mode
     private let onSnooze: () -> Void
     private let onChangePassword: () -> Void
+    private let onEndTest: () -> Void
 
     private var window: NSPanel?
     private var hostingController: NSHostingController<AlertContentView>?
@@ -38,12 +39,14 @@ final class PasswordExpirationAlert {
         expirationDate: Date,
         mode: Mode = .live,
         onSnooze: @escaping () -> Void,
-        onChangePassword: @escaping () -> Void
+        onChangePassword: @escaping () -> Void,
+        onEndTest: @escaping () -> Void = { }
     ) {
         self.expirationDate = expirationDate
         self.mode = mode
         self.onSnooze = onSnooze
         self.onChangePassword = onChangePassword
+        self.onEndTest = onEndTest
     }
 
     /// Pokazuje okienko na wierzchu wszystkich innych okien
@@ -71,6 +74,7 @@ final class PasswordExpirationAlert {
             },
             onEndTest: { [weak self] in
                 self?.close()
+                self?.onEndTest()
             }
         )
 
