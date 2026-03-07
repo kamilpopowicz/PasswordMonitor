@@ -92,8 +92,9 @@ public class ActiveDirectoryManager {
 
     /// Sprawdza czy trzeba pokazać ostrzeżenie
     public func shouldShowWarning(passwordInfo: PasswordInfo) -> Bool {
-        let shouldWarn = passwordInfo.daysUntilExpiration <= warningThreshold
-        Logger.shared.log("Warning threshold check: daysRemaining=\(passwordInfo.daysUntilExpiration), thresholdDays=\(warningThreshold), shouldWarn=\(shouldWarn)")
+        let daysRemaining = PasswordExpirationMath.daysRemaining(until: passwordInfo.expiryDate)
+        let shouldWarn = daysRemaining <= warningThreshold
+        Logger.shared.log("Warning threshold check: daysRemaining=\(daysRemaining), thresholdDays=\(warningThreshold), shouldWarn=\(shouldWarn)")
         return shouldWarn
     }
 
@@ -342,11 +343,7 @@ public class ActiveDirectoryManager {
             to: lastSetDate
         ) ?? lastSetDate
 
-        let daysUntilExpiration = Calendar.current.dateComponents(
-            [.day],
-            from: Date(),
-            to: expiryDate
-        ).day ?? 0
+        let daysUntilExpiration = PasswordExpirationMath.daysRemaining(until: expiryDate)
 
         return PasswordInfo(
             lastSetDate: lastSetDate,

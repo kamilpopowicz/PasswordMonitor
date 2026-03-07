@@ -268,7 +268,7 @@ private struct AlertContentView: View {
     // MARK: - Helpers
     
     private func smartAdviceTextKey() -> LocalizedStringKey {
-        let days = Calendar.current.dateComponents([.day], from: Date(), to: expirationDate).day ?? 0
+        let days = PasswordExpirationMath.daysRemaining(until: expirationDate)
 
         switch days {
         case ..<0:

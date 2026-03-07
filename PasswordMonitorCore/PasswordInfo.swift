@@ -18,9 +18,14 @@ public struct PasswordInfo: Codable {
     /// Czy dane pochodzą z cache (ostatnio znane, nie z bieżącego odczytu AD)
     public let isFromCache: Bool
 
+    /// Aktualna liczba dni do wygaśnięcia liczona z daty wygaśnięcia.
+    public var currentDaysUntilExpiration: Int {
+        PasswordExpirationMath.daysRemaining(until: expiryDate)
+    }
+
     /// Czy hasło jest już wygasłe (pochodna od daysUntilExpiration)
     public var isExpired: Bool {
-        daysUntilExpiration <= 0
+        currentDaysUntilExpiration <= 0
     }
 
     public init(

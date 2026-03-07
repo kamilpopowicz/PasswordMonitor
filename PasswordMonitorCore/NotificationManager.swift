@@ -66,7 +66,7 @@ public final class NotificationManager: ObservableObject {
         expirationDate: Date,
         thresholdDays: Int
     ) -> Bool {
-        let daysRemaining = Calendar.current.dateComponents([.day], from: now, to: expirationDate).day ?? 0
+        let daysRemaining = PasswordExpirationMath.daysRemaining(until: expirationDate, from: now)
         return daysRemaining <= thresholdDays
     }
     
@@ -85,7 +85,7 @@ public final class NotificationManager: ObservableObject {
         Logger.shared.logLocalized("log_notification_expiration_updated %@", date?.formatted() ?? "nil")
         if let date {
             let thresholdDays = Self.resolvedWarningThreshold()
-            let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
+            let daysRemaining = PasswordExpirationMath.daysRemaining(until: date)
             Logger.shared.log("Notification state updated: daysRemaining=\(daysRemaining), thresholdDays=\(thresholdDays)")
         }
     }
@@ -109,7 +109,7 @@ public final class NotificationManager: ObservableObject {
         
         let now = Date()
         let thresholdDays = Self.resolvedWarningThreshold()
-        let daysRemaining = Calendar.current.dateComponents([.day], from: now, to: expirationDate).day ?? 0
+        let daysRemaining = PasswordExpirationMath.daysRemaining(until: expirationDate, from: now)
         Logger.shared.log("Notification check: daysRemaining=\(daysRemaining), thresholdDays=\(thresholdDays), shownToday=\(hasShownNotificationToday), snoozed=\(isSnoozed)")
 
         // Jeśli hasło wygasa w progu ostrzeżenia, pokaż alert od razu (nie czekaj na godzinę).

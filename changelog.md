@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.5.1
+- Fixed a day-count mismatch where the menu bar could show stale `days remaining` while the alert used the live expiry date.
+- Unified remaining-day calculations so the menu bar, alert, cache fallback, and warning logic all use the same expiry-date-based path.
+- Added regression coverage for cache reloads and shared day-count calculation.
+
 ## PasswordMonitor 1.5
 - Restored the login-item helper as a real background path that checks password expiry even when the main app is closed.
 - Added helper refresh scheduling for launch, wake, hourly checks, and the configured notification time.

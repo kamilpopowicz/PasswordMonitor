@@ -34,11 +34,12 @@ public final class PasswordCache {
 
         do {
             var info = try JSONDecoder().decode(PasswordInfo.self, from: data)
+            let refreshedDaysRemaining = PasswordExpirationMath.daysRemaining(until: info.expiryDate)
 
-            // Upewnij się, że przy odczycie oznaczamy dane jako pochodzące z cache
+            // Recompute remaining days so cached values do not drift from the alert logic.
             info = PasswordInfo(
                 lastSetDate: info.lastSetDate,
-                daysUntilExpiration: info.daysUntilExpiration,
+                daysUntilExpiration: refreshedDaysRemaining,
                 expiryDate: info.expiryDate,
                 isFromCache: true
             )

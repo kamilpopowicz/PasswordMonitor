@@ -23,13 +23,15 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 10) {
             // Status
             if let info = passwordInfo {
+                let daysRemaining = info.currentDaysUntilExpiration
+
                 Text("menu_password_expires_title")
                     .font(.headline)
                     .foregroundColor(PMTheme.textSecondary)
 
-                Text(LanguageSettings.localizedString("days_remaining %lld", info.daysUntilExpiration))
+                Text(LanguageSettings.localizedString("days_remaining %lld", daysRemaining))
                     .font(.title2)
-                    .foregroundColor(info.daysUntilExpiration <= 7 ? PMTheme.danger : PMTheme.success)
+                    .foregroundColor(daysRemaining <= 7 ? PMTheme.danger : PMTheme.success)
 
                 Divider()
 
@@ -159,7 +161,7 @@ struct MenuBarView: View {
     private var canChangePasswordNow: Bool {
         guard let info = passwordInfo else { return false }
         // Zachowujemy dotychczasową logikę: aktywuj od 28 dni przed deadlinem
-        return info.daysUntilExpiration <= 28
+        return info.currentDaysUntilExpiration <= 28
     }
 }
 

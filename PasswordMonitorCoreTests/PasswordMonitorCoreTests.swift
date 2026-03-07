@@ -18,10 +18,11 @@ final class PasswordMonitorCoreTests: XCTestCase {
     }
 
     func testPasswordCacheSaveLoadMarksFromCache() {
+        let expiryDate = Date().addingTimeInterval(10 * 24 * 3600 + 3600)
         let info = PasswordInfo(
             lastSetDate: Date(timeIntervalSince1970: 0),
             daysUntilExpiration: 7,
-            expiryDate: Date(timeIntervalSince1970: 60),
+            expiryDate: expiryDate,
             isFromCache: false
         )
 
@@ -29,10 +30,18 @@ final class PasswordMonitorCoreTests: XCTestCase {
 
         let loaded = PasswordCache.shared.load()
         XCTAssertNotNil(loaded)
-        XCTAssertEqual(loaded?.daysUntilExpiration, 7)
-        XCTAssertEqual(loaded?.expiryDate, Date(timeIntervalSince1970: 60))
+        XCTAssertEqual(loaded?.daysUntilExpiration, 10)
+        XCTAssertEqual(loaded?.expiryDate.timeIntervalSince1970 ?? 0, expiryDate.timeIntervalSince1970, accuracy: 1)
         XCTAssertEqual(loaded?.lastSetDate, Date(timeIntervalSince1970: 0))
         XCTAssertTrue(loaded?.isFromCache ?? false)
+    }
+
+    func testPasswordExpirationMathUsesSameDayCountAsAlertLogic() {
+        let now = Date(timeIntervalSince1970: 0)
+        let expirationDate = now.addingTimeInterval(6 * 24 * 3600 + 23 * 3600)
+
+        let daysRemaining = PasswordExpirationMath.daysRemaining(until: expirationDate, from: now)
+        XCTAssertEqual(daysRemaining, 6)
     }
 
     func testPasswordCacheLoadInvalidDataReturnsNil() {
