@@ -143,11 +143,8 @@ struct MenuBarView: View {
                     self.passwordInfo = info
                     self.isChecking = false
 
-                    // Jeśli wg Twojej logiki trzeba ostrzec – przekaż datę do NotificationManager
-                    if manager.shouldShowWarning(passwordInfo: info) {
-                        NotificationManager.shared.updateExpirationDate(info.expiryDate)
-                        NotificationManager.shared.checkAndShowNotificationIfNeeded()
-                    }
+                    NotificationManager.shared.updateExpirationDate(info.expiryDate)
+                    NotificationManager.shared.checkAndShowNotificationIfNeeded()
                 }
             } catch {
                 DispatchQueue.main.async {

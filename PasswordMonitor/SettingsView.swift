@@ -15,6 +15,8 @@ private enum SettingsKeys {
     static let maxPasswordAge = "max_password_age"
     static let warningThreshold = "warning_threshold"
     static let notificationHour = "notification_hour" // Format: "09:00"
+    static let quietHoursStart = "quiet_hours_start" // Format: "18:01"
+    static let quietHoursEnd = "quiet_hours_end"     // Format: "05:59"
     static let minimalLogging = "minimal_logging"
 }
 
@@ -40,6 +42,10 @@ struct SettingsView: View {
     // Godzina w UI
     @State private var notificationHourString = "09:00"
     @State private var notificationDate = Date()
+    @State private var quietHoursStartString = "18:01"
+    @State private var quietHoursStartDate = Date()
+    @State private var quietHoursEndString = "05:59"
+    @State private var quietHoursEndDate = Date()
 
     @State private var showAlert = false
     @State private var alertMessage = ""
@@ -54,6 +60,8 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.maxPasswordAge) private var storedMaxPasswordAge = 30
     @AppStorage(SettingsKeys.warningThreshold) private var storedWarningThreshold = 7
     @AppStorage(SettingsKeys.notificationHour) private var storedNotificationHour = "09:00"
+    @AppStorage(SettingsKeys.quietHoursStart) private var storedQuietHoursStart = "18:01"
+    @AppStorage(SettingsKeys.quietHoursEnd) private var storedQuietHoursEnd = "05:59"
     @AppStorage(SettingsKeys.minimalLogging) private var storedMinimalLogging = true
     var body: some View {
         VStack(spacing: 0) {
@@ -105,6 +113,41 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundColor(PMTheme.textSecondary)
                             .italic()
+
+                        HStack {
+                            DatePicker(
+                                "settings_quiet_hours_start",
+                                selection: $quietHoursStartDate,
+                                displayedComponents: .hourAndMinute
+                            )
+                            .onChange(of: quietHoursStartDate) { _, newValue in
+                                quietHoursStartString = dateToTimeString(newValue) ?? "18:01"
+                                Logger.shared.log("Quiet hours start changed to \(quietHoursStartString)")
+                            }
+
+                            DatePicker(
+                                "settings_quiet_hours_end",
+                                selection: $quietHoursEndDate,
+                                displayedComponents: .hourAndMinute
+                            )
+                            .onChange(of: quietHoursEndDate) { _, newValue in
+                                quietHoursEndString = dateToTimeString(newValue) ?? "05:59"
+                                Logger.shared.log("Quiet hours end changed to \(quietHoursEndString)")
+                            }
+                        }
+
+                        Text("settings_quiet_hours_footnote")
+                            .font(.caption)
+                            .foregroundColor(PMTheme.textSecondary)
+                            .italic()
+
+                        #if DEBUG
+                        Button("settings_force_helper_refresh") {
+                            forceHelperRefresh()
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(PMTheme.accent)
+                        #endif
 
                         Button("menu_test_notification") {
                             let testDate = Date().addingTimeInterval(23 * 3600)
@@ -318,6 +361,8 @@ struct SettingsView: View {
             || maxPasswordAge != storedMaxPasswordAge
             || warningThreshold != storedWarningThreshold
             || notificationHourString != storedNotificationHour
+            || quietHoursStartString != storedQuietHoursStart
+            || quietHoursEndString != storedQuietHoursEnd
             || launchAtLogin != savedLaunchAtLogin
             || selectedLanguage != languageSettings.selectedLanguage
             || minimalLogging != storedMinimalLogging
@@ -363,6 +408,10 @@ struct SettingsView: View {
         warningThreshold = storedWarningThreshold
         notificationHourString = storedNotificationHour
         notificationDate = timeStringToDate(notificationHourString) ?? Date()
+        quietHoursStartString = storedQuietHoursStart
+        quietHoursStartDate = timeStringToDate(quietHoursStartString) ?? Date()
+        quietHoursEndString = storedQuietHoursEnd
+        quietHoursEndDate = timeStringToDate(quietHoursEndString) ?? Date()
         selectedLanguage = languageSettings.selectedLanguage
         minimalLogging = storedMinimalLogging
 
@@ -432,6 +481,17 @@ struct SettingsView: View {
             }
     }
 
+    private func forceHelperRefresh() {
+        DistributedNotificationCenter.default().post(
+            name: HelperMessaging.forceRefreshNotification,
+            object: nil,
+            userInfo: nil
+        )
+        Logger.shared.log("Manual helper refresh requested from Settings")
+        alertMessage = LanguageSettings.localizedString("settings_force_helper_refresh_sent")
+        showAlert = true
+    }
+
     /// Zapisuje wprowadzone zmiany do AppStorage i helpera
     private func saveChanges() {
         let domainChanged = (domainName != storedDomainName)
@@ -441,6 +501,8 @@ struct SettingsView: View {
         storedMaxPasswordAge = maxPasswordAge
         storedWarningThreshold = warningThreshold
         storedNotificationHour = notificationHourString
+        storedQuietHoursStart = quietHoursStartString
+        storedQuietHoursEnd = quietHoursEndString
         storedMinimalLogging = minimalLogging
 
         // Zastosuj stan helpera tylko jeśli zmieniony
@@ -490,6 +552,8 @@ struct SettingsView: View {
         storedMaxPasswordAge = 30
         storedWarningThreshold = 7
         storedNotificationHour = "09:00"
+        storedQuietHoursStart = "18:01"
+        storedQuietHoursEnd = "05:59"
         storedMinimalLogging = true
 
         let systemLanguage = Locale.current.language.languageCode?.identifier ?? "en"

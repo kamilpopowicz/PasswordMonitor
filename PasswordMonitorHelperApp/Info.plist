@@ -6,8 +6,6 @@
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>Application is agent (UIElement)</key>
 	<true/>
-	<key>LSBackgroundOnly</key>
-	<true/>
     <key>LSUIElement</key>
     <true/>
 </dict>

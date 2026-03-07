@@ -55,6 +55,20 @@ public final class NotificationManager: ObservableObject {
     
     /// Timer do jednorazowego sprawdzenia po zmianie hasła (30 minut)
     private var passwordChangeCheckTimer: Timer?
+
+    static func resolvedWarningThreshold(from defaults: UserDefaults = .standard) -> Int {
+        let configuredThreshold = defaults.integer(forKey: "warning_threshold")
+        return configuredThreshold > 0 ? configuredThreshold : 7
+    }
+
+    static func isWithinWarningThreshold(
+        now: Date,
+        expirationDate: Date,
+        thresholdDays: Int
+    ) -> Bool {
+        let daysRemaining = Calendar.current.dateComponents([.day], from: now, to: expirationDate).day ?? 0
+        return daysRemaining <= thresholdDays
+    }
     
     // MARK: - Initialization
     
@@ -69,6 +83,11 @@ public final class NotificationManager: ObservableObject {
     public func updateExpirationDate(_ date: Date?) {
         currentExpirationDate = date
         Logger.shared.logLocalized("log_notification_expiration_updated %@", date?.formatted() ?? "nil")
+        if let date {
+            let thresholdDays = Self.resolvedWarningThreshold()
+            let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
+            Logger.shared.log("Notification state updated: daysRemaining=\(daysRemaining), thresholdDays=\(thresholdDays)")
+        }
     }
     
     /// Sprawdza czy powinniśmy pokazać powiadomienie (wywoływane cyklicznie)
@@ -88,28 +107,19 @@ public final class NotificationManager: ObservableObject {
             return
         }
         
-        let notificationTime = getNotificationTime()
         let now = Date()
-
-        let warningThresholdDays = UserDefaults.standard.integer(forKey: "warning_threshold")
-        let thresholdDays = warningThresholdDays > 0 ? warningThresholdDays : 7
+        let thresholdDays = Self.resolvedWarningThreshold()
         let daysRemaining = Calendar.current.dateComponents([.day], from: now, to: expirationDate).day ?? 0
+        Logger.shared.log("Notification check: daysRemaining=\(daysRemaining), thresholdDays=\(thresholdDays), shownToday=\(hasShownNotificationToday), snoozed=\(isSnoozed)")
 
         // Jeśli hasło wygasa w progu ostrzeżenia, pokaż alert od razu (nie czekaj na godzinę).
-        if daysRemaining <= thresholdDays {
+        if Self.isWithinWarningThreshold(now: now, expirationDate: expirationDate, thresholdDays: thresholdDays) {
             Logger.shared.logLocalized("log_notification_threshold_reached %d", daysRemaining)
             showNotification(passwordExpirationDate: expirationDate)
             return
         }
-        
-        // Czy nadszedł czas powiadomienia (lub minął i komputer był uśpiony)?
-        if now >= notificationTime {
-            Logger.shared.logLocalized("log_notification_time_reached %@", String(describing: expirationDate))
-            showNotification(passwordExpirationDate: expirationDate)
-        } else {
-            let diff = notificationTime.timeIntervalSince(now)
-            Logger.shared.logLocalized("log_notification_minutes_remaining %d", Int(diff / 60))
-        }
+
+        Logger.shared.log("Skipping notification; password expires in \(daysRemaining) days, threshold is \(thresholdDays)")
     }
     
     /// Odłóż powiadomienie o 3 godziny
@@ -141,22 +151,6 @@ public final class NotificationManager: ObservableObject {
     }
     
     // MARK: - Private Methods
-    
-    /// Zwraca dzisiejszą datę z godziną z ustawień
-    private func getNotificationTime() -> Date {
-        let defaults = UserDefaults.standard
-        let timeString = defaults.string(forKey: "notification_hour") ?? "09:00"
-        
-        let calendar = Calendar.current
-        var components = calendar.dateComponents([.year, .month, .day], from: Date())
-        
-        let timeParts = timeString.split(separator: ":")
-        components.hour = Int(timeParts[0]) ?? 9
-        components.minute = Int(timeParts[1]) ?? 0
-        components.second = 0
-        
-        return calendar.date(from: components) ?? Date()
-    }
     
     /// Sprawdza czy snooze się skończył
     private func hasSnoozeExpired() -> Bool {
@@ -201,6 +195,7 @@ public final class NotificationManager: ObservableObject {
     public func showTestNotification(expirationDate: Date) {
         let alert = PasswordExpirationAlert(
             expirationDate: expirationDate,
+            mode: .test,
             onSnooze: { },
             onChangePassword: { [weak self] in
                 Logger.shared.logLocalized("log_notification_test_change_password_selected")

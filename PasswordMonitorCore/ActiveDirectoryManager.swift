@@ -11,7 +11,10 @@ import Foundation
 public class ActiveDirectoryManager {
 
     private let maxPasswordAge = 30       // Dni
-    private let warningThreshold = 7      // Ostrzegaj od 7 dni
+    private var warningThreshold: Int {
+        let configuredThreshold = UserDefaults.standard.integer(forKey: "warning_threshold")
+        return configuredThreshold > 0 ? configuredThreshold : 7
+    }
 
     public init() {}
 
@@ -89,7 +92,9 @@ public class ActiveDirectoryManager {
 
     /// Sprawdza czy trzeba pokazać ostrzeżenie
     public func shouldShowWarning(passwordInfo: PasswordInfo) -> Bool {
-        return passwordInfo.daysUntilExpiration <= warningThreshold
+        let shouldWarn = passwordInfo.daysUntilExpiration <= warningThreshold
+        Logger.shared.log("Warning threshold check: daysRemaining=\(passwordInfo.daysUntilExpiration), thresholdDays=\(warningThreshold), shouldWarn=\(shouldWarn)")
+        return shouldWarn
     }
 
     // MARK: - AD

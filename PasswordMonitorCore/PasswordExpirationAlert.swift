@@ -16,7 +16,13 @@ public extension Notification.Name {
 /// Zawsze na wierzchu, nie da się ukryć, z live licznikiem odliczającym
 @MainActor
 final class PasswordExpirationAlert {
+    enum Mode {
+        case live
+        case test
+    }
+
     private let expirationDate: Date
+    private let mode: Mode
     private let onSnooze: () -> Void
     private let onChangePassword: () -> Void
 
@@ -30,10 +36,12 @@ final class PasswordExpirationAlert {
     ///   - onChangePassword: Callback po kliknięciu "Zmień hasło"
     init(
         expirationDate: Date,
+        mode: Mode = .live,
         onSnooze: @escaping () -> Void,
         onChangePassword: @escaping () -> Void
     ) {
         self.expirationDate = expirationDate
+        self.mode = mode
         self.onSnooze = onSnooze
         self.onChangePassword = onChangePassword
     }
@@ -51,6 +59,7 @@ final class PasswordExpirationAlert {
 
         let contentView = AlertContentView(
             expirationDate: expirationDate,
+            mode: mode,
             isUrgent: isUrgent,
             onSnooze: { [weak self] in
                 self?.close()
@@ -59,6 +68,9 @@ final class PasswordExpirationAlert {
             onChangePassword: { [weak self] in
                 self?.close()
                 self?.onChangePassword()
+            },
+            onEndTest: { [weak self] in
+                self?.close()
             }
         )
 
@@ -96,7 +108,9 @@ final class PasswordExpirationAlert {
         }
 
         panel.alphaValue = 1.0
+        NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
+        panel.orderFrontRegardless()
     }
 
     /// Zamyka okienko
@@ -117,9 +131,11 @@ final class PasswordExpirationAlert {
 /// Zawartość okienka alertu (UI)
 private struct AlertContentView: View {
     let expirationDate: Date
+    let mode: PasswordExpirationAlert.Mode
     let isUrgent: Bool
     let onSnooze: () -> Void
     let onChangePassword: () -> Void
+    let onEndTest: () -> Void
 
     @State private var timeRemaining: TimeInterval
     @State private var timer: Timer?
@@ -127,14 +143,18 @@ private struct AlertContentView: View {
 
     init(
         expirationDate: Date,
+        mode: PasswordExpirationAlert.Mode,
         isUrgent: Bool,
         onSnooze: @escaping () -> Void,
-        onChangePassword: @escaping () -> Void
+        onChangePassword: @escaping () -> Void,
+        onEndTest: @escaping () -> Void
     ) {
         self.expirationDate = expirationDate
+        self.mode = mode
         self.isUrgent = isUrgent
         self.onSnooze = onSnooze
         self.onChangePassword = onChangePassword
+        self.onEndTest = onEndTest
         _timeRemaining = State(initialValue: expirationDate.timeIntervalSinceNow)
     }
 
@@ -217,6 +237,18 @@ private struct AlertContentView: View {
             }
             .padding(.top, 10)
 
+            if mode == .test {
+                Divider()
+                    .padding(.top, 4)
+
+                Button(action: onEndTest) {
+                    Text("alert_end_test")
+                        .frame(minWidth: 120)
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+
             Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
                 .font(.caption2)
                 .foregroundColor(PMTheme.textSecondary)
@@ -244,6 +276,8 @@ private struct AlertContentView: View {
         case 0...1:
             return LocalizedStringKey("alert_advice_today")
         case 2...7:
+            return LocalizedStringKey("alert_advice_week")
+        case _ where mode == .test:
             return LocalizedStringKey("alert_advice_week")
         default:
             return LocalizedStringKey("alert_advice_default")
@@ -334,15 +368,19 @@ private struct AlertContentView: View {
     Group {
         AlertContentView(
             expirationDate: Date().addingTimeInterval(3 * 24 * 3600),
+            mode: .live,
             isUrgent: false,
             onSnooze: {},
-            onChangePassword: {}
+            onChangePassword: {},
+            onEndTest: {}
         )
         AlertContentView(
             expirationDate: Date().addingTimeInterval(999 * 24 * 3600),
+            mode: .test,
             isUrgent: false,
             onSnooze: {},
-            onChangePassword: {}
+            onChangePassword: {},
+            onEndTest: {}
         )
     }
 }

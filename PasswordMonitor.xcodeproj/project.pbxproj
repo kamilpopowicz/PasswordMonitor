@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		C7113AEE2F3006C100201B8D /* PasswordMonitorHelperApp.app in Resources */ = {isa = PBXBuildFile; fileRef = C75A047E2F2B3784009BC04C /* PasswordMonitorHelperApp.app */; };
 		65588709FE16406EA4CDD952 /* PasswordMonitorCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; };
+		7D8394EF112E4AB39AE89FE2 /* PasswordMonitorCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; };
 		C72340C42F28192F00C53976 /* PasswordMonitorCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; };
 		C72340D12F281BF800C53976 /* PasswordMonitorCore.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = C72340BC2F28192F00C53976 /* PasswordMonitorCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8F27F490006C40A89FDDCCC3 /* PasswordMonitorCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBEDBD55289C487A81C00DCD /* PasswordMonitorCoreTests.swift */; };
@@ -25,6 +26,13 @@
 			remoteInfo = PasswordMonitorHelperApp;
 		};
 		C72340C22F28192F00C53976 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C723407D2F263E5400C53976 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C72340BB2F28192F00C53976;
+			remoteInfo = PasswordMonitorCore;
+		};
+		DAA6857E25DF4DB2B28D5AA6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = C723407D2F263E5400C53976 /* Project object */;
 			proxyType = 1;
@@ -76,7 +84,6 @@
 		C75A048B2F2B37CD009BC04C /* Exceptions for "PasswordMonitorHelperApp" folder in "PasswordMonitorHelperApp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Main.swift,
 			);
 			target = C75A047D2F2B3784009BC04C /* PasswordMonitorHelperApp */;
 		};
@@ -123,6 +130,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7D8394EF112E4AB39AE89FE2 /* PasswordMonitorCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -250,6 +258,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				4501DB57F17D4E0CAB26A8AF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C75A047F2F2B3784009BC04C /* PasswordMonitorHelperApp */,
@@ -422,6 +431,11 @@
 			target = C72340BB2F28192F00C53976 /* PasswordMonitorCore */;
 			targetProxy = 9E06532FBF6E474BA3B9E01D /* PBXContainerItemProxy */;
 		};
+		4501DB57F17D4E0CAB26A8AF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C72340BB2F28192F00C53976 /* PasswordMonitorCore */;
+			targetProxy = DAA6857E25DF4DB2B28D5AA6 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -578,7 +592,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -626,7 +640,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -668,7 +682,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitorCore;
@@ -709,7 +723,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitorCore;
@@ -736,7 +750,7 @@
 				DEVELOPMENT_TEAM = SY8DWFNG8P;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitorCoreTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -752,7 +766,7 @@
 				DEVELOPMENT_TEAM = SY8DWFNG8P;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitorCoreTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -790,9 +804,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+					"@executable_path/../../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitorHelperApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -843,9 +858,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+					"@executable_path/../../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = popo.PasswordMonitorHelperApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

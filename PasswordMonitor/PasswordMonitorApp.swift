@@ -225,11 +225,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     // Log informacyjny
                     Logger.shared.logLocalized("log_init_password_expiry %@ %@", String(info.daysUntilExpiration), String(describing: info.expiryDate))
                     
-                    // Jeśli wg Twojej logiki trzeba ostrzec – przekaż datę do NotificationManager
-                    if manager.shouldShowWarning(passwordInfo: info) {
-                        NotificationManager.shared.updateExpirationDate(info.expiryDate)
-                        NotificationManager.shared.checkAndShowNotificationIfNeeded()
-                    }
+                    NotificationManager.shared.updateExpirationDate(info.expiryDate)
+                    NotificationManager.shared.checkAndShowNotificationIfNeeded()
                 }
             } catch {
                 DispatchQueue.main.async {

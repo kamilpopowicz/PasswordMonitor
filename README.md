@@ -1,6 +1,6 @@
 # PasswordMonitor
 
-PasswordMonitor is a macOS menu bar app that helps users keep track of corporate password expiration. It checks Active Directory metadata, notifies you ahead of expiration, and can run automatically in the background via a login item helper.
+PasswordMonitor is a macOS menu bar app that helps users keep track of corporate password expiration. It checks Active Directory metadata, notifies you ahead of expiration, and can run automatically in the background via a login item helper even when the main app is closed.
 
 This repository currently provides **an unsigned build for testing** (no Apple Developer certificate). That means Gatekeeper will show a warning and users must open the app manually (right‑click → Open).
 
@@ -30,9 +30,9 @@ If you want automatic checks:
 
 ## Features
 - Menu bar UI with at‑a‑glance password status
-- Scheduled background checks via login item helper
+- Background helper checks on login, wake, hourly cadence, and the configured notification time
 - Alerts and snooze support for expiring passwords
-- Settings for notification time, warning threshold, and AD domain
+- Settings for notification time, warning threshold, AD domain, and quiet hours
 - Built‑in logs viewer with filtering, copy, and Finder reveal
 - Privacy-safe log masking for host/domain values
 - Runtime language switching (English/Polish)
@@ -51,6 +51,7 @@ If you want automatic checks:
 2. Open **Settings** to configure:
    - Active Directory domain
    - Notification time
+   - Quiet hours
    - Warning threshold
    - Launch at login
 3. The app will check your password status and alert you as needed.

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.5
+- Restored the login-item helper as a real background path that checks password expiry even when the main app is closed.
+- Added helper refresh scheduling for launch, wake, hourly checks, and the configured notification time.
+- Added editable quiet hours to reduce unnecessary background AD queries overnight.
+- Added a debug-only manual helper refresh action in Settings.
+- Fixed the alert threshold so blocking password alerts only appear at the configured warning threshold or below.
+- Added smoke-test documentation and unit coverage for helper scheduling and quiet-hours logic.
+
 ## PasswordMonitor 1.4
 - Unified window panel styling and minimum size across app windows.
 - Fixed menu bar window layout alignment.
