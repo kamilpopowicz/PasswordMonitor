@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.5.4
+- AD domain resolver now matches the system’s FQDN against the available DSCL nodes so manual checks succeed with the read-only value shown in Settings.
+- NotificationManager suppresses repeated “Brak daty wygaśnięcia hasła” logs and keeps the cached expiration date ready for future checks, ensuring helper/menu retries don’t spam AD.
+- SMBPasswordLastSet parsing now selects the newest timestamp when multiple entries are returned (e.g., when reading via Search).
+- Helper now checks cached expiration data on launch and wake so notifications can appear even when the main app is closed.
+- Wake observer now uses NSWorkspace’s notification center to ensure it fires for the login item.
+- Helper now resolves localized alert strings from the host app bundle so button labels render correctly.
+- Menu bar now only shows “domain unavailable” after a real refresh attempt and disables “Zmień hasło” when the domain is confirmed unavailable.
+- Prevented duplicate alerts by skipping automatic checks in the main app when the helper login item is enabled and by avoiding alert checks on menu open.
+- Added resolver matching tests for the new node-selection logic and updated QA guidance to record the automated `xcodebuild test` run despite DerivedData permission warnings.
+
+## PasswordMonitor 1.5.5
+- Added shared, persisted notification state so snooze and “shown today” survive relaunch and stay consistent between main app and helper.
+- Live-checks now run before alerts and menu opens, with a 30s timeout and cache fallback to avoid blocking.
+- Offline domain alerts now disable “Change password”, allow snooze in urgent cases, and show a VPN message.
+- Added 1-hour recheck scheduling for urgent expirations and offline snooze flows.
+
+## PasswordMonitor 1.5.6
+- Added explicit menu refresh start/finish logs to confirm live-check timing.
+- Reduced duplicate helper settings sync on launch.
+
+## PasswordMonitor 1.5.7
+- Debounced menu refresh to prevent back-to-back live checks when the menu opens.
+
+## PasswordMonitor 1.5.3
+- Reduced AD query volume by throttling auto-refreshes, deduplicating in-flight requests, and relying on cached results when cooldown is active.
+- Helper now only refreshes on wake or the configured notification time.
+- Settings show the system domain in read-only mode, with the value pulled from macOS’s Users & Groups configuration.
+
 ## PasswordMonitor 1.5.2
 - Centralized password-status refresh so the app, helper, menu bar, and scheduled checks use the same fetch/update/alert path.
 - Fixed the menu bar open path so opening the menu no longer behaves like a manual alert trigger.

@@ -90,6 +90,23 @@
         }
       }
     },
+    "alert_domain_unavailable": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect to VPN and change your password."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Po\u0142\u0105cz z VPN i zmie\u0144 has\u0142o."
+          }
+        }
+      }
+    },
     "alert_remaining_short_format": {
       "extractionState": "stale",
       "localizations": {
@@ -2079,6 +2096,38 @@
         }
       }
     },
+    "menu_refresh_finished": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu refresh finished"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wczytywanie danych z menu zako\u0144czone"
+          }
+        }
+      }
+    },
+    "menu_refresh_started": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu refresh started"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wczytywanie danych z menu rozpocz\u0119te"
+          }
+        }
+      }
+    },
     "menu_check_status": {
       "localizations": {
         "en": {
@@ -2091,6 +2140,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sprawd\u017a status has\u0142a"
+          }
+        }
+      }
+    },
+    "log_menu_refresh_finished": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu refresh finished"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wczytywanie danych z menu zako\u0144czone"
+          }
+        }
+      }
+    },
+    "log_menu_refresh_started": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu refresh started"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wczytywanie danych z menu rozpocz\u0119te"
+          }
+        }
+      }
+    },
+    "menu_checking_now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking now..."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprawdzanie..."
           }
         }
       }
@@ -2286,6 +2383,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nazwa domeny"
+          }
+        }
+      }
+    },
+    "settings_domain_not_configured": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No system domain configured"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak skonfigurowanej domeny systemowej"
+          }
+        }
+      }
+    },
+    "settings_domain_source_info": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domain is read-only and loaded from the laptop's Users & Groups configuration."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domena tylko do odczytu, pochodzi z ustawienia Użytkownicy i grupy."
           }
         }
       }

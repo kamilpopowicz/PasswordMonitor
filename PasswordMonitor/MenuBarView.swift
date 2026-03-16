@@ -16,13 +16,15 @@ struct MenuBarView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.openWindow) private var openWindow
 
-    @State private var passwordInfo: PasswordInfo?
+    @ObservedObject private var notificationManager = NotificationManager.shared
+
     @State private var isChecking = false
+    @State private var lastMenuRefreshAt: Date = .distantPast
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // Status
-            if let info = passwordInfo {
+            if let info = notificationManager.latestPasswordInfo {
                 let daysRemaining = info.currentDaysUntilExpiration
 
                 Text("menu_password_expires_title")
@@ -44,7 +46,7 @@ struct MenuBarView: View {
                     .foregroundColor(PMTheme.textSecondary)
                 
                 // ostrzeżenie, jeśli dane są z cache (domena niedostępna)
-                if info.isFromCache {
+                if notificationManager.hasPerformedRefresh && !notificationManager.isDomainAvailable {
                     Text("menu_domain_warning")
                         .font(.caption)
                         .foregroundColor(PMTheme.danger)
@@ -54,6 +56,16 @@ struct MenuBarView: View {
                 Text("menu_check_status")
                     .font(.headline)
                     .foregroundColor(PMTheme.textSecondary)
+            }
+
+            if isChecking {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("menu_checking_now")
+                        .font(.caption)
+                        .foregroundColor(PMTheme.textSecondary)
+                }
             }
 
             Divider()
@@ -122,7 +134,7 @@ struct MenuBarView: View {
         .pmPanel()
         .frame(width: 260, alignment: .leading)
         .onAppear {
-            refreshPasswordStatus(reason: .automatic)
+            refreshPasswordStatus(reason: .manual, shouldCheckNotification: true)
         }
     }
 
@@ -132,19 +144,27 @@ struct MenuBarView: View {
     }
 
     private func checkPasswordNow() {
-        refreshPasswordStatus(reason: .manual)
+        refreshPasswordStatus(reason: .manual, shouldCheckNotification: true)
     }
 
-    private func refreshPasswordStatus(reason: NotificationManager.CheckReason) {
+    private func refreshPasswordStatus(reason: NotificationManager.CheckReason, shouldCheckNotification: Bool) {
+        let now = Date()
+        if isChecking || now.timeIntervalSince(lastMenuRefreshAt) < 1.0 {
+            return
+        }
+        lastMenuRefreshAt = now
         isChecking = true
-        NotificationManager.shared.refreshPasswordStatus(
+        Logger.shared.logLocalized("log_menu_refresh_started")
+        notificationManager.refreshPasswordStatusLive(
             reason: reason,
+            shouldCheckNotification: shouldCheckNotification,
             onResult: { info in
-                self.passwordInfo = info
                 self.isChecking = false
+                Logger.shared.logLocalized("log_menu_refresh_finished")
             },
             onError: { error in
                 self.isChecking = false
+                Logger.shared.logLocalized("log_menu_refresh_finished")
                 Logger.shared.logLocalized("log_menu_check_error %@", String(describing: error))
             }
         )
@@ -152,9 +172,11 @@ struct MenuBarView: View {
     
     /// Czy przycisk „Zmień hasło” ma być aktywny
     private var canChangePasswordNow: Bool {
-        guard let info = passwordInfo else { return false }
+        guard let info = notificationManager.latestPasswordInfo else { return false }
         // Zachowujemy dotychczasową logikę: aktywuj od 28 dni przed deadlinem
-        return info.currentDaysUntilExpiration <= 28
+        let withinThreshold = info.currentDaysUntilExpiration <= 28
+        let domainAvailable = notificationManager.isDomainAvailable || !notificationManager.hasPerformedRefresh
+        return withinThreshold && domainAvailable
     }
 }
 

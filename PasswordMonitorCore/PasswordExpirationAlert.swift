@@ -22,6 +22,7 @@ final class PasswordExpirationAlert {
     }
 
     private let expirationDate: Date
+    private let isDomainAvailable: Bool
     private let mode: Mode
     private let onSnooze: () -> Void
     private let onChangePassword: () -> Void
@@ -37,12 +38,14 @@ final class PasswordExpirationAlert {
     ///   - onChangePassword: Callback po kliknięciu "Zmień hasło"
     init(
         expirationDate: Date,
+        isDomainAvailable: Bool = true,
         mode: Mode = .live,
         onSnooze: @escaping () -> Void,
         onChangePassword: @escaping () -> Void,
         onEndTest: @escaping () -> Void = { }
     ) {
         self.expirationDate = expirationDate
+        self.isDomainAvailable = isDomainAvailable
         self.mode = mode
         self.onSnooze = onSnooze
         self.onChangePassword = onChangePassword
@@ -62,6 +65,7 @@ final class PasswordExpirationAlert {
 
         let contentView = AlertContentView(
             expirationDate: expirationDate,
+            isDomainAvailable: isDomainAvailable,
             mode: mode,
             isUrgent: isUrgent,
             onSnooze: { [weak self] in
@@ -135,6 +139,7 @@ final class PasswordExpirationAlert {
 /// Zawartość okienka alertu (UI)
 private struct AlertContentView: View {
     let expirationDate: Date
+    let isDomainAvailable: Bool
     let mode: PasswordExpirationAlert.Mode
     let isUrgent: Bool
     let onSnooze: () -> Void
@@ -147,6 +152,7 @@ private struct AlertContentView: View {
 
     init(
         expirationDate: Date,
+        isDomainAvailable: Bool,
         mode: PasswordExpirationAlert.Mode,
         isUrgent: Bool,
         onSnooze: @escaping () -> Void,
@@ -154,6 +160,7 @@ private struct AlertContentView: View {
         onEndTest: @escaping () -> Void
     ) {
         self.expirationDate = expirationDate
+        self.isDomainAvailable = isDomainAvailable
         self.mode = mode
         self.isUrgent = isUrgent
         self.onSnooze = onSnooze
@@ -168,12 +175,12 @@ private struct AlertContentView: View {
                 .font(.system(size: 48))
                 .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.warning)
 
-            Text("alert_title_expiring")
+            Text(Logger.localizedString("alert_title_expiring"))
                 .font(.title2)
                 .fontWeight(.bold)
 
             // Opis z zawijaniem tekstu
-            Text(smartAdviceTextKey())
+            Text(smartAdviceText())
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(PMTheme.textSecondary)
@@ -182,7 +189,7 @@ private struct AlertContentView: View {
 
             // Live timer – zawsze pokazuje rzeczywisty czas do wygaśnięcia
             VStack(spacing: 8) {
-                Text(remainingTitleKey)
+                Text(remainingTitleText)
                     .font(.caption)
                     .foregroundColor(PMTheme.textSecondary)
 
@@ -216,37 +223,50 @@ private struct AlertContentView: View {
                     )
             )
 
+            let snoozeDisabled = isUrgent && isDomainAvailable
+            let changePasswordDisabled = !isDomainAvailable
+
             HStack(spacing: 12) {
                 // "Odłóż" – niedostępny tylko gdy hasło wygasa za ≤ 24h
                 Button(action: onSnooze) {
-                    Text("alert_snooze")
+                    Text(Logger.localizedString("alert_snooze"))
                         .frame(minWidth: 100)
                 }
                 .buttonStyle(.bordered)
                 .tint(PMTheme.danger)
-                .disabled(isUrgent)
-                .opacity(isUrgent ? 0.5 : 1.0)
-                .help(isUrgent
-                      ? Text("alert_snooze_help_disabled")
-                      : Text("alert_snooze_help_enabled"))
+                .disabled(snoozeDisabled)
+                .opacity(snoozeDisabled ? 0.5 : 1.0)
+                .help(snoozeDisabled
+                      ? Text(Logger.localizedString("alert_snooze_help_disabled"))
+                      : Text(Logger.localizedString("alert_snooze_help_enabled")))
 
                 // "Zmień hasło" – na razie tylko log + zamknięcie okna
                 Button(action: onChangePassword) {
-                    Text("alert_change_password")
+                    Text(Logger.localizedString("alert_change_password"))
                         .frame(minWidth: 100)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(PMTheme.accent)
                 .keyboardShortcut(.defaultAction)
+                .disabled(changePasswordDisabled)
+                .opacity(changePasswordDisabled ? 0.5 : 1.0)
             }
             .padding(.top, 10)
+
+            if !isDomainAvailable {
+                Text(Logger.localizedString("alert_domain_unavailable"))
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(PMTheme.danger)
+                    .multilineTextAlignment(.center)
+            }
 
             if mode == .test {
                 Divider()
                     .padding(.top, 4)
 
                 Button(action: onEndTest) {
-                    Text("alert_end_test")
+                    Text(Logger.localizedString("alert_end_test"))
                         .frame(minWidth: 120)
                 }
                 .buttonStyle(.bordered)
@@ -271,27 +291,27 @@ private struct AlertContentView: View {
 
     // MARK: - Helpers
     
-    private func smartAdviceTextKey() -> LocalizedStringKey {
+    private func smartAdviceText() -> String {
         let days = PasswordExpirationMath.daysRemaining(until: expirationDate)
 
         switch days {
         case ..<0:
-            return LocalizedStringKey("alert_advice_expired")
+            return Logger.localizedString("alert_advice_expired")
         case 0...1:
-            return LocalizedStringKey("alert_advice_today")
+            return Logger.localizedString("alert_advice_today")
         case 2...7:
-            return LocalizedStringKey("alert_advice_week")
+            return Logger.localizedString("alert_advice_week")
         case _ where mode == .test:
-            return LocalizedStringKey("alert_advice_week")
+            return Logger.localizedString("alert_advice_week")
         default:
-            return LocalizedStringKey("alert_advice_default")
+            return Logger.localizedString("alert_advice_default")
         }
     }
 
-    private var remainingTitleKey: LocalizedStringKey {
+    private var remainingTitleText: String {
         timeRemaining > 86400
-            ? LocalizedStringKey("alert_remaining_title_long")
-            : LocalizedStringKey("alert_remaining_title_short")
+            ? Logger.localizedString("alert_remaining_title_long")
+            : Logger.localizedString("alert_remaining_title_short")
     }
 
     private func formattedExpirationDate() -> String {
@@ -372,6 +392,7 @@ private struct AlertContentView: View {
     Group {
         AlertContentView(
             expirationDate: Date().addingTimeInterval(3 * 24 * 3600),
+            isDomainAvailable: true,
             mode: .live,
             isUrgent: false,
             onSnooze: {},
@@ -380,6 +401,7 @@ private struct AlertContentView: View {
         )
         AlertContentView(
             expirationDate: Date().addingTimeInterval(999 * 24 * 3600),
+            isDomainAvailable: true,
             mode: .test,
             isUrgent: false,
             onSnooze: {},
