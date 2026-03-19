@@ -18,6 +18,7 @@ public final class NotificationManager: ObservableObject {
         case automatic
         case scheduledTime
         case manual
+        case menuOpen
     }
 
     public static let shared = NotificationManager()
@@ -80,6 +81,8 @@ public final class NotificationManager: ObservableObject {
     private var hasLoggedMissingExpirationDate = false
     private let helperBundleId = "popo.PasswordMonitorHelperApp"
     private let stateStore = NotificationStateStore.shared
+    private var lastLogTimestamps: [String: Date] = [:]
+    private var lastLoggedDaysRemaining: Int?
 
     static func resolvedWarningThreshold(from defaults: UserDefaults = .standard) -> Int {
         let configuredThreshold = defaults.integer(forKey: "warning_threshold")
@@ -115,7 +118,10 @@ public final class NotificationManager: ObservableObject {
         now: Date,
         defaults: UserDefaults = .standard
     ) -> Bool {
-        isWithinQuietHours(now: now, defaults: defaults) && reason == .automatic
+        guard isWithinQuietHours(now: now, defaults: defaults) else {
+            return false
+        }
+        return reason != .manual && reason != .scheduledTime
     }
 
     static func isNotificationSuppressedBySnooze(
@@ -132,7 +138,7 @@ public final class NotificationManager: ObservableObject {
             return false
         }
 
-        return reason == .automatic
+        return reason != .manual
     }
     
     // MARK: - Initialization
@@ -267,13 +273,10 @@ public final class NotificationManager: ObservableObject {
             }
 
             await MainActor.run {
-                guard let self else { return }
-                guard self.liveRefreshToken == token else { return }
-                timeoutWorkItem.cancel()
-                self.isLiveRefreshInFlight = false
-                self.liveRefreshToken = nil
-                self.completeLiveRefresh(
-                    with: result,
+                NotificationManager.shared.finalizeLiveRefresh(
+                    result: result,
+                    token: token,
+                    timeoutWorkItem: timeoutWorkItem,
                     reason: reason,
                     shouldCheckNotification: shouldCheckNotification,
                     onResult: onResult,
@@ -281,6 +284,29 @@ public final class NotificationManager: ObservableObject {
                 )
             }
         }
+    }
+
+    @MainActor
+    private func finalizeLiveRefresh(
+        result: Result<PasswordInfo, Error>,
+        token: UUID,
+        timeoutWorkItem: DispatchWorkItem,
+        reason: CheckReason,
+        shouldCheckNotification: Bool,
+        onResult: ((PasswordInfo) -> Void)?,
+        onError: ((Error) -> Void)?
+    ) {
+        guard liveRefreshToken == token else { return }
+        timeoutWorkItem.cancel()
+        isLiveRefreshInFlight = false
+        liveRefreshToken = nil
+        completeLiveRefresh(
+            with: result,
+            reason: reason,
+            shouldCheckNotification: shouldCheckNotification,
+            onResult: onResult,
+            onError: onError
+        )
     }
 
     private func shouldStartRefresh(reason: CheckReason, bypassCooldown: Bool) -> Bool {
@@ -440,7 +466,9 @@ public final class NotificationManager: ObservableObject {
         }
         
         guard !hasShownNotificationToday else {
-            Logger.shared.logLocalized("log_notification_already_shown_today")
+            if shouldLog(key: "notification_already_shown", interval: 30 * 60) {
+                Logger.shared.logLocalized("log_notification_already_shown_today")
+            }
             return
         }
         
@@ -453,12 +481,14 @@ public final class NotificationManager: ObservableObject {
             snoozeEndTime: snoozeEndTime,
             now: now
         ) {
-            Logger.shared.logLocalized("log_notification_snooze_until %@", snoozeEndTime?.formatted() ?? "unknown")
-            Logger.shared.log("Skipping notification because snooze is active (reason=\(reason.rawValue))")
+            if shouldLog(key: "notification_snoozed", interval: 10 * 60) {
+                Logger.shared.logLocalized("log_notification_snooze_until %@", snoozeEndTime?.formatted() ?? "unknown")
+                Logger.shared.log("Skipping notification because snooze is active (reason=\(reason.rawValue))")
+            }
             return
         }
 
-        if snoozeStillActive && reason != .automatic {
+        if snoozeStillActive && reason == .manual {
             Logger.shared.log("Bypassing active snooze for notification (reason=\(reason.rawValue), snoozeUntil=\(snoozeEndTime?.formatted() ?? "unknown"))")
             isSnoozed = false
             snoozeEndTime = nil
@@ -471,7 +501,9 @@ public final class NotificationManager: ObservableObject {
         Logger.shared.log("Notification check: reason=\(reason.rawValue), daysRemaining=\(daysRemaining), thresholdDays=\(thresholdDays), shownToday=\(hasShownNotificationToday), snoozed=\(isSnoozed), quietHours=\(isQuietHours)")
 
         if Self.isNotificationSuppressedForQuietHours(reason: reason, now: now) {
-            Logger.shared.log("Skipping notification during quiet hours (reason=\(reason.rawValue))")
+            if shouldLog(key: "notification_quiet_hours", interval: 30 * 60) {
+                Logger.shared.log("Skipping notification during quiet hours (reason=\(reason.rawValue))")
+            }
             return
         }
 
@@ -496,7 +528,10 @@ public final class NotificationManager: ObservableObject {
             return
         }
 
-        Logger.shared.log("Skipping notification; password expires in \(daysRemaining) days, threshold is \(thresholdDays)")
+        if lastLoggedDaysRemaining != daysRemaining || shouldLog(key: "notification_below_threshold", interval: 60 * 60) {
+            Logger.shared.log("Skipping notification; password expires in \(daysRemaining) days, threshold is \(thresholdDays)")
+            lastLoggedDaysRemaining = daysRemaining
+        }
     }
     
     /// Odłóż powiadomienie o określony czas
@@ -705,7 +740,7 @@ public final class NotificationManager: ObservableObject {
     }
 
     private func shouldHandleNotifications(for reason: CheckReason) -> Bool {
-        if reason == .manual {
+        if reason == .manual || reason == .menuOpen {
             return true
         }
 
@@ -733,6 +768,15 @@ public final class NotificationManager: ObservableObject {
 
         let components = Calendar.current.dateComponents([.hour, .minute], from: now)
         return components.hour == hour && components.minute == minute
+    }
+
+    private func shouldLog(key: String, interval: TimeInterval) -> Bool {
+        let now = Date()
+        if let last = lastLogTimestamps[key], now.timeIntervalSince(last) < interval {
+            return false
+        }
+        lastLogTimestamps[key] = now
+        return true
     }
     
     deinit {
