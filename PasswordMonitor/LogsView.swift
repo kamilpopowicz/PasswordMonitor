@@ -126,6 +126,7 @@ struct LogsView: View {
                             (Text("logs_refresh_label") + Text(":"))
                                 .font(.caption)
                                 .foregroundColor(PMTheme.textSecondary)
+                                .padding(.trailing, 10)
                             Picker("", selection: $logStore.refreshMode) {
                                 Text("logs_refresh_immediate").tag(LogStore.RefreshMode.immediate)
                                 Text("logs_refresh_1m").tag(LogStore.RefreshMode.oneMinute)
@@ -134,7 +135,6 @@ struct LogsView: View {
                             .labelsHidden()
                             .pickerStyle(.segmented)
                             .frame(width: 220, alignment: .trailing)
-                            .padding(.leading, 4)
                         }
 
                         Text("logs_privacy_notice")
