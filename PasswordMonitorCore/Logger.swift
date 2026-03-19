@@ -107,14 +107,38 @@ public class Logger {
             return cached.bundle
         }
 
-        if let path = Bundle.main.path(forResource: languageCode, ofType: "lproj"),
-           let bundle = Bundle(path: path) {
+        if let bundle = bundleForLanguage(languageCode, in: Bundle.main) {
+            cachedBundle = (languageCode, bundle)
+            return bundle
+        }
+
+        if let hostBundle = hostAppBundle(), let bundle = bundleForLanguage(languageCode, in: hostBundle) {
             cachedBundle = (languageCode, bundle)
             return bundle
         }
 
         cachedBundle = (languageCode, .main)
         return .main
+    }
+
+    private static func bundleForLanguage(_ languageCode: String, in bundle: Bundle) -> Bundle? {
+        guard let path = bundle.path(forResource: languageCode, ofType: "lproj") else {
+            return nil
+        }
+        return Bundle(path: path)
+    }
+
+    private static func hostAppBundle() -> Bundle? {
+        // Helper lives at .../PasswordMonitor.app/Contents/Library/LoginItems/PasswordMonitorHelperApp.app
+        // Go up 4 levels to reach the host app bundle.
+        var url = Bundle.main.bundleURL
+        for _ in 0..<4 {
+            url.deleteLastPathComponent()
+        }
+        guard url.pathExtension == "app" else {
+            return nil
+        }
+        return Bundle(url: url)
     }
 
     private static var isMinimalLoggingEnabled: Bool {
@@ -135,7 +159,7 @@ public class Logger {
             result = result.replacingOccurrences(of: fullName, with: "<user>")
         }
 
-        let domain = UserDefaults.standard.string(forKey: "ad_domain") ?? ""
+        let domain = SystemADDomainResolver.currentDomain() ?? ""
         if !domain.isEmpty {
             result = result.replacingOccurrences(of: domain, with: "<domain>")
         }

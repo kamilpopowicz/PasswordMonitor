@@ -134,7 +134,7 @@ struct MenuBarView: View {
         .pmPanel()
         .frame(width: 260, alignment: .leading)
         .onAppear {
-            refreshPasswordStatus(reason: .manual, shouldCheckNotification: true)
+            refreshPasswordStatus(reason: .menuOpen, shouldCheckNotification: true)
         }
     }
 
@@ -144,7 +144,7 @@ struct MenuBarView: View {
     }
 
     private func checkPasswordNow() {
-        refreshPasswordStatus(reason: .manual, shouldCheckNotification: true)
+        refreshPasswordStatus(reason: .menuOpen, shouldCheckNotification: true)
     }
 
     private func refreshPasswordStatus(reason: NotificationManager.CheckReason, shouldCheckNotification: Bool) {

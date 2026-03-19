@@ -10,9 +10,13 @@ import XCTest
 
 final class PasswordMonitorCoreTests: XCTestCase {
     private let cacheKey = "cached_password_info"
+    private let sharedDefaults = UserDefaults(suiteName: "popo.PasswordMonitor")
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: cacheKey)
+        sharedDefaults?.removeObject(forKey: cacheKey)
+        UserDefaults.standard.removeObject(forKey: "cached_password_info_last_fetch_cache")
+        sharedDefaults?.removeObject(forKey: "cached_password_info_last_fetch_cache")
         UserDefaults.standard.removeObject(forKey: "warning_threshold")
         UserDefaults.standard.removeObject(forKey: "quiet_hours_start")
         UserDefaults.standard.removeObject(forKey: "quiet_hours_end")
@@ -29,6 +33,7 @@ final class PasswordMonitorCoreTests: XCTestCase {
         )
 
         PasswordCache.shared.save(info)
+        PasswordCache.shared.markLastFetchWasCache(true)
 
         let loaded = PasswordCache.shared.load()
         XCTAssertNotNil(loaded)
@@ -36,6 +41,7 @@ final class PasswordMonitorCoreTests: XCTestCase {
         XCTAssertEqual(loaded?.expiryDate.timeIntervalSince1970 ?? 0, expiryDate.timeIntervalSince1970, accuracy: 1)
         XCTAssertEqual(loaded?.lastSetDate, Date(timeIntervalSince1970: 0))
         XCTAssertTrue(loaded?.isFromCache ?? false)
+        XCTAssertNotNil(sharedDefaults?.data(forKey: cacheKey))
     }
 
     func testPasswordExpirationMathUsesSameDayCountAsAlertLogic() {
@@ -60,6 +66,44 @@ final class PasswordMonitorCoreTests: XCTestCase {
 
     func testParseSMBPasswordLastSetInvalid() {
         XCTAssertThrowsError(try ActiveDirectoryManager.parseSMBPasswordLastSet(from: "nope"))
+    }
+
+    func testParseSMBPasswordLastSetSelectsLatestWhenMultipleLines() throws {
+        let output = """
+        SMBPasswordLastSet: 116444736000000000
+        SMBPasswordLastSet: 116444736100000000
+        """
+        let date = try ActiveDirectoryManager.parseSMBPasswordLastSet(from: output)
+        XCTAssertEqual(date, Date(timeIntervalSince1970: 10))
+    }
+
+    func testSystemADDomainResolverParsesDomainFromOutput() {
+        let output = """
+        Active Directory Domain = corp.example.com
+        Active Directory Forest = CORP.EXAMPLE.COM
+        """
+
+        XCTAssertEqual(SystemADDomainResolver.parseDomain(from: output), "corp.example.com")
+    }
+
+    func testSystemADDomainResolverReturnsNilForMissingDomain() {
+        let output = "Some unrelated configuration"
+        XCTAssertNil(SystemADDomainResolver.parseDomain(from: output))
+    }
+
+    func testSystemADDomainResolverMatchesShortNodeNameFromFQDN() {
+        let nodes = ["EXAMPLE", "OTHER"]
+        XCTAssertEqual(
+            SystemADDomainResolver.matchingNode(for: "example.local", nodes: nodes),
+            "EXAMPLE"
+        )
+    }
+
+    func testSystemADDomainResolverReturnsNilWhenNodeListDoesNotContainDomain() {
+        let nodes = ["EXAMPLE"]
+        XCTAssertNil(
+            SystemADDomainResolver.matchingNode(for: "unknown.domain", nodes: nodes)
+        )
     }
 
     func testHelperScheduleNextOccurrenceReturnsSameDayFutureTime() {
