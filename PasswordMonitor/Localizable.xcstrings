@@ -3158,13 +3158,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auto refresh:"
+            "value": "Auto refresh"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auto odświeżanie:"
+            "value": "Auto odświeżanie"
           }
         }
       }

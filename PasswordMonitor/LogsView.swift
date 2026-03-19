@@ -122,8 +122,8 @@ struct LogsView: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 6) {
-                        HStack(spacing: 12) {
-                            Text("logs_refresh_label")
+                        HStack(spacing: 8) {
+                            (Text("logs_refresh_label") + Text(":"))
                                 .font(.caption)
                                 .foregroundColor(PMTheme.textSecondary)
                             Picker("", selection: $logStore.refreshMode) {
@@ -134,7 +134,6 @@ struct LogsView: View {
                             .labelsHidden()
                             .pickerStyle(.segmented)
                             .frame(width: 220, alignment: .trailing)
-                            .padding(.leading, 6)
                         }
 
                         Text("logs_privacy_notice")
