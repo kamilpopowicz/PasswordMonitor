@@ -93,6 +93,12 @@ final class LogStore: ObservableObject {
             }
         }
     }
+
+    func share() {
+        let picker = NSSharingServicePicker(items: [fileURL])
+        guard let window = NSApp.keyWindow, let contentView = window.contentView else { return }
+        picker.show(relativeTo: .zero, of: contentView, preferredEdge: .minY)
+    }
     func revealInFinder() {
         NSWorkspace.shared.activateFileViewerSelecting([fileURL])
     }

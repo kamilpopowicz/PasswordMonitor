@@ -18,6 +18,7 @@ struct LogsView: View {
     @State private var isFollowingLatest = true
     @State private var scrollToBottomToken = UUID()
     @State private var showSearchField = false
+    @State private var searchFocusToken = UUID()
     private let searchColumnWidth: CGFloat = 260
     private let searchButtonSpacing: CGFloat = 6
     private let levelsColumnWidth: CGFloat = 430
@@ -49,7 +50,7 @@ struct LogsView: View {
                         .pmButton()
 
                         Button("logs_export") {
-                            logStore.exportLog(content: filteredContent)
+                            logStore.share()
                         }
                         .pmButton()
                     }
@@ -60,7 +61,9 @@ struct LogsView: View {
                         SearchField(
                             text: $searchText,
                             placeholder: String(localized: "logs_search_placeholder"),
-                            isDark: themeManager.isDarkAppearance
+                            isDark: themeManager.isDarkAppearance,
+                            isVisible: showSearchField,
+                            focusToken: $searchFocusToken
                         )
                         .frame(width: showSearchField ? (searchColumnWidth - 32 - searchButtonSpacing) : 0)
                         .opacity(showSearchField ? 1 : 0)
@@ -71,7 +74,11 @@ struct LogsView: View {
                         Button {
                             withAnimation(.easeInOut(duration: 0.18)) {
                                 showSearchField.toggle()
-                                if !showSearchField { searchText = "" }
+                                if showSearchField {
+                                    searchFocusToken = UUID()
+                                } else {
+                                    searchText = ""
+                                }
                             }
                         } label: {
                             Image(systemName: showSearchField ? "xmark" : "magnifyingglass")
@@ -119,6 +126,7 @@ struct LogsView: View {
                             Text("logs_refresh_label")
                                 .font(.caption)
                                 .foregroundColor(PMTheme.textSecondary)
+                                .padding(.trailing, 6)
                             Picker("", selection: $logStore.refreshMode) {
                                 Text("logs_refresh_immediate").tag(LogStore.RefreshMode.immediate)
                                 Text("logs_refresh_1m").tag(LogStore.RefreshMode.oneMinute)
@@ -250,6 +258,8 @@ private struct SearchField: NSViewRepresentable {
     @Binding var text: String
     let placeholder: String
     let isDark: Bool
+    let isVisible: Bool
+    @Binding var focusToken: UUID
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text)
@@ -264,6 +274,7 @@ private struct SearchField: NSViewRepresentable {
         field.focusRingType = .none
         field.controlSize = .small
         field.drawsBackground = true
+        context.coordinator.field = field
         applyAppearance(field)
         return field
     }
@@ -274,6 +285,13 @@ private struct SearchField: NSViewRepresentable {
         }
         nsView.placeholderString = placeholder
         applyAppearance(nsView)
+
+        if isVisible, context.coordinator.lastFocusToken != focusToken {
+            context.coordinator.lastFocusToken = focusToken
+            nsView.window?.makeFirstResponder(nsView)
+        } else if !isVisible, nsView.window?.firstResponder == nsView {
+            nsView.window?.makeFirstResponder(nil)
+        }
     }
 
     private func applyAppearance(_ field: NSSearchField) {
@@ -290,6 +308,8 @@ private struct SearchField: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSSearchFieldDelegate {
         @Binding var text: String
+        weak var field: NSSearchField?
+        var lastFocusToken = UUID()
 
         init(text: Binding<String>) {
             _text = text
