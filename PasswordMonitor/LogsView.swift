@@ -134,6 +134,7 @@ struct LogsView: View {
                             .labelsHidden()
                             .pickerStyle(.segmented)
                             .frame(width: 220, alignment: .trailing)
+                            .padding(.leading, 4)
                         }
 
                         Text("logs_privacy_notice")
