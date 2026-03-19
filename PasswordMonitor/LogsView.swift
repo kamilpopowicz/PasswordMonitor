@@ -19,7 +19,6 @@ struct LogsView: View {
     @State private var scrollToBottomToken = UUID()
     @State private var showSearchField = false
     private let searchColumnWidth: CGFloat = 260
-    private let searchButtonWidth: CGFloat = 96
     private let searchButtonSpacing: CGFloat = 6
     private let levelsColumnWidth: CGFloat = 430
 
@@ -63,7 +62,7 @@ struct LogsView: View {
                             placeholder: String(localized: "logs_search_placeholder"),
                             isDark: themeManager.isDarkAppearance
                         )
-                        .frame(width: showSearchField ? (searchColumnWidth - searchButtonWidth - searchButtonSpacing) : 0)
+                        .frame(width: showSearchField ? (searchColumnWidth - 32 - searchButtonSpacing) : 0)
                         .opacity(showSearchField ? 1 : 0)
                         .clipped()
                         .animation(.easeInOut(duration: 0.18), value: showSearchField)
@@ -75,13 +74,10 @@ struct LogsView: View {
                                 if !showSearchField { searchText = "" }
                             }
                         } label: {
-                            Label(
-                                showSearchField ? "logs_search_close" : "logs_search",
-                                systemImage: showSearchField ? "xmark" : "magnifyingglass"
-                            )
+                            Image(systemName: showSearchField ? "xmark" : "magnifyingglass")
                         }
                         .pmButton(role: .secondary, size: .compact)
-                        .frame(width: searchButtonWidth)
+                        .help(showSearchField ? String(localized: "logs_search_close") : String(localized: "logs_search"))
                     }
                     .frame(width: searchColumnWidth, alignment: .trailing)
                 }
@@ -156,6 +152,16 @@ struct LogsView: View {
                         scrollToBottomToken: $scrollToBottomToken,
                         isDark: themeManager.isDarkAppearance
                     )
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(PMTheme.fieldBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(PMTheme.fieldStroke, lineWidth: 1)
+                            )
+                    )
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
                 }
 
                 if logStore.isLoading {
@@ -332,6 +338,10 @@ private struct LogTextView: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         guard let textView = nsView.documentView as? NSTextView else { return }
+        textView.textColor = isDark ? NSColor(PMTheme.textPrimary) : NSColor(PMTheme.textPrimary)
+        textView.insertionPointColor = isDark ? NSColor(PMTheme.textPrimary) : NSColor(PMTheme.textPrimary)
+        textView.drawsBackground = false
+
         if textView.textStorage?.length != attributedText.length ||
             textView.attributedString() != attributedText {
             textView.textStorage?.setAttributedString(attributedText)
