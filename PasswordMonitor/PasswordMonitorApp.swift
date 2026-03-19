@@ -109,7 +109,6 @@ struct AppCommands: Commands {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    private var wakeObserver: Any?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger.shared.logLocalized("log_app_launched")
@@ -117,26 +116,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Rejestracja helpera
         registerHelperService()
         
-        // Obserwacja NSWorkspace.didWakeNotification, która po wybudzeniu systemu wywoła sprawdzenie
-        wakeObserver = NotificationCenter.default.addObserver(
-            forName: NSWorkspace.didWakeNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            Logger.shared.logLocalized("log_system_wake_check")
-            
-            Task { @MainActor in
-                NotificationManager.shared.refreshPasswordStatus(
-                    reason: .automatic,
-                    onError: { error in
-                        Logger.shared.logLocalized("log_init_password_check_error %@", String(describing: error))
-                    }
-                )
-            }
-        }
-        
-        // Natychmiastowe sprawdzenie ważności hasła po starcie
-        runInitialPasswordCheck()
     }
     
     private func registerHelperService() {
@@ -216,18 +195,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
             }
         }
-    }
-    
-    private func runInitialPasswordCheck() {
-        NotificationManager.shared.refreshPasswordStatus(
-            reason: .automatic,
-            onResult: { info in
-                Logger.shared.logLocalized("log_init_password_expiry %@ %@", String(info.daysUntilExpiration), String(describing: info.expiryDate))
-            },
-            onError: { error in
-                Logger.shared.logLocalized("log_init_password_check_error %@", String(describing: error))
-            }
-        )
     }
     
 }

@@ -17,7 +17,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Twoje has\u0142o jest jeszcze wa\u017cne, ale polityka firmy wymaga zmiany co 30 dni. Zmie\u0144 je z wyprzedzeniem."
+            "value": "Twoje hasło jest jeszcze ważne, ale polityka firmy wymaga zmiany co 30 dni. Zmień je z wyprzedzeniem."
           }
         }
       }
@@ -34,7 +34,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Twoje has\u0142o ju\u017c wygas\u0142o. Zmie\u0144 je natychmiast, aby unikn\u0105\u0107 problem\u00f3w z logowaniem."
+            "value": "Twoje hasło już wygasło. Zmień je natychmiast, aby uniknąć problemów z logowaniem."
           }
         }
       }
@@ -51,7 +51,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Twoje has\u0142o wygasa dzisiaj. Najlepiej zmie\u0144 je od razu, \u017ceby unikn\u0105\u0107 blokady konta."
+            "value": "Twoje hasło wygasa dzisiaj. Najlepiej zmień je od razu, żeby uniknąć blokady konta."
           }
         }
       }
@@ -68,7 +68,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Twoje has\u0142o wyga\u015bnie w ci\u0105gu tygodnia. Zaplanuj zmian\u0119 has\u0142a jeszcze przed up\u0142ywem tego terminu."
+            "value": "Twoje hasło wygaśnie w ciągu tygodnia. Zaplanuj zmianę hasła jeszcze przed upływem tego terminu."
           }
         }
       }
@@ -85,7 +85,24 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zmie\u0144 has\u0142o"
+            "value": "Zmień hasło"
+          }
+        }
+      }
+    },
+    "alert_domain_unavailable": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect to VPN and change your password."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Połącz z VPN i zmień hasło."
           }
         }
       }
@@ -119,7 +136,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pozosta\u0142o:"
+            "value": "Pozostało:"
           }
         }
       }
@@ -136,7 +153,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pozosta\u0142o czasu:"
+            "value": "Pozostało czasu:"
           }
         }
       }
@@ -153,7 +170,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Od\u0142\u00f3\u017c"
+            "value": "Odłóż"
           }
         }
       }
@@ -164,13 +181,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can\u2019t snooze when the password expires in less than 24 hours."
+            "value": "You can’t snooze when the password expires in less than 24 hours."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie mo\u017cna od\u0142o\u017cy\u0107, gdy has\u0142o wygasa za mniej ni\u017c 24h"
+            "value": "Nie można odłożyć, gdy hasło wygasa za mniej niż 24h"
           }
         }
       }
@@ -204,7 +221,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Twoje has\u0142o wygasa!"
+            "value": "Twoje hasło wygasa!"
           }
         }
       }
@@ -289,7 +306,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "\u0141adowanie..."
+            "value": "Ładowanie..."
           }
         }
       }
@@ -341,7 +358,7 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld dzie\u0144"
+                  "value": "%lld dzień"
                 }
               },
               "other": {
@@ -367,7 +384,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "B\u0142\u0105d: %@"
+            "value": "Błąd: %@"
           }
         }
       }
@@ -400,7 +417,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Helper service wy\u0142\u0105czony"
+            "value": "Helper service wyłączony"
           }
         }
       }
@@ -417,7 +434,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Helper service aktywowany. Zostanie uruchomiony przy nast\u0119pnym logowaniu."
+            "value": "Helper service aktywowany. Zostanie uruchomiony przy następnym logowaniu."
           }
         }
       }
@@ -428,13 +445,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open System Settings \u2192 General \u2192 Login Items and allow PasswordMonitorHelperApp"
+            "value": "Open System Settings → General → Login Items and allow PasswordMonitorHelperApp"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Otw\u00f3rz System Settings \u2192 Og\u00f3lne \u2192 Elementy logowania i zatwierd\u017a PasswordMonitorHelperApp"
+            "value": "Otwórz System Settings → Ogólne → Elementy logowania i zatwierdź PasswordMonitorHelperApp"
           }
         }
       }
@@ -450,7 +467,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wykrywamy j\u0119zyk lokalnie na urz\u0105dzeniu i mo\u017cemy zaproponowa\u0107 zmian\u0119 j\u0119zyka aplikacji."
+            "value": "Wykrywamy język lokalnie na urządzeniu i możemy zaproponować zmianę języka aplikacji."
           }
         }
       }
@@ -460,13 +477,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Type or paste a short sample of text\u2026"
+            "value": "Type or paste a short sample of text…"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wpisz lub wklej kr\u00f3tki przyk\u0142ad tekstu\u2026"
+            "value": "Wpisz lub wklej krótki przykład tekstu…"
           }
         }
       }
@@ -482,7 +499,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Asystent j\u0119zyka"
+            "value": "Asystent języka"
           }
         }
       }
@@ -515,7 +532,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "J\u0119zyk"
+            "value": "Język"
           }
         }
       }
@@ -532,7 +549,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ustawienia j\u0119zyka"
+            "value": "Ustawienia języka"
           }
         }
       }
@@ -565,7 +582,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wykryto j\u0119zyk: %@. Po zmianie ca\u0142y interfejs zostanie zaktualizowany."
+            "value": "Wykryto język: %@. Po zmianie cały interfejs zostanie zaktualizowany."
           }
         }
       }
@@ -581,7 +598,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zmie\u0144"
+            "value": "Zmień"
           }
         }
       }
@@ -597,7 +614,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zmieni\u0107 j\u0119zyk aplikacji?"
+            "value": "Zmienić język aplikacji?"
           }
         }
       }
@@ -614,7 +631,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "P\u00f3\u017aniej"
+            "value": "Później"
           }
         }
       }
@@ -631,24 +648,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "B\u0142\u0105d odczytu lokalnego: %@"
-          }
-        }
-      }
-    },
-    "log_ad_no_connection %@": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No connection to domain %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak po\u0142\u0105czenia z domen\u0105 %@"
+            "value": "Błąd odczytu lokalnego: %@"
           }
         }
       }
@@ -682,7 +682,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wykryte w\u0119z\u0142y AD: %@"
+            "value": "Wykryte węzły AD: %@"
           }
         }
       }
@@ -699,7 +699,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "B\u0142\u0105d listy w\u0119z\u0142\u00f3w AD: %@ (kod %d)"
+            "value": "Błąd listy węzłów AD: %@ (kod %d)"
           }
         }
       }
@@ -716,7 +716,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "\u017b\u0105dany w\u0119ze\u0142 AD: %@"
+            "value": "Żądany węzeł AD: %@"
           }
         }
       }
@@ -733,7 +733,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wybrany w\u0119ze\u0142 AD: %@"
+            "value": "Wybrany węzeł AD: %@"
           }
         }
       }
@@ -750,7 +750,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zapasowy w\u0119ze\u0142 AD: %@"
+            "value": "Zapasowy węzeł AD: %@"
           }
         }
       }
@@ -767,7 +767,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "B\u0142\u0105d odczytu z AD: %@"
+            "value": "Błąd odczytu z AD: %@"
           }
         }
       }
@@ -784,7 +784,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "U\u017cywam danych z cache"
+            "value": "Używam danych z cache"
           }
         }
       }
@@ -818,7 +818,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "B\u0142\u0105d odczytu cache: %@"
+            "value": "Błąd odczytu cache: %@"
           }
         }
       }
@@ -835,7 +835,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "B\u0142\u0105d zapisu cache: %@"
+            "value": "Błąd zapisu cache: %@"
           }
         }
       }
@@ -852,7 +852,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Przeliczono na dat\u0119: %@"
+            "value": "Przeliczono na datę: %@"
           }
         }
       }
@@ -886,7 +886,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Znaleziono lini\u0119: %@"
+            "value": "Znaleziono linię: %@"
           }
         }
       }
@@ -937,7 +937,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie uda\u0142o si\u0119 sparsowa\u0107: %@"
+            "value": "Nie udało się sparsować: %@"
           }
         }
       }
@@ -1005,7 +1005,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Helper ju\u017c aktywny"
+            "value": "Helper już aktywny"
           }
         }
       }
@@ -1022,7 +1022,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pr\u00f3ba rejestracji..."
+            "value": "Próba rejestracji..."
           }
         }
       }
@@ -1056,7 +1056,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "\u015acie\u017cka helpera: %@"
+            "value": "Ścieżka helpera: %@"
           }
         }
       }
@@ -1090,7 +1090,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pocz\u0105tkowy status us\u0142ugi: %@"
+            "value": "Początkowy status usługi: %@"
           }
         }
       }
@@ -1107,7 +1107,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Us\u0142uga nieznaleziona w bazie systemu (nigdy nie rejestrowana)"
+            "value": "Usługa nieznaleziona w bazie systemu (nigdy nie rejestrowana)"
           }
         }
       }
@@ -1124,7 +1124,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Domena b\u0142\u0119du: %@, kod: %ld"
+            "value": "Domena błędu: %@, kod: %ld"
           }
         }
       }
@@ -1141,7 +1141,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie uda\u0142o si\u0119 zarejestrowa\u0107 helpera: %@"
+            "value": "Nie udało się zarejestrować helpera: %@"
           }
         }
       }
@@ -1175,7 +1175,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Helper zarejestrowany (wcze\u015bniej niezarejestrowany)"
+            "value": "Helper zarejestrowany (wcześniej niezarejestrowany)"
           }
         }
       }
@@ -1192,7 +1192,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Helper zarejestrowany pomy\u015blnie"
+            "value": "Helper zarejestrowany pomyślnie"
           }
         }
       }
@@ -1260,7 +1260,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "B\u0142\u0105d zmiany helpera: %@"
+            "value": "Błąd zmiany helpera: %@"
           }
         }
       }
@@ -1316,40 +1316,6 @@
         }
       }
     },
-    "log_init_password_check_error %@": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Init: password check error: %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Init: b\u0142\u0105d sprawdzania has\u0142a: %@"
-          }
-        }
-      }
-    },
-    "log_init_password_expiry %@ %@": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Init: password expires in %@ days (expiry: %@)"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Init: has\u0142o wygasa za %@ dni (expiry: %@)"
-          }
-        }
-      }
-    },
     "log_logstore_clear_failed %@": {
       "extractionState": "stale",
       "localizations": {
@@ -1362,7 +1328,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie uda\u0142o si\u0119 wyczy\u015bci\u0107 log\u00f3w: %@"
+            "value": "Nie udało się wyczyścić logów: %@"
           }
         }
       }
@@ -1379,7 +1345,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eksport log\u00f3w nie powi\u00f3d\u0142 si\u0119: %@"
+            "value": "Eksport logów nie powiódł się: %@"
           }
         }
       }
@@ -1396,7 +1362,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menu: wybrano zmian\u0119 has\u0142a"
+            "value": "Menu: wybrano zmianę hasła"
           }
         }
       }
@@ -1413,7 +1379,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menu: b\u0142\u0105d sprawdzenia: %@"
+            "value": "Menu: błąd sprawdzenia: %@"
           }
         }
       }
@@ -1430,7 +1396,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Powiadomienie ju\u017c dzi\u015b pokazane"
+            "value": "Powiadomienie już dziś pokazane"
           }
         }
       }
@@ -1447,7 +1413,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "U\u017cytkownik wybra\u0142 zmian\u0119 has\u0142a"
+            "value": "Użytkownik wybrał zmianę hasła"
           }
         }
       }
@@ -1464,7 +1430,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Powiadomienie zamkni\u0119te przez u\u017cytkownika"
+            "value": "Powiadomienie zamknięte przez użytkownika"
           }
         }
       }
@@ -1481,7 +1447,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Data wyga\u015bni\u0119cia zaktualizowana na %@"
+            "value": "Data wygaśnięcia zaktualizowana na %@"
           }
         }
       }
@@ -1498,7 +1464,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "P\u00f3\u0142noc - reset flagi powiadomienia"
+            "value": "Północ - reset flagi powiadomienia"
           }
         }
       }
@@ -1515,24 +1481,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nast\u0119pny reset o p\u00f3\u0142nocy za %dh %dmin"
-          }
-        }
-      }
-    },
-    "log_notification_no_current_expiration": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No currentExpirationDate - skipping verification"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak currentExpirationDate - pomijam weryfikacj\u0119"
+            "value": "Następny reset o północy za %dh %dmin"
           }
         }
       }
@@ -1549,41 +1498,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Brak daty wyga\u015bni\u0119cia has\u0142a"
-          }
-        }
-      }
-    },
-    "log_notification_password_changed %@": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Password seems changed (new expiry: %@)"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Has\u0142o wygl\u0105da na zmienione (nowa data wyga\u015bni\u0119cia: %@)"
-          }
-        }
-      }
-    },
-    "log_notification_password_unchanged %@": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Password still unchanged after 30 minutes (expiry: %@)"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Po 30 minutach has\u0142o nadal niezmienione (expiry: %@)"
+            "value": "Brak daty wygaśnięcia hasła"
           }
         }
       }
@@ -1600,7 +1515,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "B\u0142\u0105d ponownego sprawdzenia: %@"
+            "value": "Błąd ponownego sprawdzenia: %@"
           }
         }
       }
@@ -1617,7 +1532,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zaplanowano weryfikacj\u0119 zmiany has\u0142a za 30 minut"
+            "value": "Zaplanowano weryfikację zmiany hasła za 30 minut"
           }
         }
       }
@@ -1634,7 +1549,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie mo\u017cna od\u0142o\u017cy\u0107 - has\u0142o wygasa za %dh (< 24h)"
+            "value": "Nie można odłożyć - hasło wygasa za %dh (< 24h)"
           }
         }
       }
@@ -1685,7 +1600,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "TEST: u\u017cytkownik wybra\u0142 zmian\u0119 has\u0142a"
+            "value": "TEST: użytkownik wybrał zmianę hasła"
           }
         }
       }
@@ -1702,7 +1617,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Osi\u0105gni\u0119to pr\u00f3g powiadomienia: %d dni"
+            "value": "Osiągnięto próg powiadomienia: %d dni"
           }
         }
       }
@@ -1719,7 +1634,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Okienko ju\u017c otwarte"
+            "value": "Okienko już otwarte"
           }
         }
       }
@@ -1758,23 +1673,6 @@
         }
       }
     },
-    "log_system_wake_check": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "System wake - checking notification"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wybudzenie systemu - sprawdzam powiadomienie"
-          }
-        }
-      }
-    },
     "logs_autoscroll": {
       "localizations": {
         "en": {
@@ -1802,7 +1700,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wyczy\u015b\u0107"
+            "value": "Wyczyść"
           }
         }
       }
@@ -1834,7 +1732,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Brak log\u00f3w."
+            "value": "Brak logów."
           }
         }
       }
@@ -1898,7 +1796,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "B\u0142\u0119dy"
+            "value": "Błędy"
           }
         }
       }
@@ -1946,7 +1844,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ostrze\u017cenia"
+            "value": "Ostrzeżenia"
           }
         }
       }
@@ -1962,7 +1860,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tylko b\u0142\u0119dy"
+            "value": "Tylko błędy"
           }
         }
       }
@@ -1978,7 +1876,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Logi nie przechowuj\u0105 wra\u017cliwych danych osobowych."
+            "value": "Logi nie przechowują wrażliwych danych osobowych."
           }
         }
       }
@@ -1994,7 +1892,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Poka\u017c w Finderze"
+            "value": "Pokaż w Finderze"
           }
         }
       }
@@ -2042,7 +1940,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Us\u0142uga w tle"
+            "value": "Usługa w tle"
           }
         }
       }
@@ -2058,7 +1956,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zmie\u0144 has\u0142o"
+            "value": "Zmień hasło"
           }
         }
       }
@@ -2074,7 +1972,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sprawd\u017a teraz"
+            "value": "Sprawdź teraz"
           }
         }
       }
@@ -2090,7 +1988,55 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sprawd\u017a status has\u0142a"
+            "value": "Sprawdź status hasła"
+          }
+        }
+      }
+    },
+    "log_menu_refresh_finished": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu refresh finished"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wczytywanie danych z menu zakończone"
+          }
+        }
+      }
+    },
+    "log_menu_refresh_started": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu refresh started"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wczytywanie danych z menu rozpoczęte"
+          }
+        }
+      }
+    },
+    "menu_checking_now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking now..."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprawdzanie..."
           }
         }
       }
@@ -2106,7 +2052,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Brak po\u0142\u0105czenia z domen\u0105. Po\u0142\u0105cz si\u0119 z VPN przed zmian\u0105 has\u0142a."
+            "value": "Brak połączenia z domeną. Połącz się z VPN przed zmianą hasła."
           }
         }
       }
@@ -2154,7 +2100,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Has\u0142o wygasa za:"
+            "value": "Hasło wygasa za:"
           }
         }
       }
@@ -2219,7 +2165,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Otw\u00f3rz Settings"
+            "value": "Otwórz Settings"
           }
         }
       }
@@ -2230,13 +2176,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "To enable automatic password checks, approve the app in:\n\nSystem Settings \u2192 General \u2192 Login Items \u2192 Allow in Background"
+            "value": "To enable automatic password checks, approve the app in:\n\nSystem Settings → General → Login Items → Allow in Background"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aby w\u0142\u0105czy\u0107 automatyczne sprawdzanie has\u0142a, zatwierd\u017a aplikacj\u0119 w:\n\nSystem Settings \u2192 General \u2192 Login Items \u2192 Allow in Background"
+            "value": "Aby włączyć automatyczne sprawdzanie hasła, zatwierdź aplikację w:\n\nSystem Settings → General → Login Items → Allow in Background"
           }
         }
       }
@@ -2269,7 +2215,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Helper w tle dzia\u0142a wy\u0142\u0105cznie do sprawdzania wa\u017cno\u015bci has\u0142a i wy\u015bwietlania powiadomie\u0144."
+            "value": "Helper w tle działa wyłącznie do sprawdzania ważności hasła i wyświetlania powiadomień."
           }
         }
       }
@@ -2290,6 +2236,38 @@
         }
       }
     },
+    "settings_domain_not_configured": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No system domain configured"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak skonfigurowanej domeny systemowej"
+          }
+        }
+      }
+    },
+    "settings_domain_source_info": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domain is read-only and loaded from the laptop's Users & Groups configuration."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domena tylko do odczytu, pochodzi z ustawienia Użytkownicy i grupy."
+          }
+        }
+      }
+    },
     "settings_helper_desc %@": {
       "extractionState": "stale",
       "localizations": {
@@ -2302,7 +2280,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Helper dzia\u0142aj\u0105cy w tle codziennie sprawdza stan wa\u017cno\u015bci has\u0142a o %@"
+            "value": "Helper działający w tle codziennie sprawdza stan ważności hasła o %@"
           }
         }
       }
@@ -2318,7 +2296,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Status helpera dzia\u0142aj\u0105cego w tle"
+            "value": "Status helpera działającego w tle"
           }
         }
       }
@@ -2350,7 +2328,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Maksymalny wiek has\u0142a (dni)"
+            "value": "Maksymalny wiek hasła (dni)"
           }
         }
       }
@@ -2360,13 +2338,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Settings\u2026"
+            "value": "Settings…"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ustawienia\u2026"
+            "value": "Ustawienia…"
           }
         }
       }
@@ -2398,7 +2376,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Logi debug s\u0105 wy\u0142\u0105czone, a dane wra\u017cliwe s\u0105 maskowane."
+            "value": "Logi debug są wyłączone, a dane wrażliwe są maskowane."
           }
         }
       }
@@ -2446,7 +2424,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zresetowa\u0107 ustawienia?"
+            "value": "Zresetować ustawienia?"
           }
         }
       }
@@ -2462,7 +2440,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resetuj ustawienia do domy\u015blnych"
+            "value": "Resetuj ustawienia do domyślnych"
           }
         }
       }
@@ -2478,7 +2456,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usu\u0144 aplikacj\u0119"
+            "value": "Usuń aplikację"
           }
         }
       }
@@ -2494,7 +2472,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usun\u0105\u0107 Password Monitor?"
+            "value": "Usunąć Password Monitor?"
           }
         }
       }
@@ -2510,7 +2488,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "To usunie aplikacj\u0119 i wszystkie zapisane dane na tym Macu."
+            "value": "To usunie aplikację i wszystkie zapisane dane na tym Macu."
           }
         }
       }
@@ -2531,22 +2509,6 @@
         }
       }
     },
-    "log_settings_domain_check_error %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Settings domain check error: %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "B\u0142\u0105d sprawdzania domeny w ustawieniach: %@"
-          }
-        }
-      }
-    },
     "settings_notification_footnote": {
       "localizations": {
         "en": {
@@ -2558,7 +2520,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Powiadomienie wy\u015bwietli si\u0119 codziennie o ustalonej godzinie"
+            "value": "Powiadomienie wyświetli się codziennie o ustalonej godzinie"
           }
         }
       }
@@ -2638,7 +2600,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prywatno\u015b\u0107 i logi"
+            "value": "Prywatność i logi"
           }
         }
       }
@@ -2686,7 +2648,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pr\u00f3g ostrze\u017cenia (dni)"
+            "value": "Próg ostrzeżenia (dni)"
           }
         }
       }
@@ -2826,7 +2788,7 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld dzie\u0144"
+                  "value": "%lld dzień"
                 }
               },
               "other": {
@@ -3010,7 +2972,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wygl\u0105d"
+            "value": "Wygląd"
           }
         }
       }
@@ -3106,7 +3068,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zako\u0144cz test"
+            "value": "Zakończ test"
           }
         }
       }
@@ -3154,7 +3116,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "W godzinach ciszy sprawdzanie has\u0142a w tle jest pomijane. Sprawdzenie zaplanowane na ustawion\u0105 godzin\u0119 mo\u017ce jednak wykona\u0107 si\u0119 dok\u0142adnie o tej porze."
+            "value": "W godzinach ciszy sprawdzanie hasła w tle jest pomijane. Sprawdzenie zaplanowane na ustawioną godzinę może jednak wykonać się dokładnie o tej porze."
           }
         }
       }
@@ -3170,7 +3132,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wymu\u015b od\u015bwie\u017cenie helpera"
+            "value": "Wymuś odświeżenie helpera"
           }
         }
       }
@@ -3186,7 +3148,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wys\u0142ano \u017c\u0105danie od\u015bwie\u017cenia do helpera dzia\u0142aj\u0105cego w tle."
+            "value": "Wysłano żądanie odświeżenia do helpera działającego w tle."
           }
         }
       }

@@ -18,32 +18,6 @@ public class ActiveDirectoryManager {
 
     public init() {}
 
-    // MARK: - Connectivity
-
-    /// Sprawdza połączenie z AD
-    func checkADConnectivity() -> Bool {
-        guard let domainName = resolvedADNodeName() else {
-            Logger.shared.logLocalized("log_ad_no_domain_configured")
-            return false
-        }
-
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
-        task.arguments = ["/Active Directory/\(domainName)/All Domains", "list", "/Users"]
-
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = pipe
-
-        do {
-            try task.run()
-            task.waitUntilExit()
-            return task.terminationStatus == 0
-        } catch {
-            return false
-        }
-    }
-
     // MARK: - Public API
 
     /// Główna metoda:
@@ -51,36 +25,50 @@ public class ActiveDirectoryManager {
     /// 2. Gdy AD niedostępne / błąd – próbuje lokalnego `passwordLastSetTime`
     /// 3. Gdy oba źródła zawiodą – próbuje z cache
     public func getPasswordInfo(for username: String) throws -> PasswordInfo {
-        // 1. Najpierw próba z AD
-        guard let domainName = resolvedADNodeName() else {
-            Logger.shared.logLocalized("log_ad_no_domain_configured")
-            throw ADError.invalidData
-        }
-        if checkADConnectivity() {
+        if let configuredDomain = SystemADDomainResolver.currentDomain() {
+            Logger.shared.logLocalized("log_ad_domain_requested %@", maskDomainPartial(configuredDomain))
+            let resolvedNode = SystemADDomainResolver.adNodeName(for: configuredDomain)
+            let candidatePaths = buildADNodePaths(configuredDomain: configuredDomain, resolvedNode: resolvedNode)
+            if let resolvedNode, resolvedNode.caseInsensitiveCompare(configuredDomain) != .orderedSame {
+                Logger.shared.logLocalized("log_ad_node_selected %@", maskDomainPartial(resolvedNode))
+            } else if resolvedNode == nil {
+                Logger.shared.logLocalized("log_ad_node_fallback %@", "All Domains")
+            }
+
             do {
-                let info = try getPasswordInfoFromAD(username: username)
-                // ✅ Zapisz do cache przy sukcesie
+                var lastError: Error?
+                for path in candidatePaths {
+                    do {
+                        let info = try getPasswordInfoFromAD(username: username, nodePath: path)
+                        PasswordCache.shared.markLastFetchWasCache(false)
+                        PasswordCache.shared.save(info)
+                        return info
+                    } catch {
+                        lastError = error
+                    }
+                }
+                if let lastError {
+                    throw lastError
+                }
+            } catch {
+                Logger.shared.logLocalized("log_ad_read_error %@", String(describing: error))
+            }
+        } else {
+            Logger.shared.logLocalized("log_ad_no_domain_configured")
+
+            // Jeśli nie ma domeny, spróbuj lokalnego Open Directory
+            do {
+                let info = try getPasswordInfoLocal(username: username)
+                PasswordCache.shared.markLastFetchWasCache(false)
                 PasswordCache.shared.save(info)
                 return info
             } catch {
-                Logger.shared.logLocalized("log_ad_read_error %@", String(describing: error))
-                // Lecimy dalej do lokalnego fallbacku
+                Logger.shared.logLocalized("log_ad_local_read_error %@", String(describing: error))
             }
-        } else {
-            Logger.shared.logLocalized("log_ad_no_connection %@", domainName)
-        }
-
-        // 2. Fallback do lokalnego Open Directory
-        do {
-            let info = try getPasswordInfoLocal(username: username)
-            // ✅ Zapisz do cache przy sukcesie
-            PasswordCache.shared.save(info)
-            return info
-        } catch {
-            Logger.shared.logLocalized("log_ad_local_read_error %@", String(describing: error))
         }
 
         // 3. Ostateczny fallback: cache
+        PasswordCache.shared.markLastFetchWasCache(true)
         if let cached = PasswordCache.shared.load() {
             Logger.shared.logLocalized("log_ad_using_cache")
             return cached
@@ -101,16 +89,12 @@ public class ActiveDirectoryManager {
     // MARK: - AD
 
     /// Pobiera SMBPasswordLastSet z AD
-    private func getPasswordInfoFromAD(username: String) throws -> PasswordInfo {
-        guard let domainName = resolvedADNodeName() else {
-            Logger.shared.logLocalized("log_ad_no_domain_configured")
-            throw ADError.invalidData
-        }
-
+    private func getPasswordInfoFromAD(username: String, nodePath: String) throws -> PasswordInfo {
+        Logger.shared.log("dscl query path: \(nodePath)")
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
         task.arguments = [
-            "/Active Directory/\(domainName)/All Domains",
+            nodePath,
             "-read",
             "/Users/\(username)",
             "SMBPasswordLastSet"
@@ -145,7 +129,24 @@ public class ActiveDirectoryManager {
         Logger.shared.logLocalized("log_dscl_output %@", output)
 
         let lastSetDate = try Self.parseSMBPasswordLastSet(from: output)
-        return calculateExpirationInfo(from: lastSetDate)
+        return try calculateExpirationInfo(from: lastSetDate)
+    }
+
+    private func buildADNodePaths(configuredDomain: String, resolvedNode: String?) -> [String] {
+        var paths = [String]()
+
+        if let resolvedNode {
+            paths.append("/Active Directory/\(resolvedNode)/All Domains")
+            if resolvedNode.caseInsensitiveCompare(configuredDomain) != .orderedSame {
+                paths.append("/Active Directory/\(configuredDomain)/All Domains")
+            }
+            return paths
+        }
+
+        paths.append("/Active Directory/All Domains")
+        paths.append("/Search")
+        paths.append("/Active Directory/\(configuredDomain)/All Domains")
+        return paths
     }
 
     // MARK: - Lokalny fallback
@@ -197,7 +198,7 @@ public class ActiveDirectoryManager {
             throw ADError.invalidData
         }
 
-        return calculateExpirationInfo(from: lastSetDate)
+        return try calculateExpirationInfo(from: lastSetDate)
     }
 
     // MARK: - Parsing (internal for tests)
@@ -205,23 +206,41 @@ public class ActiveDirectoryManager {
     /// Parse: "SMBPasswordLastSet: 133123456789012345"
     static func parseSMBPasswordLastSet(from output: String) throws -> Date {
         let lines = output.components(separatedBy: .newlines)
-        guard let lastSetLine = lines.first(where: { $0.contains("SMBPasswordLastSet") }) else {
+        let matchingLines = lines.filter { $0.contains("SMBPasswordLastSet") }
+        guard !matchingLines.isEmpty else {
             Logger.shared.logLocalized("log_dscl_password_last_set_missing")
             throw ADError.invalidData
         }
 
-        Logger.shared.logLocalized("log_dscl_found_line %@", lastSetLine)
+        if matchingLines.count > 1 {
+            Logger.shared.log("Multiple SMBPasswordLastSet lines found: \(matchingLines.count). Selecting the latest timestamp.")
+        }
 
-        let components = lastSetLine.components(separatedBy: ":")
-        guard
-            components.count >= 2,
-            let lastSetRaw = components.last?.trimmingCharacters(in: .whitespacesAndNewlines),
-            let lastSetInt = Int64(lastSetRaw)
-        else {
-            Logger.shared.logLocalized("log_dscl_parse_failed %@", lastSetLine)
+        var latestTimestamp: Int64?
+        var latestLine: String?
+
+        for line in matchingLines {
+            let components = line.components(separatedBy: ":")
+            guard
+                components.count >= 2,
+                let lastSetRaw = components.last?.trimmingCharacters(in: .whitespacesAndNewlines),
+                let lastSetInt = Int64(lastSetRaw)
+            else {
+                continue
+            }
+
+            if latestTimestamp == nil || lastSetInt > (latestTimestamp ?? 0) {
+                latestTimestamp = lastSetInt
+                latestLine = line
+            }
+        }
+
+        guard let lastSetInt = latestTimestamp, let lastSetLine = latestLine else {
+            Logger.shared.logLocalized("log_dscl_parse_failed %@", matchingLines.first ?? "unknown")
             throw ADError.invalidData
         }
 
+        Logger.shared.logLocalized("log_dscl_found_line %@", lastSetLine)
         Logger.shared.logLocalized("log_dscl_parsed_timestamp %lld", lastSetInt)
 
         // Konwersja Windows FILETIME → UNIX timestamp
@@ -230,64 +249,6 @@ public class ActiveDirectoryManager {
 
         Logger.shared.logLocalized("log_dscl_converted_date %@", String(describing: lastSetDate))
         return lastSetDate
-    }
-
-    private func resolvedDomainName() -> String? {
-        let raw = UserDefaults.standard.string(forKey: "ad_domain") ?? ""
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private func resolvedADNodeName() -> String? {
-        guard let requested = resolvedDomainName() else { return nil }
-        Logger.shared.logLocalized("log_ad_domain_requested %@", maskDomainPartial(requested))
-        let nodes = listADNodes()
-        if let match = nodes.first(where: { $0.caseInsensitiveCompare(requested) == .orderedSame }) {
-            Logger.shared.logLocalized("log_ad_node_selected %@", maskDomainPartial(match))
-            return match
-        }
-        if let fallback = nodes.first {
-            Logger.shared.logLocalized("log_ad_node_fallback %@", maskDomainPartial(fallback))
-            return fallback
-        }
-        return requested
-    }
-
-    private func listADNodes() -> [String] {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
-        task.arguments = ["/Active Directory", "-list", "/"]
-
-        let pipe = Pipe()
-        let errorPipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = errorPipe
-
-        do {
-            try task.run()
-            task.waitUntilExit()
-        } catch {
-            return []
-        }
-
-        guard task.terminationStatus == 0 else {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
-            Logger.shared.logLocalized("log_ad_nodes_list_error %@ %d", errorOutput.isEmpty ? "unknown" : errorOutput, task.terminationStatus)
-            return []
-        }
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else { return [] }
-        let nodes = output
-            .split(separator: "\n")
-            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        
-        let masked = nodes.map { maskDomainPartial($0) }.joined(separator: ", ")
-        Logger.shared.logLocalized("log_ad_nodes_detected %@", masked.isEmpty ? "<none>" : masked)
-        
-        return nodes
     }
 
     private func parseDateString(_ value: String) -> Date? {
@@ -336,7 +297,8 @@ public class ActiveDirectoryManager {
     // MARK: - Wspólna logika wygasania
 
     /// Oblicza dni do wygaśnięcia i buduje PasswordInfo
-    private func calculateExpirationInfo(from lastSetDate: Date) -> PasswordInfo {
+    private func calculateExpirationInfo(from lastSetDate: Date) throws -> PasswordInfo {
+        try validateExpirationInfo(lastSetDate: lastSetDate)
         let expiryDate = Calendar.current.date(
             byAdding: .day,
             value: maxPasswordAge,
@@ -344,11 +306,29 @@ public class ActiveDirectoryManager {
         ) ?? lastSetDate
 
         let daysUntilExpiration = PasswordExpirationMath.daysRemaining(until: expiryDate)
+        try validateExpirationRange(daysUntilExpiration: daysUntilExpiration)
 
         return PasswordInfo(
             lastSetDate: lastSetDate,
             daysUntilExpiration: daysUntilExpiration,
             expiryDate: expiryDate
         )
+    }
+
+    private func validateExpirationInfo(lastSetDate: Date) throws {
+        let now = Date()
+        let futureLimit = now.addingTimeInterval(24 * 3600)
+        if lastSetDate > futureLimit {
+            Logger.shared.log("Invalid lastSetDate: in the future (\(lastSetDate))")
+            throw ADError.invalidData
+        }
+    }
+
+    private func validateExpirationRange(daysUntilExpiration: Int) throws {
+        let minimumOverdue = max(maxPasswordAge * 2, 90)
+        if daysUntilExpiration < -minimumOverdue {
+            Logger.shared.log("Invalid expiration range: daysUntilExpiration=\(daysUntilExpiration)")
+            throw ADError.invalidData
+        }
     }
 }

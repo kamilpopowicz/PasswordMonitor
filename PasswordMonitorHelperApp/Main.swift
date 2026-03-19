@@ -10,28 +10,21 @@ import Foundation
 import PasswordMonitorCore
 
 final class HelperAppDelegate: NSObject, NSApplicationDelegate {
-    private let refreshInterval: TimeInterval = 60 * 60
-    private var refreshTimer: Timer?
     private var scheduledCheckTimer: Timer?
     private var wakeObserver: Any?
     private var manualRefreshObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger.shared.log("Password Monitor Helper launched")
-        syncSharedSettings()
-        schedulePeriodicRefresh()
-        scheduleNextNotificationTimeRefresh()
 
-        wakeObserver = NotificationCenter.default.addObserver(
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Logger.shared.log("Helper automatic refresh triggered by system wake")
+            Logger.shared.log("Helper wake detected; checking notification from cache")
             guard let helper = self else { return }
-            Task { @MainActor in
-                helper.refreshPasswordStatus(reason: HelperRefreshReason.wake.rawValue)
-            }
+            helper.handleWakeOrLaunchCheck()
         }
 
         manualRefreshObserver = DistributedNotificationCenter.default().addObserver(
@@ -46,13 +39,10 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        Task { @MainActor in
-            refreshPasswordStatus(reason: HelperRefreshReason.launch.rawValue)
-        }
+        handleWakeOrLaunchCheck()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        refreshTimer?.invalidate()
         scheduledCheckTimer?.invalidate()
         if let wakeObserver {
             NotificationCenter.default.removeObserver(wakeObserver)
@@ -60,18 +50,6 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         if let manualRefreshObserver {
             DistributedNotificationCenter.default().removeObserver(manualRefreshObserver)
         }
-    }
-
-    private func schedulePeriodicRefresh() {
-        refreshTimer?.invalidate()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
-            guard let helper = self else { return }
-            Task { @MainActor in
-                helper.refreshPasswordStatus(reason: HelperRefreshReason.timer.rawValue)
-            }
-        }
-
-        Logger.shared.log("Helper scheduled periodic refresh every \(Int(refreshInterval / 60)) minutes")
     }
 
     private func scheduleNextNotificationTimeRefresh() {
@@ -107,9 +85,10 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
 
         Task.detached(priority: .userInitiated) {
             await MainActor.run {
-                NotificationManager.shared.refreshPasswordStatus(
+                NotificationManager.shared.refreshPasswordStatusLive(
                     reason: self.notificationCheckReason(for: reason),
                     username: username,
+                    shouldCheckNotification: true,
                     onResult: { info in
                         Logger.shared.log("Helper fetched password status: daysRemaining=\(info.daysUntilExpiration), expiryDate=\(info.expiryDate)")
                     },
@@ -171,7 +150,6 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
     private func syncSharedSettings() {
         let sourceDefaults = UserDefaults(suiteName: "popo.PasswordMonitor")
         let keys = [
-            "ad_domain",
             "max_password_age",
             "warning_threshold",
             "notification_hour",
@@ -194,6 +172,20 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
             Logger.shared.log("Helper settings sync found no shared values")
         } else {
             Logger.shared.log("Helper synced settings keys: \(copiedKeys.joined(separator: ", "))")
+        }
+    }
+
+    private func handleWakeOrLaunchCheck() {
+        syncSharedSettings()
+        scheduleNextNotificationTimeRefresh()
+
+        Task { @MainActor in
+            if NotificationManager.shared.latestPasswordInfo != nil || PasswordCache.shared.load() != nil {
+                NotificationManager.shared.checkAndShowNotificationIfNeeded(reason: .automatic)
+                return
+            }
+
+            self.refreshPasswordStatus(reason: HelperRefreshReason.wake.rawValue)
         }
     }
 }

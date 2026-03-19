@@ -87,13 +87,18 @@ final class LogStore: ObservableObject {
     private func load() {
         isLoading = true
         let url = fileURL
-        Task.detached { [weak self] in
-            let text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-            await MainActor.run {
-                self?.content = text
-                self?.isLoading = false
-            }
+        Task { [weak self] in
+            let text = await LogStore.readFile(url: url)
+            guard let self else { return }
+            self.content = text
+            self.isLoading = false
         }
+    }
+
+    private static func readFile(url: URL) async -> String {
+        await Task.detached {
+            (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        }.value
     }
 
     private func startMonitoring() {

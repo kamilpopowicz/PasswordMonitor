@@ -11,7 +11,6 @@ import Combine
 import PasswordMonitorCore
 
 private enum SettingsKeys {
-    static let domainName = "ad_domain"
     static let maxPasswordAge = "max_password_age"
     static let warningThreshold = "warning_threshold"
     static let notificationHour = "notification_hour" // Format: "09:00"
@@ -28,7 +27,7 @@ struct SettingsView: View {
 
     // EDYTOWANE wartości (UI)
     @State private var launchAtLogin = false
-    @State private var domainName = ""
+    @State private var systemDomain: String?
     @State private var maxPasswordAge = 30
     @State private var warningThreshold = 7
     @State private var selectedLanguage: LanguageSettings.AppLanguage = .english
@@ -56,7 +55,6 @@ struct SettingsView: View {
     private let helperBundleID = "popo.PasswordMonitorHelperApp"
 
     // ZAPISANE wartości (AppStorage)
-    @AppStorage(SettingsKeys.domainName) private var storedDomainName = ""
     @AppStorage(SettingsKeys.maxPasswordAge) private var storedMaxPasswordAge = 30
     @AppStorage(SettingsKeys.warningThreshold) private var storedWarningThreshold = 7
     @AppStorage(SettingsKeys.notificationHour) private var storedNotificationHour = "09:00"
@@ -159,8 +157,26 @@ struct SettingsView: View {
 
                     // MARK: Active Directory
                     Section(header: Text("settings_section_ad").font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        TextField("settings_domain_name", text: $domainName)
-                            .textFieldStyle(.roundedBorder)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("settings_domain_name")
+                                .font(.caption)
+                                .foregroundColor(PMTheme.textSecondary)
+                            if let domain = systemDomain, !domain.isEmpty {
+                                Text(domain)
+                                    .font(.body)
+                                    .foregroundColor(PMTheme.textPrimary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            } else {
+                                Text("settings_domain_not_configured")
+                                    .font(.body)
+                                    .foregroundColor(PMTheme.textSecondary)
+                            }
+                            Text("settings_domain_source_info")
+                                .font(.caption)
+                                .foregroundColor(PMTheme.textSecondary)
+                                .italic()
+                        }
+                        .padding(.vertical, 2)
 
                         HStack {
                             Text("settings_max_password_age")
@@ -357,8 +373,7 @@ struct SettingsView: View {
     /// Czy wartości edytowane różnią się od zapisanych
     private var isDirty: Bool {
         let savedLaunchAtLogin = (helperStatus == .enabled)
-        return domainName != storedDomainName
-            || maxPasswordAge != storedMaxPasswordAge
+        return maxPasswordAge != storedMaxPasswordAge
             || warningThreshold != storedWarningThreshold
             || notificationHourString != storedNotificationHour
             || quietHoursStartString != storedQuietHoursStart
@@ -403,7 +418,7 @@ struct SettingsView: View {
 
     private func loadSettings() {
         // AppStorage -> edytowane wartości
-        domainName = storedDomainName
+        systemDomain = SystemADDomainResolver.currentDomain()
         maxPasswordAge = storedMaxPasswordAge
         warningThreshold = storedWarningThreshold
         notificationHourString = storedNotificationHour
@@ -494,10 +509,7 @@ struct SettingsView: View {
 
     /// Zapisuje wprowadzone zmiany do AppStorage i helpera
     private func saveChanges() {
-        let domainChanged = (domainName != storedDomainName)
-
         // Zapisz do AppStorage
-        storedDomainName = domainName
         storedMaxPasswordAge = maxPasswordAge
         storedWarningThreshold = warningThreshold
         storedNotificationHour = notificationHourString
@@ -514,18 +526,6 @@ struct SettingsView: View {
         // Ustaw język na wybrany po zapisie
         languageSettings.selectedLanguage = selectedLanguage
 
-        if domainChanged {
-            NotificationManager.shared.refreshPasswordStatus(
-                reason: .automatic,
-                onResult: { _ in
-                    NotificationManager.shared.resetDailyNotificationState()
-                },
-                onError: { error in
-                    Logger.shared.logLocalized("log_settings_domain_check_error %@", String(describing: error))
-                }
-            )
-        }
-
         // Pozostajemy w oknie – stan "dirty" wynika z aktualnych wartości
     }
 
@@ -541,7 +541,6 @@ struct SettingsView: View {
         UserDefaults.standard.removePersistentDomain(forName: bundleID)
         UserDefaults.standard.synchronize()
 
-        storedDomainName = ""
         storedMaxPasswordAge = 30
         storedWarningThreshold = 7
         storedNotificationHour = "09:00"

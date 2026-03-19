@@ -1,0 +1,7 @@
+.git/
+.build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+.swiftpm/
+Build/

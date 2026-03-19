@@ -2,7 +2,9 @@
 
 PasswordMonitor is a macOS menu bar app that helps users keep track of corporate password expiration. It checks Active Directory metadata, notifies you ahead of expiration, and can run automatically in the background via a login item helper even when the main app is closed.
 
-This repository currently provides **an unsigned build for testing** (no Apple Developer certificate). That means Gatekeeper will show a warning and users must open the app manually (right‑click → Open).
+This repository currently provides **testing builds**. Depending on your local setup, they may be unsigned, so Gatekeeper can show a warning and users must open the app manually (right‑click → Open).
+
+Current version: **1.5.7**
 
 ---
 
@@ -32,8 +34,11 @@ If you want automatic checks:
 - Menu bar UI with at‑a‑glance password status
 - Background helper checks on login, wake, hourly cadence, and the configured notification time
 - Alerts and snooze support for expiring passwords
+- Snooze state and “shown today” persist across relaunch and are shared between the main app and helper
 - Manual checks and the configured notification time can intentionally break through quiet hours and active snooze
-- Settings for notification time, warning threshold, AD domain, and quiet hours
+- Settings for notification time, warning threshold, quiet hours, and read-only AD domain info pulled from the system configuration
+- Menu open performs a live AD check (with a 30s timeout) before showing alerts
+- Automatic AD node resolution keeps the read-only domain (FQDN) in sync with the system’s Users & Groups entry so `dscl` can still read `SMBPasswordLastSet`
 - Built‑in logs viewer with filtering, copy, and Finder reveal
 - Privacy-safe log masking for host/domain values
 - Runtime language switching (English/Polish)
@@ -51,6 +56,7 @@ If you want automatic checks:
 1. Launch the app — it appears in the menu bar.
 2. Open **Settings** to configure:
    - Active Directory domain
+      - (read-only; pulled from System Settings → Users & Groups, while the resolver picks the matching DSCL node internally)
    - Notification time
    - Quiet hours
    - Warning threshold
