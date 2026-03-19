@@ -263,7 +263,7 @@ public final class NotificationManager: ObservableObject {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: timeoutWorkItem)
 
-        Task.detached(priority: .userInitiated) { [weak self] in
+        Task.detached(priority: .userInitiated) {
             let result: Result<PasswordInfo, Error>
             do {
                 let info = try ActiveDirectoryManager().getPasswordInfo(for: username)
@@ -425,7 +425,9 @@ public final class NotificationManager: ObservableObject {
     /// Sprawdza czy powinniśmy pokazać powiadomienie (wywoływane cyklicznie)
     public func checkAndShowNotificationIfNeeded(reason: CheckReason = .automatic, allowLiveCheck: Bool = true) {
         guard shouldHandleNotifications(for: reason) else {
-            Logger.shared.log("Skipping notification check in main app because helper is enabled (reason=\(reason.rawValue))")
+            if shouldLog(key: "notification_skip_helper_enabled", interval: 5 * 60) {
+                Logger.shared.log("Skipping notification check in main app because helper is enabled (reason=\(reason.rawValue))")
+            }
             return
         }
         loadNotificationStateFromStore()
