@@ -1673,22 +1673,6 @@
         }
       }
     },
-    "logs_autoscroll": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auto-scroll"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auto-scroll"
-          }
-        }
-      }
-    },
     "logs_clear": {
       "localizations": {
         "en": {
@@ -1701,22 +1685,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wyczyść"
-          }
-        }
-      }
-    },
-    "logs_copy_all": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy All"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kopiuj wszystko"
           }
         }
       }
@@ -1742,13 +1710,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Legend:"
+            "value": "Legend"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Legenda:"
+            "value": "Legenda"
           }
         }
       }
@@ -1845,22 +1813,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ostrzeżenia"
-          }
-        }
-      }
-    },
-    "logs_only_errors": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Only errors"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tylko błędy"
           }
         }
       }
@@ -3149,6 +3101,150 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wysłano żądanie odświeżenia do helpera działającego w tle."
+          }
+        }
+      }
+    },
+    "logs_now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teraz"
+          }
+        }
+      }
+    },
+    "logs_reload": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reload"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wczytaj ponownie"
+          }
+        }
+      }
+    },
+    "logs_export": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udostępnij"
+          }
+        }
+      }
+    },
+    "logs_refresh_label": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto refresh"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto odświeżanie"
+          }
+        }
+      }
+    },
+    "logs_refresh_immediate": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immediate"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Natychmiast"
+          }
+        }
+      }
+    },
+    "logs_refresh_1m": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 min"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 minuta"
+          }
+        }
+      }
+    },
+    "logs_refresh_5m": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 min"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 minut"
+          }
+        }
+      }
+    },
+    "logs_search": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukaj"
+          }
+        }
+      }
+    },
+    "logs_search_close": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close search"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zamknij"
           }
         }
       }

@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.5.8
+- Revamped Logs view with a Console.app-style toolbar, improved multi-line selection, and reliable live updates.
+- Added in-window auto-refresh modes for Logs (immediate, 1 minute, 5 minutes) and default follow-latest behavior.
+
 ## PasswordMonitor 1.5.4
 - AD domain resolver now matches the system’s FQDN against the available DSCL nodes so manual checks succeed with the read-only value shown in Settings.
 - NotificationManager suppresses repeated “Brak daty wygaśnięcia hasła” logs and keeps the cached expiration date ready for future checks, ensuring helper/menu retries don’t spam AD.

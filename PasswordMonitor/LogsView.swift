@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 import PasswordMonitorCore
 
 struct LogsView: View {
@@ -14,78 +15,135 @@ struct LogsView: View {
     @StateObject private var logStore = LogStore()
     @State private var searchText = ""
     @State private var selectedLevel: Logger.Level? = nil
-    @State private var isAutoScrollEnabled = true
-    @State private var autoScrollOverride: Bool? = nil
+    @State private var isFollowingLatest = true
+    @State private var scrollToBottomToken = UUID()
     @State private var showSearchField = false
+    @State private var searchFocusToken = UUID()
     private let searchColumnWidth: CGFloat = 260
-    private let searchButtonWidth: CGFloat = 28
     private let searchButtonSpacing: CGFloat = 6
     private let levelsColumnWidth: CGFloat = 430
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 6) {
+            VStack(spacing: 10) {
+                HStack(alignment: .center) {
                     HStack(spacing: 8) {
-                        (Text("logs_level_filter") + Text(":"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.textSecondary)
-                        Picker("", selection: $selectedLevel) {
-                            Text("logs_level_all").tag(Logger.Level?.none)
-                            Text("logs_level_info").tag(Logger.Level?.some(.info))
-                            Text("logs_level_warning").tag(Logger.Level?.some(.warning))
-                            Text("logs_level_error").tag(Logger.Level?.some(.error))
-                            Text("logs_level_debug").tag(Logger.Level?.some(.debug))
+                        Button("logs_now") {
+                            isFollowingLatest = true
+                            scrollToBottomToken = UUID()
                         }
-                        .labelsHidden()
-                        .pickerStyle(.segmented)
-                        .frame(width: levelsColumnWidth - 80, alignment: .leading)
+                        .pmButton(role: isFollowingLatest ? .primary : .secondary)
+
+                        Button("logs_clear") {
+                            logStore.clear()
+                        }
+                        .pmButton(role: .destructive)
+
+                        Button("logs_reload") {
+                            logStore.reload()
+                        }
+                        .pmButton()
+
+                        Button("logs_reveal") {
+                            logStore.revealInFinder()
+                        }
+                        .pmButton()
+
+                        Button("logs_export") {
+                            logStore.share()
+                        }
+                        .pmButton()
                     }
 
-                    HStack(spacing: 8) {
-                        (Text("logs_legend") + Text(":"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.textSecondary)
-                        LegendDot(color: PMTheme.textPrimary, labelKey: "logs_level_info")
-                        LegendDot(color: PMTheme.warning, labelKey: "logs_level_warning")
-                        LegendDot(color: PMTheme.danger, labelKey: "logs_level_error")
-                        LegendDot(color: PMTheme.textMuted, labelKey: "logs_level_debug")
-                    }
-                }
-                .frame(width: levelsColumnWidth, alignment: .leading)
-                Spacer()
-                VStack(alignment: .trailing, spacing: 6) {
+                    Spacer()
+
                     HStack(spacing: searchButtonSpacing) {
                         SearchField(
                             text: $searchText,
                             placeholder: String(localized: "logs_search_placeholder"),
-                            isDark: themeManager.isDarkAppearance
+                            isDark: themeManager.isDarkAppearance,
+                            isVisible: showSearchField,
+                            focusToken: $searchFocusToken
                         )
-                            .frame(width: showSearchField ? (searchColumnWidth - searchButtonWidth - searchButtonSpacing) : 0)
-                            .opacity(showSearchField ? 1 : 0)
-                            .clipped()
-                            .animation(.easeInOut(duration: 0.18), value: showSearchField)
-                            .allowsHitTesting(showSearchField)
+                        .frame(width: showSearchField ? (searchColumnWidth - 32 - searchButtonSpacing) : 0)
+                        .opacity(showSearchField ? 1 : 0)
+                        .clipped()
+                        .animation(.easeInOut(duration: 0.18), value: showSearchField)
+                        .allowsHitTesting(showSearchField)
 
                         Button {
                             withAnimation(.easeInOut(duration: 0.18)) {
                                 showSearchField.toggle()
-                                if !showSearchField { searchText = "" }
+                                if showSearchField {
+                                    searchFocusToken = UUID()
+                                } else {
+                                    searchText = ""
+                                }
                             }
                         } label: {
                             Image(systemName: showSearchField ? "xmark" : "magnifyingglass")
                         }
                         .pmButton(role: .secondary, size: .compact)
-                        .frame(width: searchButtonWidth)
+                        .help(showSearchField ? String(localized: "logs_search_close") : String(localized: "logs_search"))
                     }
                     .frame(width: searchColumnWidth, alignment: .trailing)
+                }
 
-                    Text("logs_privacy_notice")
-                        .font(.caption)
-                        .foregroundColor(PMTheme.textSecondary)
-                        .italic()
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: searchColumnWidth, alignment: .trailing)
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            (Text("logs_level_filter") + Text(":"))
+                                .font(.caption)
+                                .foregroundColor(PMTheme.textSecondary)
+                            Picker("", selection: $selectedLevel) {
+                                Text("logs_level_all").tag(Logger.Level?.none)
+                                Text("logs_level_info").tag(Logger.Level?.some(.info))
+                                Text("logs_level_warning").tag(Logger.Level?.some(.warning))
+                                Text("logs_level_error").tag(Logger.Level?.some(.error))
+                                Text("logs_level_debug").tag(Logger.Level?.some(.debug))
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .frame(width: levelsColumnWidth - 80, alignment: .leading)
+                        }
+
+                        HStack(spacing: 8) {
+                            (Text("logs_legend") + Text(":"))
+                                .font(.caption)
+                                .foregroundColor(PMTheme.textSecondary)
+                            LegendDot(color: PMTheme.textPrimary, labelKey: "logs_level_info")
+                            LegendDot(color: PMTheme.warning, labelKey: "logs_level_warning")
+                            LegendDot(color: PMTheme.danger, labelKey: "logs_level_error")
+                            LegendDot(color: PMTheme.textMuted, labelKey: "logs_level_debug")
+                        }
+                    }
+                    .frame(width: levelsColumnWidth, alignment: .leading)
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 6) {
+                        HStack(spacing: 8) {
+                            (Text("logs_refresh_label") + Text(":"))
+                                .font(.caption)
+                                .foregroundColor(PMTheme.textSecondary)
+                                .padding(.trailing, 10)
+                            Picker("", selection: $logStore.refreshMode) {
+                                Text("logs_refresh_immediate").tag(LogStore.RefreshMode.immediate)
+                                Text("logs_refresh_1m").tag(LogStore.RefreshMode.oneMinute)
+                                Text("logs_refresh_5m").tag(LogStore.RefreshMode.fiveMinutes)
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .frame(width: 220, alignment: .trailing)
+                        }
+
+                        Text("logs_privacy_notice")
+                            .font(.caption)
+                            .foregroundColor(PMTheme.textSecondary)
+                            .italic()
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: searchColumnWidth, alignment: .trailing)
+                    }
                 }
             }
             .padding()
@@ -96,51 +154,22 @@ struct LogsView: View {
                 if themeManager.isApplyingTheme {
                     LogsThemePlaceholder()
                 } else {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 0) {
-                                if filteredContent.isEmpty {
-                                    Text("logs_empty")
-                                        .foregroundColor(PMTheme.textSecondary)
-                                        .padding(.top, 8)
-                                } else {
-                                    let lines = filteredContent.split(separator: "\n", omittingEmptySubsequences: false)
-                                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                                        Text(String(line))
-                                            .font(.system(.body, design: .monospaced))
-                                            .foregroundColor(color(for: String(line)))
-                                            .textSelection(.enabled)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                    }
-                                }
-                                Color.clear
-                                    .frame(height: 1)
-                                    .id("bottom")
-                                    .background(GeometryReader { geo in
-                                        Color.clear
-                                            .preference(key: BottomOffsetKey.self, value: geo.frame(in: .named("logScroll")).maxY)
-                                    })
-                            }
-                            .padding()
-                        }
-                        .scrollContentBackground(.hidden)
-                        .background(Color.clear)
-                        .coordinateSpace(name: "logScroll")
-                        .onPreferenceChange(BottomOffsetKey.self) { value in
-                            // Jeśli użytkownik jest blisko dołu, utrzymujemy auto-scroll
-                            isAutoScrollEnabled = value < 60
-                        }
-                        .onChange(of: logStore.content) { _, _ in
-                            let shouldScroll = autoScrollOverride ?? isAutoScrollEnabled
-                            guard shouldScroll else { return }
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                proxy.scrollTo("bottom", anchor: .bottom)
-                            }
-                        }
-                        .onAppear {
-                            proxy.scrollTo("bottom", anchor: .bottom)
-                        }
-                    }
+                    LogTextView(
+                        attributedText: attributedContent(),
+                        isFollowingLatest: $isFollowingLatest,
+                        scrollToBottomToken: $scrollToBottomToken,
+                        isDark: themeManager.isDarkAppearance
+                    )
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(PMTheme.fieldBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(PMTheme.fieldStroke, lineWidth: 1)
+                            )
+                    )
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
                 }
 
                 if logStore.isLoading {
@@ -149,31 +178,6 @@ struct LogsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .layoutPriority(1)
-
-            HStack {
-                Toggle("logs_autoscroll", isOn: Binding(
-                    get: { autoScrollOverride ?? isAutoScrollEnabled },
-                    set: { autoScrollOverride = $0 }
-                ))
-                Button("logs_only_errors") {
-                    selectedLevel = (selectedLevel == .error) ? nil : .error
-                }
-                .pmButton()
-                Button("logs_copy_all") {
-                    logStore.copyAll()
-                }
-                .pmButton()
-                Button("logs_clear") {
-                    logStore.clear()
-                }
-                .pmButton(role: .destructive)
-                Spacer()
-                Button("logs_reveal") {
-                    logStore.revealInFinder()
-                }
-                .pmButton()
-            }
-            .padding([.horizontal, .top])
 
             VStack(spacing: 2) {
                 Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
@@ -187,10 +191,20 @@ struct LogsView: View {
         .onAppear {
             logStore.start()
             appState.windowOpened()
+            isFollowingLatest = true
+            scrollToBottomToken = UUID()
         }
         .onDisappear {
             logStore.stop()
             appState.windowClosed()
+        }
+        .onChange(of: logStore.content) { _, _ in
+            if isFollowingLatest {
+                scrollToBottomToken = UUID()
+            }
+        }
+        .onChange(of: logStore.refreshMode) { _, newValue in
+            logStore.setRefreshMode(newValue)
         }
     }
 
@@ -206,12 +220,37 @@ struct LogsView: View {
         return filtered.joined(separator: "\n")
     }
 
-    private func color(for line: String) -> Color {
-        if line.contains("[ERROR]") { return PMTheme.danger }
-        if line.contains("[WARN]") { return PMTheme.warning }
-        if line.contains("[DEBUG]") { return PMTheme.textMuted }
-        if line.contains("[INFO]") { return PMTheme.textPrimary }
-        return PMTheme.textPrimary
+    private func attributedContent() -> NSAttributedString {
+        if filteredContent.isEmpty {
+            return NSAttributedString(
+                string: String(localized: "logs_empty"),
+                attributes: [
+                    .font: NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
+                    .foregroundColor: NSColor(PMTheme.textSecondary)
+                ]
+            )
+        }
+
+        let lines = filteredContent.split(separator: "\n", omittingEmptySubsequences: false)
+        let result = NSMutableAttributedString()
+        for (index, lineSub) in lines.enumerated() {
+            let line = String(lineSub)
+            let color: NSColor
+            if line.contains("[ERROR]") { color = NSColor(PMTheme.danger) }
+            else if line.contains("[WARN]") { color = NSColor(PMTheme.warning) }
+            else if line.contains("[DEBUG]") { color = NSColor(PMTheme.textMuted) }
+            else { color = NSColor(PMTheme.textPrimary) }
+
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
+                .foregroundColor: color
+            ]
+            result.append(NSAttributedString(string: line, attributes: attributes))
+            if index < lines.count - 1 {
+                result.append(NSAttributedString(string: "\n", attributes: attributes))
+            }
+        }
+        return result
     }
 }
 
@@ -219,6 +258,8 @@ private struct SearchField: NSViewRepresentable {
     @Binding var text: String
     let placeholder: String
     let isDark: Bool
+    let isVisible: Bool
+    @Binding var focusToken: UUID
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text)
@@ -233,6 +274,7 @@ private struct SearchField: NSViewRepresentable {
         field.focusRingType = .none
         field.controlSize = .small
         field.drawsBackground = true
+        context.coordinator.field = field
         applyAppearance(field)
         return field
     }
@@ -243,6 +285,13 @@ private struct SearchField: NSViewRepresentable {
         }
         nsView.placeholderString = placeholder
         applyAppearance(nsView)
+
+        if isVisible, context.coordinator.lastFocusToken != focusToken {
+            context.coordinator.lastFocusToken = focusToken
+            nsView.window?.makeFirstResponder(nsView)
+        } else if !isVisible, nsView.window?.firstResponder == nsView {
+            nsView.window?.makeFirstResponder(nil)
+        }
     }
 
     private func applyAppearance(_ field: NSSearchField) {
@@ -259,6 +308,8 @@ private struct SearchField: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSSearchFieldDelegate {
         @Binding var text: String
+        weak var field: NSSearchField?
+        var lastFocusToken = UUID()
 
         init(text: Binding<String>) {
             _text = text
@@ -271,10 +322,89 @@ private struct SearchField: NSViewRepresentable {
     }
 }
 
-private struct BottomOffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
+private struct LogTextView: NSViewRepresentable {
+    let attributedText: NSAttributedString
+    @Binding var isFollowingLatest: Bool
+    @Binding var scrollToBottomToken: UUID
+    let isDark: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(isFollowingLatest: $isFollowingLatest)
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let textView = NSTextView()
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.drawsBackground = false
+        textView.textContainerInset = NSSize(width: 12, height: 10)
+        textView.font = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        textView.textColor = isDark ? NSColor(PMTheme.textPrimary) : NSColor(PMTheme.textPrimary)
+
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.drawsBackground = false
+        scrollView.documentView = textView
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.boundsDidChange(_:)),
+            name: NSView.boundsDidChangeNotification,
+            object: scrollView.contentView
+        )
+        context.coordinator.scrollView = scrollView
+        return scrollView
+    }
+
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        guard let textView = nsView.documentView as? NSTextView else { return }
+        textView.textColor = isDark ? NSColor(PMTheme.textPrimary) : NSColor(PMTheme.textPrimary)
+        textView.insertionPointColor = isDark ? NSColor(PMTheme.textPrimary) : NSColor(PMTheme.textPrimary)
+        textView.drawsBackground = false
+
+        if textView.textStorage?.length != attributedText.length ||
+            textView.attributedString() != attributedText {
+            textView.textStorage?.setAttributedString(attributedText)
+        }
+
+        if context.coordinator.lastScrollToken != scrollToBottomToken {
+            context.coordinator.lastScrollToken = scrollToBottomToken
+            scrollToBottom(nsView)
+        } else if isFollowingLatest {
+            scrollToBottom(nsView)
+        }
+    }
+
+    private func scrollToBottom(_ scrollView: NSScrollView) {
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        let length = textView.string.count
+        if length > 0 {
+            textView.scrollRangeToVisible(NSRange(location: length - 1, length: 1))
+        } else {
+            scrollView.contentView.scroll(to: .zero)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        @Binding var isFollowingLatest: Bool
+        weak var scrollView: NSScrollView?
+        var lastScrollToken = UUID()
+
+        init(isFollowingLatest: Binding<Bool>) {
+            _isFollowingLatest = isFollowingLatest
+        }
+
+        @objc func boundsDidChange(_ notification: Notification) {
+            guard let scrollView else { return }
+            guard let textView = scrollView.documentView as? NSTextView else { return }
+            let visible = scrollView.contentView.documentVisibleRect
+            let maxY = textView.bounds.maxY
+            let distance = maxY - visible.maxY
+            let nearBottom = distance < 40
+            if isFollowingLatest != nearBottom {
+                isFollowingLatest = nearBottom
+            }
+        }
     }
 }
 

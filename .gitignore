@@ -4,3 +4,6 @@ raport.md
 plan-done/
 version for Kerberos SSO/
 scripts/check_localizations.py
+DIAGNOSTIC.md
+QA-checklist-1.5.md
+QA-reduce-ad-refresh.md

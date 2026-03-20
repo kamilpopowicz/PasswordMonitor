@@ -68,7 +68,8 @@ If you want automatic checks:
 ---
 
 ## Logging
-Logs are stored locally and can be viewed in the **Logs** window. You can copy or filter logs and reveal the log file in Finder.
+Logs are stored locally and can be viewed in the **Logs** window. You can copy or filter logs, reveal the log file in Finder, and export the current view.
+The Logs window supports auto refresh with three modes: immediate (default), 1 minute, or 5 minutes.
 
 > Tip: For privacy, avoid sharing logs that may contain sensitive data.
 
