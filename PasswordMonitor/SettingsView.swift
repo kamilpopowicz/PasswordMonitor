@@ -347,6 +347,9 @@ struct SettingsView: View {
         .onAppear {
             loadSettings()
             appState.windowOpened()
+            DispatchQueue.main.async {
+                appState.activateApp()
+            }
         }
         .onDisappear {
             appState.windowClosed()

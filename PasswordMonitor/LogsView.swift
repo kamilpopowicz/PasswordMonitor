@@ -193,6 +193,9 @@ struct LogsView: View {
             appState.windowOpened()
             isFollowingLatest = true
             scrollToBottomToken = UUID()
+            DispatchQueue.main.async {
+                appState.activateApp()
+            }
         }
         .onDisappear {
             logStore.stop()

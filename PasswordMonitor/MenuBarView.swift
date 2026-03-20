@@ -211,6 +211,13 @@ class AppState: ObservableObject {
         updateActivationPolicy()
     }
 
+    func activateApp() {
+        NSApp.activate(ignoringOtherApps: true)
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow {
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+
     func windowClosed() {
         windowCount = max(0, windowCount - 1)
         updateActivationPolicy()
