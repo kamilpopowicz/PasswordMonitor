@@ -15,6 +15,7 @@ struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismiss) private var dismiss
 
     @ObservedObject private var notificationManager = NotificationManager.shared
 
@@ -101,12 +102,14 @@ struct MenuBarView: View {
 
             Button("menu_settings") {
                 openWindow(id: "settings-window")
+                dismiss()
             }
             .controlSize(.regular)
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Button("menu_logs") {
                 openWindow(id: "logs-window")
+                dismiss()
             }
             .controlSize(.regular)
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -461,13 +461,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste a sample text and use the AI button to detect language."
+            "value": "Minimum 20 characters recommended for detection."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wklej przykładowy tekst i użyj przycisku AI do wykrycia języka."
+            "value": "Dla wykrycia języka zalecane jest minimum 20 znaków."
           }
         }
       }
@@ -477,13 +477,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Type or paste a short sample of text…"
+            "value": "Enter or paste sample text to detect language."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wpisz lub wklej krótki przykład tekstu…"
+            "value": "Wpisz lub wklej przykładowy tekst do wykrycia języka."
           }
         }
       }
@@ -3329,22 +3329,6 @@
         }
       }
     },
-    "language_assist_requirements": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Requirements"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wymagania"
-          }
-        }
-      }
-    },
     "language_assist_ai_requirements": {
       "localizations": {
         "en": {
@@ -3645,6 +3629,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Otwórz Apple Intelligence"
+          }
+        }
+      }
+    },
+    "language_assist_detect": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detect"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wykryj"
           }
         }
       }

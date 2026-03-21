@@ -15,18 +15,37 @@ import FoundationModels
 #endif
 
 struct AIRequirementsView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var model = AIRequirementsModel()
+    private let optionColumnWidth: CGFloat = 180
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("ai_requirements_title")
-                    .font(.title2)
-                    .foregroundColor(PMTheme.textPrimary)
-
-                RequirementRow(titleKey: "ai_requirements_system_language", value: model.systemLanguageDisplay, status: model.systemStatus)
-                RequirementRow(titleKey: "ai_requirements_siri_language", value: model.siriLanguageDisplay, status: model.siriStatus)
-                RequirementRow(titleKey: "ai_requirements_ai_enabled", value: model.aiAvailabilityDisplay, status: model.aiStatus)
+                RequirementRow(
+                    titleKey: "ai_requirements_system_language",
+                    value: model.systemLanguageDisplay,
+                    status: model.systemStatus,
+                    optionWidth: optionColumnWidth,
+                    buttonKey: "ai_requirements_open_language",
+                    action: { model.openLanguageSettings() }
+                )
+                RequirementRow(
+                    titleKey: "ai_requirements_siri_language",
+                    value: model.siriLanguageDisplay,
+                    status: model.siriStatus,
+                    optionWidth: optionColumnWidth,
+                    buttonKey: "ai_requirements_open_siri",
+                    action: { model.openSiriSettings() }
+                )
+                RequirementRow(
+                    titleKey: "ai_requirements_ai_enabled",
+                    value: model.aiAvailabilityDisplay,
+                    status: model.aiStatus,
+                    optionWidth: optionColumnWidth,
+                    buttonKey: "ai_requirements_open_ai",
+                    action: { model.openAISettings() }
+                )
 
                 Text("ai_requirements_notice")
                     .font(.caption)
@@ -34,31 +53,22 @@ struct AIRequirementsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding()
+            .frame(minWidth: PMLayout.windowMinWidth, alignment: .leading)
 
             Divider()
 
             HStack(spacing: 8) {
-                Button("ai_requirements_open_language") {
-                    model.openLanguageSettings()
-                }
-                .pmButton()
-
-                Button("ai_requirements_open_siri") {
-                    model.openSiriSettings()
-                }
-                .pmButton()
-
-                Button("ai_requirements_open_ai") {
-                    model.openAISettings()
-                }
-                .pmButton()
-
                 Spacer()
 
                 Button("ai_requirements_refresh") {
                     Task { await model.refresh() }
                 }
                 .pmButton(role: .primary)
+
+                Button("common_close") {
+                    dismiss()
+                }
+                .pmButton()
             }
             .padding()
         }
@@ -73,17 +83,27 @@ private struct RequirementRow: View {
     let titleKey: LocalizedStringKey
     let value: String
     let status: RequirementStatus
+    let optionWidth: CGFloat
+    let buttonKey: LocalizedStringKey
+    let action: () -> Void
 
     var body: some View {
         HStack {
             Circle()
                 .fill(status.color)
                 .frame(width: 8, height: 8)
+                .padding(.trailing, 6)
             Text(titleKey)
                 .foregroundColor(PMTheme.textSecondary)
-            Spacer()
+                .frame(width: optionWidth, alignment: .leading)
             Text(value)
                 .foregroundColor(PMTheme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(nil)
+            Button(buttonKey) {
+                action()
+            }
+            .pmButton()
         }
     }
 }
