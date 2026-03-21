@@ -57,7 +57,6 @@ final class LanguageSettings: ObservableObject {
     init() {
         // Initialize from UserDefaults or system locale
         self.storedLanguage = UserDefaults.standard.string(forKey: "appLanguage")
-            ?? Locale.current.language.languageCode?.identifier
             ?? "en"
 
         NotificationCenter.default.addObserver(

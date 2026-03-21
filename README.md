@@ -61,6 +61,7 @@ If you want automatic checks:
    - Quiet hours
    - Warning threshold
    - Launch at login
+   - Language (with optional AI-assisted detection)
 3. The app will check your password status and alert you as needed.
 4. Automatic background checks respect quiet hours, but a manual check and the exact configured alert time can still show the alert when needed.
 5. Use **Logs** for troubleshooting or export.

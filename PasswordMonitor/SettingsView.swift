@@ -250,13 +250,18 @@ struct SettingsView: View {
                         }
 
                         HStack(spacing: 8) {
+                            Button("language_assist_detect") {
+                                detectLanguageOnDevice()
+                            }
+                            .pmButton()
+
                             Button("language_assist_ai_detect") {
                                 Task { await detectLanguageWithAI() }
                             }
                             .pmButton(role: .primary)
                             .disabled(aiDetectInProgress)
 
-                            Button("language_assist_requirements") {
+                            Button("language_assist_permissions") {
                                 openWindow(id: "ai-check-window")
                             }
                             .pmButton()
@@ -558,6 +563,27 @@ struct SettingsView: View {
         aiDetectStatus = LanguageSettings.localizedString("language_assist_ai_unavailable")
     }
 
+    private func detectLanguageOnDevice() {
+        let trimmed = languageAssistText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 20 else {
+            aiDetectStatus = LanguageSettings.localizedString("language_assist_ai_no_text")
+            return
+        }
+
+        guard let detected = languageSettings.detectLanguage(for: trimmed) else {
+            aiDetectStatus = LanguageSettings.localizedString("language_assist_ai_failed")
+            return
+        }
+
+        if detected != selectedLanguage {
+            lastSuggestedLanguage = detected
+            suggestedLanguage = detected
+            showLanguageSuggestion = true
+        } else {
+            aiDetectStatus = LanguageSettings.localizedString("language_assist_ai_same")
+        }
+    }
+
     private func forceHelperRefresh() {
         DistributedNotificationCenter.default().post(
             name: HelperMessaging.forceRefreshNotification,
@@ -610,8 +636,7 @@ struct SettingsView: View {
         storedQuietHoursEnd = "05:59"
         storedMinimalLogging = true
 
-        let systemLanguage = Locale.current.language.languageCode?.identifier ?? "en"
-        languageSettings.selectedLanguage = LanguageSettings.AppLanguage(rawValue: systemLanguage) ?? .english
+        languageSettings.selectedLanguage = .english
 
         loadSettings()
     }

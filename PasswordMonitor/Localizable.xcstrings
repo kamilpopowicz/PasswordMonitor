@@ -3430,13 +3430,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI Requirements"
+            "value": "AI Permissions"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wymagania AI"
+            "value": "Uprawnienia AI"
           }
         }
       }
@@ -3446,13 +3446,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Intelligence requirements"
+            "value": "Apple Intelligence permissions"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wymagania Apple Intelligence"
+            "value": "Uprawnienia Apple Intelligence"
           }
         }
       }
@@ -3613,6 +3613,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Odśwież"
+          }
+        }
+      }
+    },
+    "language_assist_permissions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uprawnienia"
+          }
+        }
+      }
+    },
+    "ai_requirements_open_ai": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Apple Intelligence"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz Apple Intelligence"
           }
         }
       }

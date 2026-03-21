@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## PasswordMonitor 1.5.8
 - Revamped Logs view with a Console.app-style toolbar, improved multi-line selection, and reliable live updates.
 - Added in-window auto-refresh modes for Logs (immediate, 1 minute, 5 minutes) and default follow-latest behavior.
+- Added AI language detection actions (on-device), permissions checklist window, and system-language prompt on launch.
 
 ## PasswordMonitor 1.5.4
 - AD domain resolver now matches the system’s FQDN against the available DSCL nodes so manual checks succeed with the read-only value shown in Settings.
