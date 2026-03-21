@@ -11,6 +11,10 @@ import SwiftUI
 import NaturalLanguage
 import Combine
 
+extension Notification.Name {
+    static let appLanguageChanged = Notification.Name("appLanguageChanged")
+}
+
 /// Centralized language manager for the app
 /// Persists user selection to UserDefaults and provides observable locale
 final class LanguageSettings: ObservableObject {
@@ -55,6 +59,17 @@ final class LanguageSettings: ObservableObject {
         self.storedLanguage = UserDefaults.standard.string(forKey: "appLanguage")
             ?? Locale.current.language.languageCode?.identifier
             ?? "en"
+
+        NotificationCenter.default.addObserver(
+            forName: .appLanguageChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            if let code = notification.userInfo?["code"] as? String {
+                self.storedLanguage = code
+            }
+        }
     }
 
     func setLanguage(_ language: AppLanguage) {
@@ -90,6 +105,13 @@ final class LanguageSettings: ObservableObject {
 
         guard !arguments.isEmpty else { return format }
 
+        return String(format: format, locale: Locale(identifier: languageCode), arguments: arguments)
+    }
+
+    static func localizedString(_ key: String, languageCode: String, _ arguments: CVarArg...) -> String {
+        let bundle = localizedBundle(for: languageCode)
+        let format = bundle.localizedString(forKey: key, value: nil, table: nil)
+        guard !arguments.isEmpty else { return format }
         return String(format: format, locale: Locale(identifier: languageCode), arguments: arguments)
     }
 

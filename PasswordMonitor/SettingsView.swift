@@ -7,8 +7,10 @@
 
 import SwiftUI
 import ServiceManagement
-import Combine
 import PasswordMonitorCore
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
 
 private enum SettingsKeys {
     static let maxPasswordAge = "max_password_age"
@@ -21,6 +23,7 @@ private enum SettingsKeys {
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openWindow) private var openWindow
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var languageSettings: LanguageSettings
     @EnvironmentObject var themeManager: ThemeManager
@@ -33,7 +36,8 @@ struct SettingsView: View {
     @State private var selectedLanguage: LanguageSettings.AppLanguage = .english
     @State private var minimalLogging = true
     @State private var languageAssistText = ""
-    @State private var languageAssistCancellable: AnyCancellable?
+    @State private var aiDetectInProgress = false
+    @State private var aiDetectStatus: String?
     @State private var showLanguageSuggestion = false
     @State private var suggestedLanguage: LanguageSettings.AppLanguage?
     @State private var lastSuggestedLanguage: LanguageSettings.AppLanguage?
@@ -236,9 +240,6 @@ struct SettingsView: View {
                                                 .stroke(PMTheme.fieldStroke, lineWidth: 1)
                                         )
                                 )
-                                .onChange(of: languageAssistText) { _, newValue in
-                                    debounceLanguageAssistChange(newValue)
-                                }
 
                             if languageAssistText.isEmpty {
                                 Text("language_assist_placeholder")
@@ -247,6 +248,32 @@ struct SettingsView: View {
                                     .allowsHitTesting(false)
                             }
                         }
+
+                        HStack(spacing: 8) {
+                            Button("language_assist_ai_detect") {
+                                Task { await detectLanguageWithAI() }
+                            }
+                            .pmButton(role: .primary)
+                            .disabled(aiDetectInProgress)
+
+                            Button("language_assist_requirements") {
+                                openWindow(id: "ai-check-window")
+                            }
+                            .pmButton()
+
+                            Spacer()
+                        }
+
+                        if let aiDetectStatus {
+                            Text(aiDetectStatus)
+                                .font(.caption)
+                                .foregroundColor(PMTheme.danger)
+                        }
+
+                        Text("language_assist_ai_requirements")
+                            .font(.caption)
+                            .foregroundColor(PMTheme.danger)
+                            .italic()
 
                         Text("language_assist_footnote")
                             .font(.caption)
@@ -477,26 +504,58 @@ struct SettingsView: View {
         }
     }
 
-    private func handleLanguageAssistChange(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 20 else { return }
+    @MainActor
+    private func detectLanguageWithAI() async {
+        let trimmed = languageAssistText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            aiDetectStatus = LanguageSettings.localizedString("language_assist_ai_no_text")
+            return
+        }
 
-        guard let detected = languageSettings.detectLanguage(for: trimmed) else { return }
-        guard detected != selectedLanguage else { return }
-        guard detected != lastSuggestedLanguage else { return }
+        aiDetectInProgress = true
+        defer { aiDetectInProgress = false }
+        aiDetectStatus = nil
 
-        lastSuggestedLanguage = detected
-        suggestedLanguage = detected
-        showLanguageSuggestion = true
-    }
+        #if canImport(FoundationModels)
+        if #available(macOS 26.0, *) {
+            do {
+                let session = LanguageModelSession()
+                let sample = String(trimmed.prefix(1000))
+                let prompt = """
+                Detect the language of the text below. Reply with only one of: pl, en, or unknown.
+                Text: \(sample)
+                """
+                let response = try await session.respond(to: prompt)
+                let result = String(describing: response)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .lowercased()
 
-    private func debounceLanguageAssistChange(_ text: String) {
-        languageAssistCancellable?.cancel()
-        languageAssistCancellable = Just(text)
-            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
-            .sink { value in
-                handleLanguageAssistChange(value)
+                let detected: LanguageSettings.AppLanguage?
+                if result.contains("pl") { detected = .polish }
+                else if result.contains("en") { detected = .english }
+                else { detected = nil }
+
+                guard let detected else {
+                    aiDetectStatus = LanguageSettings.localizedString("language_assist_ai_failed")
+                    return
+                }
+
+                if detected != selectedLanguage {
+                    lastSuggestedLanguage = detected
+                    suggestedLanguage = detected
+                    showLanguageSuggestion = true
+                } else {
+                    aiDetectStatus = LanguageSettings.localizedString("language_assist_ai_same")
+                }
+                return
+            } catch {
+                aiDetectStatus = LanguageSettings.localizedString("language_assist_ai_unavailable")
+                return
             }
+        }
+        #endif
+
+        aiDetectStatus = LanguageSettings.localizedString("language_assist_ai_unavailable")
     }
 
     private func forceHelperRefresh() {

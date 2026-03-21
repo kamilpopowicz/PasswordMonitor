@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 import ServiceManagement
 import PasswordMonitorCore
 import Combine
@@ -82,6 +83,16 @@ struct PasswordMonitorApp: App {
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
         .windowResizability(.contentMinSize)
+
+        Window("ai_requirements_window_title", id: "ai-check-window") {
+            AIRequirementsView()
+                .environmentObject(themeManager)
+                .environment(\.locale, languageSettings.locale)
+                .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
+                .pmWindowBackground(reduced: themeManager.isApplyingTheme)
+                .pmThemeApplying(themeManager.isApplyingTheme)
+        }
+        .windowResizability(.contentMinSize)
         
         // Skróty i menu
         .commands {
@@ -115,7 +126,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Rejestracja helpera
         registerHelperService()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.promptForSystemLanguageIfNeeded()
+        }
         
+    }
+
+    private func promptForSystemLanguageIfNeeded() {
+        let systemCode = Locale.current.language.languageCode?.identifier ?? "en"
+        let current = UserDefaults.standard.string(forKey: "appLanguage") ?? "en"
+        guard systemCode != current else { return }
+
+        let lastPrompted = UserDefaults.standard.string(forKey: "appLanguagePrompted")
+        guard lastPrompted != systemCode else { return }
+
+        let title = LanguageSettings.localizedString("language_prompt_title", languageCode: systemCode)
+        let systemName = Locale.current.localizedString(forLanguageCode: systemCode) ?? systemCode
+        let message = LanguageSettings.localizedString("language_prompt_message %@", languageCode: systemCode, systemName)
+        let yesTitle = LanguageSettings.localizedString("language_prompt_accept", languageCode: systemCode)
+        let noTitle = LanguageSettings.localizedString("language_prompt_decline", languageCode: systemCode)
+
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: yesTitle)
+        alert.addButton(withTitle: noTitle)
+
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        UserDefaults.standard.set(systemCode, forKey: "appLanguagePrompted")
+
+        if response == .alertFirstButtonReturn {
+            UserDefaults.standard.set(systemCode, forKey: "appLanguage")
+            NotificationCenter.default.post(
+                name: .appLanguageChanged,
+                object: nil,
+                userInfo: ["code": systemCode]
+            )
+        }
     }
     
     private func registerHelperService() {

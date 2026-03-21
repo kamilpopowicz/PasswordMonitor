@@ -461,13 +461,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "We detect the language locally on your device and can suggest switching the app language."
+            "value": "Paste a sample text and use the AI button to detect language."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wykrywamy język lokalnie na urządzeniu i możemy zaproponować zmianę języka aplikacji."
+            "value": "Wklej przykładowy tekst i użyj przycisku AI do wykrycia języka."
           }
         }
       }
@@ -3245,6 +3245,374 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zamknij"
+          }
+        }
+      }
+    },
+    "language_prompt_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use system language?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Użyć języka systemu?"
+          }
+        }
+      }
+    },
+    "language_prompt_message %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your system language is %@. Switch the app to this language?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wykryto język systemu: %@. Przełączyć aplikację na ten język?"
+          }
+        }
+      }
+    },
+    "language_prompt_accept": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes, switch"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tak, zmień"
+          }
+        }
+      }
+    },
+    "language_prompt_decline": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No, keep"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie, zostaw"
+          }
+        }
+      }
+    },
+    "language_assist_ai_detect": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detect language with AI"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wykryj język przez AI"
+          }
+        }
+      }
+    },
+    "language_assist_requirements": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requirements"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymagania"
+          }
+        }
+      }
+    },
+    "language_assist_ai_requirements": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requires Apple Intelligence, supported system and Siri language."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymaga Apple Intelligence oraz wspieranego języka systemu i Siri."
+          }
+        }
+      }
+    },
+    "language_assist_ai_no_text": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter text to detect language."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wpisz tekst, aby wykryć język."
+          }
+        }
+      }
+    },
+    "language_assist_ai_unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence is unavailable on this Mac."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence jest niedostępne na tym Macu."
+          }
+        }
+      }
+    },
+    "language_assist_ai_failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not detect language."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się wykryć języka."
+          }
+        }
+      }
+    },
+    "language_assist_ai_same": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detected language matches current setting."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wykryty język jest zgodny z ustawieniem."
+          }
+        }
+      }
+    },
+    "ai_requirements_window_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI Requirements"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymagania AI"
+          }
+        }
+      }
+    },
+    "ai_requirements_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence requirements"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymagania Apple Intelligence"
+          }
+        }
+      }
+    },
+    "ai_requirements_system_language": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System language"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Język systemu"
+          }
+        }
+      }
+    },
+    "ai_requirements_siri_language": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri language"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Język Siri"
+          }
+        }
+      }
+    },
+    "ai_requirements_ai_enabled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence"
+          }
+        }
+      }
+    },
+    "ai_requirements_available": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Available"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dostępne"
+          }
+        }
+      }
+    },
+    "ai_requirements_unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unavailable"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niedostępne"
+          }
+        }
+      }
+    },
+    "ai_requirements_unknown": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nieznane"
+          }
+        }
+      }
+    },
+    "ai_requirements_notice": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence requires a supported system and Siri language."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence wymaga wspieranego języka systemu i Siri."
+          }
+        }
+      }
+    },
+    "ai_requirements_open_language": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Language Settings"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz ustawienia języka"
+          }
+        }
+      }
+    },
+    "ai_requirements_open_siri": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Siri Settings"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz ustawienia Siri"
+          }
+        }
+      }
+    },
+    "ai_requirements_refresh": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odśwież"
           }
         }
       }
