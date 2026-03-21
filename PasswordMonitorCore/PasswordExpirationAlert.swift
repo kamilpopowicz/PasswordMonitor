@@ -388,6 +388,7 @@ private struct AlertContentView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     Group {
         AlertContentView(
@@ -410,3 +411,4 @@ private struct AlertContentView: View {
         )
     }
 }
+#endif

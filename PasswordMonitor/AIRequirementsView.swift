@@ -18,6 +18,7 @@ struct AIRequirementsView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = AIRequirementsModel()
     private let optionColumnWidth: CGFloat = 180
+    private let statusColumnWidth: CGFloat = 14
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,6 +27,7 @@ struct AIRequirementsView: View {
                     titleKey: "ai_requirements_system_language",
                     value: model.systemLanguageDisplay,
                     status: model.systemStatus,
+                    statusWidth: statusColumnWidth,
                     optionWidth: optionColumnWidth,
                     buttonKey: "ai_requirements_open_language",
                     action: { model.openLanguageSettings() }
@@ -34,6 +36,7 @@ struct AIRequirementsView: View {
                     titleKey: "ai_requirements_siri_language",
                     value: model.siriLanguageDisplay,
                     status: model.siriStatus,
+                    statusWidth: statusColumnWidth,
                     optionWidth: optionColumnWidth,
                     buttonKey: "ai_requirements_open_siri",
                     action: { model.openSiriSettings() }
@@ -42,6 +45,7 @@ struct AIRequirementsView: View {
                     titleKey: "ai_requirements_ai_enabled",
                     value: model.aiAvailabilityDisplay,
                     status: model.aiStatus,
+                    statusWidth: statusColumnWidth,
                     optionWidth: optionColumnWidth,
                     buttonKey: "ai_requirements_open_ai",
                     action: { model.openAISettings() }
@@ -49,7 +53,7 @@ struct AIRequirementsView: View {
 
                 Text("ai_requirements_notice")
                     .font(.caption)
-                    .foregroundColor(PMTheme.danger)
+                    .foregroundColor(PMTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding()
@@ -58,6 +62,9 @@ struct AIRequirementsView: View {
             Divider()
 
             HStack(spacing: 8) {
+                Color.clear
+                    .frame(width: statusColumnWidth)
+
                 Spacer()
 
                 Button("ai_requirements_refresh") {
@@ -71,8 +78,17 @@ struct AIRequirementsView: View {
                 .pmButton()
             }
             .padding()
+
+            VStack(spacing: 2) {
+                Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+            }
+            .font(.caption2)
+            .foregroundColor(PMTheme.textSecondary)
+            .padding(.horizontal)
+            .padding(.vertical, 12)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(minHeight: PMLayout.windowMinHeight, alignment: .topLeading)
+        .fixedSize(horizontal: false, vertical: true)
         .onAppear {
             Task { await model.refresh() }
         }
@@ -83,6 +99,7 @@ private struct RequirementRow: View {
     let titleKey: LocalizedStringKey
     let value: String
     let status: RequirementStatus
+    let statusWidth: CGFloat
     let optionWidth: CGFloat
     let buttonKey: LocalizedStringKey
     let action: () -> Void
@@ -93,6 +110,7 @@ private struct RequirementRow: View {
                 .fill(status.color)
                 .frame(width: 8, height: 8)
                 .padding(.trailing, 6)
+                .frame(width: statusWidth, alignment: .leading)
             Text(titleKey)
                 .foregroundColor(PMTheme.textSecondary)
                 .frame(width: optionWidth, alignment: .leading)
@@ -158,12 +176,23 @@ final class AIRequirementsModel: ObservableObject {
     }
 
     func openAISettings() {
-        openSystemSettings(urlString: "x-apple.systempreferences:com.apple.AppleIntelligence-Settings.extension")
+        let urls = [
+            "x-apple.systempreferences:com.apple.AppleIntelligence-Settings.extension",
+            "x-apple.systempreferences:com.apple.Intelligence-Settings.extension",
+            "x-apple.systempreferences:com.apple.AppleIntelligence",
+            "x-apple.systempreferences:com.apple.Siri"
+        ]
+        for url in urls {
+            if openSystemSettings(urlString: url) {
+                return
+            }
+        }
     }
 
-    private func openSystemSettings(urlString: String) {
-        guard let url = URL(string: urlString) else { return }
-        NSWorkspace.shared.open(url)
+    @discardableResult
+    private func openSystemSettings(urlString: String) -> Bool {
+        guard let url = URL(string: urlString) else { return false }
+        return NSWorkspace.shared.open(url)
     }
 
     private func systemLanguageCode() -> String? {
@@ -217,6 +246,8 @@ final class AIRequirementsModel: ObservableObject {
     }
 }
 
+#if DEBUG
 #Preview {
     AIRequirementsView()
 }
+#endif

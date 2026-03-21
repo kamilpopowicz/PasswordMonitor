@@ -3648,6 +3648,22 @@
           }
         }
       }
+    },
+    "common_close": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zamknij"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

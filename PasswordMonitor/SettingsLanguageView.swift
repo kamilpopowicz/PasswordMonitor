@@ -52,7 +52,9 @@ struct SettingsLanguageView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     SettingsLanguageView()
         .environmentObject(LanguageSettings())
 }
+#endif

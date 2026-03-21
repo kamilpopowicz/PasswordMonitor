@@ -327,7 +327,7 @@ public struct PMWindowPanelContainer<Content: View>: View {
 
 public enum PMLayout {
     /// Global minimum window size for consistency across windows.
-    public static let windowMinWidth: CGFloat = 762
+    public static let windowMinWidth: CGFloat = 782
     public static let windowMinHeight: CGFloat = 452
     /// Global window panel inset for consistent padding and rounded panel placement.
     public static let windowPanelInset: CGFloat = 16

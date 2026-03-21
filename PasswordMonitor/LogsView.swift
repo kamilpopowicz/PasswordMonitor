@@ -462,7 +462,9 @@ private struct LogsThemePlaceholder: View {
     }
 }
 
+#if DEBUG
 #Preview {
     LogsView()
         .environmentObject(AppState())
 }
+#endif
