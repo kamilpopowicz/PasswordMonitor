@@ -20,6 +20,9 @@ public class Logger {
     private let logFileURL: URL
     private static let cacheLock = NSLock()
     private static var cachedBundle: (code: String, bundle: Bundle)?
+    private static let formatTokenRegex = try! NSRegularExpression(
+        pattern: "%(?:#@[^@]+@|(?:\\d+\\$)?[-+ #0']*(?:\\d+|\\*)?(?:\\.(?:\\d+|\\*))?(?:hh|h|ll|l|L|z|j|t)?[@diuoxXfFeEgGaAcCsSp%])"
+    )
     private let maxBytes: Int = 1_000_000
     
     public static let shared = Logger()
@@ -93,10 +96,23 @@ public class Logger {
             ?? "en"
 
         let bundle = localizedBundle(for: languageCode)
-        let format = bundle.localizedString(forKey: key, value: nil, table: nil)
+        let localized = bundle.localizedString(forKey: key, value: nil, table: nil)
+        let baseFormat = englishFormat(for: key) ?? localized
+        let format = (localized == key && baseFormat != key) ? baseFormat : localized
 
-        guard !arguments.isEmpty else { return format }
-        return String(format: format, locale: Locale(identifier: languageCode), arguments: arguments)
+        guard !arguments.isEmpty else {
+            if isBrokenLocalizedValue(format, key: key), baseFormat != key {
+                return baseFormat
+            }
+            return format
+        }
+
+        let safeFormat = isFormatCompatible(format, base: baseFormat) ? format : baseFormat
+        if isBrokenLocalizedValue(safeFormat, key: key), baseFormat != key {
+            return baseFormat
+        }
+        guard containsFormatToken(safeFormat) else { return safeFormat }
+        return String(format: safeFormat, locale: Locale(identifier: languageCode), arguments: arguments)
     }
 
     private static func localizedBundle(for languageCode: String) -> Bundle {
@@ -139,6 +155,109 @@ public class Logger {
             return nil
         }
         return Bundle(url: url)
+    }
+
+    private static func englishFormat(for key: String) -> String? {
+        if let enBundle = bundleForLanguage("en", in: Bundle.main) {
+            let format = enBundle.localizedString(forKey: key, value: nil, table: nil)
+            if format != key { return format }
+        }
+
+        if let host = hostAppBundle(), let enBundle = bundleForLanguage("en", in: host) {
+            let format = enBundle.localizedString(forKey: key, value: nil, table: nil)
+            if format != key { return format }
+        }
+
+        return nil
+    }
+
+    private static func isFormatCompatible(_ candidate: String, base: String) -> Bool {
+        let candidateTokens = formatTokens(in: candidate)
+        let baseTokens = formatTokens(in: base)
+        guard candidateTokens.count == baseTokens.count else { return false }
+
+        for (lhs, rhs) in zip(candidateTokens, baseTokens) {
+            guard let left = formatFamily(for: lhs), let right = formatFamily(for: rhs) else {
+                if lhs != rhs { return false }
+                continue
+            }
+            if left == right { continue }
+            if (left == .plural && right == .integer) || (left == .integer && right == .plural) {
+                continue
+            }
+            return false
+        }
+        return true
+    }
+
+    private static func containsFormatToken(_ format: String) -> Bool {
+        !formatTokens(in: format).isEmpty
+    }
+
+    private static func looksLikeLocalizationKey(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        return trimmed.range(
+            of: #"^[a-z0-9]+(?:_[a-z0-9]+)+(?:\s+%[-+ #0'\d\.\@\w]+)?$"#,
+            options: .regularExpression
+        ) != nil
+    }
+
+    private static func hasPlaceholderMarker(_ text: String) -> Bool {
+        text.range(of: #"(?i)\[{1,2}\s*PH\s*[_-]?\s*\d+\s*\]{1,2}"#, options: .regularExpression) != nil
+    }
+
+    private static func isBrokenLocalizedValue(_ text: String, key: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return true }
+        if trimmed == key { return true }
+        if hasPlaceholderMarker(trimmed) { return true }
+        if looksLikeLocalizationKey(trimmed) { return true }
+        return false
+    }
+
+    private static func formatTokens(in format: String) -> [String] {
+        let ns = format as NSString
+        let range = NSRange(location: 0, length: ns.length)
+        return formatTokenRegex.matches(in: format, range: range)
+            .compactMap { match in
+                guard match.range.location != NSNotFound else { return nil }
+                let token = ns.substring(with: match.range)
+                return token == "%%" ? nil : token
+            }
+    }
+
+    private enum FormatFamily {
+        case object
+        case integer
+        case floating
+        case character
+        case cString
+        case pointer
+        case plural
+    }
+
+    private static func formatFamily(for token: String) -> FormatFamily? {
+        if token.hasPrefix("%#@"), token.hasSuffix("@") {
+            return .plural
+        }
+        guard let conversion = token.last else { return nil }
+        switch conversion {
+        case "@":
+            return .object
+        case "d", "i", "u", "o", "x", "X":
+            return .integer
+        case "f", "F", "e", "E", "g", "G", "a", "A":
+            return .floating
+        case "c", "C":
+            return .character
+        case "s", "S":
+            return .cString
+        case "p":
+            return .pointer
+        default:
+            return nil
+        }
     }
 
     private static var isMinimalLoggingEnabled: Bool {

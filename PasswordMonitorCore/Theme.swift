@@ -327,10 +327,24 @@ public struct PMWindowPanelContainer<Content: View>: View {
 
 public enum PMLayout {
     /// Global minimum window size for consistency across windows.
-    public static let windowMinWidth: CGFloat = 762
+    public static let windowMinWidth: CGFloat = 782
     public static let windowMinHeight: CGFloat = 452
     /// Global window panel inset for consistent padding and rounded panel placement.
     public static let windowPanelInset: CGFloat = 16
+}
+
+public struct PMWindowFooter: View {
+    public init() {}
+
+    public var body: some View {
+        VStack(spacing: 2) {
+            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+        }
+        .font(.caption2)
+        .foregroundColor(PMTheme.textSecondary)
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+    }
 }
 
 private struct PMWindowMinSizeEnforcer: NSViewRepresentable {

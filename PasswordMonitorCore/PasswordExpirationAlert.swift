@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import Foundation
 
 public extension Notification.Name {
     static let passwordAlertVisibilityChanged = Notification.Name("PasswordMonitor.PasswordAlertVisibilityChanged")
@@ -175,7 +176,7 @@ private struct AlertContentView: View {
                 .font(.system(size: 48))
                 .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.warning)
 
-            Text(Logger.localizedString("alert_title_expiring"))
+            Text(localizedOrFallback("alert_title_expiring", fallback: "Your password is expiring soon!"))
                 .font(.title2)
                 .fontWeight(.bold)
 
@@ -229,7 +230,7 @@ private struct AlertContentView: View {
             HStack(spacing: 12) {
                 // "Odłóż" – niedostępny tylko gdy hasło wygasa za ≤ 24h
                 Button(action: onSnooze) {
-                    Text(Logger.localizedString("alert_snooze"))
+                    Text(localizedOrFallback("alert_snooze", fallback: "Snooze"))
                         .frame(minWidth: 100)
                 }
                 .buttonStyle(.bordered)
@@ -237,12 +238,12 @@ private struct AlertContentView: View {
                 .disabled(snoozeDisabled)
                 .opacity(snoozeDisabled ? 0.5 : 1.0)
                 .help(snoozeDisabled
-                      ? Text(Logger.localizedString("alert_snooze_help_disabled"))
-                      : Text(Logger.localizedString("alert_snooze_help_enabled")))
+                      ? Text(localizedOrFallback("alert_snooze_help_disabled", fallback: "You can’t snooze when the password expires in less than 24 hours."))
+                      : Text(localizedOrFallback("alert_snooze_help_enabled", fallback: "Remind me in 3 hours")))
 
                 // "Zmień hasło" – na razie tylko log + zamknięcie okna
                 Button(action: onChangePassword) {
-                    Text(Logger.localizedString("alert_change_password"))
+                    Text(localizedOrFallback("alert_change_password", fallback: "Change Password"))
                         .frame(minWidth: 100)
                 }
                 .buttonStyle(.borderedProminent)
@@ -254,7 +255,7 @@ private struct AlertContentView: View {
             .padding(.top, 10)
 
             if !isDomainAvailable {
-                Text(Logger.localizedString("alert_domain_unavailable"))
+                Text(localizedOrFallback("alert_domain_unavailable", fallback: "Connect to VPN and change your password."))
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(PMTheme.danger)
@@ -266,17 +267,14 @@ private struct AlertContentView: View {
                     .padding(.top, 4)
 
                 Button(action: onEndTest) {
-                    Text(Logger.localizedString("alert_end_test"))
+                    Text(localizedOrFallback("alert_end_test", fallback: "End Test"))
                         .frame(minWidth: 120)
                 }
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
 
-            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
-                .font(.caption2)
-                .foregroundColor(PMTheme.textSecondary)
-                .padding(.vertical, 12)
+            PMWindowFooter()
         }
         .padding(24)
         .pmPanel()
@@ -296,22 +294,22 @@ private struct AlertContentView: View {
 
         switch days {
         case ..<0:
-            return Logger.localizedString("alert_advice_expired")
+            return localizedOrFallback("alert_advice_expired", fallback: "Your password has already expired. Change it immediately to avoid access issues.")
         case 0...1:
-            return Logger.localizedString("alert_advice_today")
+            return localizedOrFallback("alert_advice_today", fallback: "Your password expires today. Change it now to avoid account lockout.")
         case 2...7:
-            return Logger.localizedString("alert_advice_week")
+            return localizedOrFallback("alert_advice_week", fallback: "Your password expires within a week. Plan to change it before the deadline.")
         case _ where mode == .test:
-            return Logger.localizedString("alert_advice_week")
+            return localizedOrFallback("alert_advice_week", fallback: "Your password expires within a week. Plan to change it before the deadline.")
         default:
-            return Logger.localizedString("alert_advice_default")
+            return localizedOrFallback("alert_advice_default", fallback: "Your password is still valid, but company policy requires changing it regularly.")
         }
     }
 
     private var remainingTitleText: String {
         timeRemaining > 86400
-            ? Logger.localizedString("alert_remaining_title_long")
-            : Logger.localizedString("alert_remaining_title_short")
+            ? localizedOrFallback("alert_remaining_title_long", fallback: "Time remaining:")
+            : localizedOrFallback("alert_remaining_title_short", fallback: "Time remaining:")
     }
 
     private func formattedExpirationDate() -> String {
@@ -332,21 +330,17 @@ private struct AlertContentView: View {
             let hours = remAfterDays / 3600
             let minutes = (remAfterDays % 3600) / 60
             let seconds = remAfterDays % 60
-            let dayText = Logger.localizedString("unit_day %lld", days)
-            let hourText = Logger.localizedString("unit_hour %lld", hours)
-            let minuteText = Logger.localizedString("unit_minute %lld", minutes)
-            let secondText = Logger.localizedString("unit_second %lld", seconds)
+            let dayText = localizedUnit("unit_day %lld", value: days, singular: "day", plural: "days")
+            let hourText = localizedUnit("unit_hour %lld", value: hours, singular: "hour", plural: "hours")
+            let minuteText = localizedUnit("unit_minute %lld", value: minutes, singular: "minute", plural: "minutes")
+            let secondText = localizedUnit("unit_second %lld", value: seconds, singular: "second", plural: "seconds")
             return "\(dayText) \(hourText) \(minuteText) \(secondText)"
         } else {
             let hours = totalSeconds / 3600
             let minutes = (totalSeconds % 3600) / 60
             let seconds = totalSeconds % 60
-            return Logger.localizedString(
-                "alert_remaining_short_format",
-                hours,
-                minutes,
-                seconds
-            )
+            // Keep countdown deterministic; broken translations must not affect this format.
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
         }
     }
 
@@ -360,10 +354,10 @@ private struct AlertContentView: View {
         let minutes = (remAfterDays % 3600) / 60
         let seconds = remAfterDays % 60
 
-        let dayText = Logger.localizedString("unit_day %lld", days)
-        let hourText = Logger.localizedString("unit_hour %lld", hours)
-        let minuteText = Logger.localizedString("unit_minute %lld", minutes)
-        let secondText = Logger.localizedString("unit_second %lld", seconds)
+        let dayText = localizedUnit("unit_day %lld", value: days, singular: "day", plural: "days")
+        let hourText = localizedUnit("unit_hour %lld", value: hours, singular: "hour", plural: "hours")
+        let minuteText = localizedUnit("unit_minute %lld", value: minutes, singular: "minute", plural: "minutes")
+        let secondText = localizedUnit("unit_second %lld", value: seconds, singular: "second", plural: "seconds")
 
         return ("\(dayText) \(hourText)", "\(minuteText) \(secondText)")
     }
@@ -384,10 +378,36 @@ private struct AlertContentView: View {
         timer?.invalidate()
         timer = nil
     }
+
+    private func localizedOrFallback(_ key: String, fallback: String) -> String {
+        let value = Logger.localizedString(key)
+        return isBrokenLocalization(value, key: key) ? fallback : value
+    }
+
+    private func localizedUnit(_ key: String, value: Int, singular: String, plural: String) -> String {
+        let localized = Logger.localizedString(key, value)
+        if isBrokenLocalization(localized, key: key) {
+            let unit = (value == 1) ? singular : plural
+            return "\(value) \(unit)"
+        }
+        return localized
+    }
+
+    private func isBrokenLocalization(_ text: String, key: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return true }
+        if trimmed == key { return true }
+        if trimmed.range(of: #"(?i)PH\s*[_-]?\s*\d+"#, options: .regularExpression) != nil { return true }
+        if trimmed.range(of: #"^[a-z0-9]+(?:_[a-z0-9]+)+(?:\s+%[-+ #0'\d\.\@\w]+)?$"#, options: .regularExpression) != nil {
+            return true
+        }
+        return false
+    }
 }
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     Group {
         AlertContentView(
@@ -410,3 +430,4 @@ private struct AlertContentView: View {
         )
     }
 }
+#endif

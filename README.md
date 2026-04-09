@@ -4,7 +4,7 @@ PasswordMonitor is a macOS menu bar app that helps users keep track of corporate
 
 This repository currently provides **testing builds**. Depending on your local setup, they may be unsigned, so Gatekeeper can show a warning and users must open the app manually (right‑click → Open).
 
-Current version: **1.5.7**
+Current version: **1.6.0**
 
 ---
 
@@ -36,12 +36,18 @@ If you want automatic checks:
 - Alerts and snooze support for expiring passwords
 - Snooze state and “shown today” persist across relaunch and are shared between the main app and helper
 - Manual checks and the configured notification time can intentionally break through quiet hours and active snooze
+- Menubar **Check now** path supports explicit live-alert verification for QA (bypasses shownToday/snooze/quiet-hours guards)
 - Settings for notification time, warning threshold, quiet hours, and read-only AD domain info pulled from the system configuration
 - Menu open performs a live AD check (with a 30s timeout) before showing alerts
 - Automatic AD node resolution keeps the read-only domain (FQDN) in sync with the system’s Users & Groups entry so `dscl` can still read `SMBPasswordLastSet`
 - Built‑in logs viewer with filtering, copy, and Finder reveal
 - Privacy-safe log masking for host/domain values
 - Runtime language switching (English/Polish)
+- AI-assisted on-device translation hardening:
+  - rejects unsafe/broken translations,
+  - falls back to English when needed,
+  - retries problematic keys (immediate multi-attempt + deferred self-heal retries)
+- Language Assist includes a manual **Retry problematic** action for failed keys
 - Manual Light/Dark/Auto theme switching
 
 ## Tech Stack
@@ -61,9 +67,31 @@ If you want automatic checks:
    - Quiet hours
    - Warning threshold
    - Launch at login
+   - Language (with optional AI-assisted detection and retry of problematic keys)
 3. The app will check your password status and alert you as needed.
 4. Automatic background checks respect quiet hours, but a manual check and the exact configured alert time can still show the alert when needed.
 5. Use **Logs** for troubleshooting or export.
+
+---
+
+## AI Translation Reliability
+PasswordMonitor uses on-device Apple Intelligence translation when available. The app treats generated localization as best-effort and applies strict validation before rendering it.
+
+### Validation and fallback
+- Placeholder mismatch or marker leaks are rejected.
+- Raw localization-key-looking output is rejected.
+- Prompt-echo style outputs are rejected.
+- Rejected values automatically fall back to base English.
+
+### Retry model (lightweight)
+- Per key, translation uses up to 3 attempts in one pass.
+- Keys that still fail are queued as “problematic”.
+- Deferred retries:
+  - once after 1 hour from translation completion,
+  - once per app launch day on startup.
+- Manual retry is available in Settings → Language Assist (`Retry problematic`).
+
+This approach avoids aggressive hourly background workloads while still self-healing most temporary model/device quality issues.
 
 ---
 

@@ -15,6 +15,7 @@ struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismiss) private var dismiss
 
     @ObservedObject private var notificationManager = NotificationManager.shared
 
@@ -27,7 +28,7 @@ struct MenuBarView: View {
             if let info = notificationManager.latestPasswordInfo {
                 let daysRemaining = info.currentDaysUntilExpiration
 
-                Text("menu_password_expires_title")
+                Text(LanguageSettings.localizedString("menu_password_expires_title"))
                     .font(.headline)
                     .foregroundColor(PMTheme.textSecondary)
 
@@ -37,7 +38,7 @@ struct MenuBarView: View {
 
                 Divider()
 
-                Text("menu_last_change_title")
+                Text(LanguageSettings.localizedString("menu_last_change_title"))
                     .font(.caption)
                     .foregroundColor(PMTheme.textSecondary)
 
@@ -47,13 +48,13 @@ struct MenuBarView: View {
                 
                 // ostrzeżenie, jeśli dane są z cache (domena niedostępna)
                 if notificationManager.hasPerformedRefresh && !notificationManager.isDomainAvailable {
-                    Text("menu_domain_warning")
+                    Text(LanguageSettings.localizedString("menu_domain_warning"))
                         .font(.caption)
                         .foregroundColor(PMTheme.danger)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                Text("menu_check_status")
+                Text(LanguageSettings.localizedString("menu_check_status"))
                     .font(.headline)
                     .foregroundColor(PMTheme.textSecondary)
             }
@@ -62,7 +63,7 @@ struct MenuBarView: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("menu_checking_now")
+                    Text(LanguageSettings.localizedString("menu_checking_now"))
                         .font(.caption)
                         .foregroundColor(PMTheme.textSecondary)
                 }
@@ -71,13 +72,13 @@ struct MenuBarView: View {
             Divider()
 
             // Akcje
-            Button("menu_check_now") {
+            Button(LanguageSettings.localizedString("menu_check_now")) {
                 checkPasswordNow()
             }
             .disabled(isChecking)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button("menu_change_password") {
+            Button(LanguageSettings.localizedString("menu_change_password")) {
                 Logger.shared.logLocalized("log_menu_change_password_selected")
                 PasswordChangeHelper.openSystemPasswordSettings()
             }
@@ -93,27 +94,29 @@ struct MenuBarView: View {
                     .fill(helperServiceColor)
                     .frame(width: 8, height: 8)
 
-                Text("menu_background_service")
+                Text(LanguageSettings.localizedString("menu_background_service"))
                     .font(.caption)
                     .foregroundColor(PMTheme.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button("menu_settings") {
+            Button(LanguageSettings.localizedString("menu_settings")) {
                 openWindow(id: "settings-window")
+                dismiss()
             }
             .controlSize(.regular)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button("menu_logs") {
+            Button(LanguageSettings.localizedString("menu_logs")) {
                 openWindow(id: "logs-window")
+                dismiss()
             }
             .controlSize(.regular)
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Divider()
 
-            Button("menu_quit") {
+            Button(LanguageSettings.localizedString("menu_quit")) {
                 NSApplication.shared.terminate(nil)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -144,7 +147,7 @@ struct MenuBarView: View {
     }
 
     private func checkPasswordNow() {
-        refreshPasswordStatus(reason: .menuOpen, shouldCheckNotification: true)
+        refreshPasswordStatus(reason: .checkNow, shouldCheckNotification: true)
     }
 
     private func refreshPasswordStatus(reason: NotificationManager.CheckReason, shouldCheckNotification: Bool) {
@@ -209,6 +212,13 @@ class AppState: ObservableObject {
     func windowOpened() {
         windowCount += 1
         updateActivationPolicy()
+    }
+
+    func activateApp() {
+        NSApp.activate(ignoringOtherApps: true)
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow {
+            window.makeKeyAndOrderFront(nil)
+        }
     }
 
     func windowClosed() {

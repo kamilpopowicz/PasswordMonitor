@@ -19,15 +19,17 @@ struct SettingsLanguageView: View {
         VStack(spacing: 0) {
             Form {
                 Section {
-                    Picker("language_picker_label", selection: $languageSettings.selectedLanguage) {
-                        ForEach(LanguageSettings.AppLanguage.allCases) { language in
-                            Text(language.displayName)
-                                .tag(language)
+                    Picker(selection: $languageSettings.selectedLanguageCode) {
+                        ForEach(languageSettings.availableLanguageOptions()) { option in
+                            Text(option.displayName)
+                                .tag(option.code)
                         }
+                    } label: {
+                        Text(LanguageSettings.localizedString("language_picker_label"))
                     }
                     .pickerStyle(.segmented)
                 } footer: {
-                    Text("language_change_footnote")
+                    Text(LanguageSettings.localizedString("language_change_footnote"))
                         .font(.caption)
                         .italic()
                         .foregroundColor(PMTheme.textSecondary)
@@ -39,20 +41,16 @@ struct SettingsLanguageView: View {
 
             Divider()
 
-            VStack(spacing: 2) {
-                Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
-            }
-            .font(.caption2)
-            .foregroundColor(PMTheme.textSecondary)
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            PMWindowFooter()
         }
-        .navigationTitle("language_settings_title")
+        .navigationTitle(LanguageSettings.localizedString("language_settings_title"))
         // Window panel and min size are applied at the Window level.
     }
 }
 
+#if DEBUG
 #Preview {
     SettingsLanguageView()
         .environmentObject(LanguageSettings())
 }
+#endif
