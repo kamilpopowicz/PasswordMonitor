@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.6.0
+- Reworked AI localization safety pipeline so low-quality outputs are rejected instead of rendered in UI:
+  - placeholder integrity checks (`%@`, `%lld`, `%%`, `stringsdict` plural forms),
+  - rejection of raw key-looking outputs (for example `alert_title_*`, `menu_*`),
+  - rejection of PH marker leaks (`[PH_0]`, `[[PH_0]]`, `{PH_0}`, variants),
+  - prompt-echo rejection (for example “Translate UI text key …”),
+  - automatic fallback to base English when custom value is unsafe or empty.
+- Added translation retry policy per key (up to 3 attempts in a single translation pass).
+- Added persistent queue of problematic localization keys in user Application Support custom localization files.
+- Added deferred self-heal retry of problematic keys:
+  - once, 1 hour after translation completes,
+  - once per app launch day (startup retry), no hourly background loop.
+- Added manual retry control in `Settings → Language Assist` next to detect/permissions actions:
+  - retries only queued problematic keys,
+  - shows attempt/fixed/remaining status in Language Assist message.
+- Hardened runtime localization fallback in alert/logger/menu paths so broken custom values are replaced by safe base text.
+- Added dedicated menu check reason (`checkNow`) to support stronger manual verification from menubar “Check now”:
+  - bypasses `shownToday` gate,
+  - bypasses active snooze,
+  - bypasses quiet-hours suppression.
+- Preserved language-agnostic architecture: no language-specific hardcoded dictionaries/overrides for FR/DE/ES.
+
 ## PasswordMonitor 1.5.8
 - Revamped Logs view with a Console.app-style toolbar, improved multi-line selection, and reliable live updates.
 - Added in-window auto-refresh modes for Logs (immediate, 1 minute, 5 minutes) and default follow-latest behavior.

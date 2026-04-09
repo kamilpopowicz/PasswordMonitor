@@ -28,28 +28,28 @@ struct LogsView: View {
             VStack(spacing: 10) {
                 HStack(alignment: .center) {
                     HStack(spacing: 8) {
-                        Button("logs_now") {
+                        Button(LanguageSettings.localizedString("logs_now")) {
                             isFollowingLatest = true
                             scrollToBottomToken = UUID()
                         }
                         .pmButton(role: isFollowingLatest ? .primary : .secondary)
 
-                        Button("logs_clear") {
+                        Button(LanguageSettings.localizedString("logs_clear")) {
                             logStore.clear()
                         }
                         .pmButton(role: .destructive)
 
-                        Button("logs_reload") {
+                        Button(LanguageSettings.localizedString("logs_reload")) {
                             logStore.reload()
                         }
                         .pmButton()
 
-                        Button("logs_reveal") {
+                        Button(LanguageSettings.localizedString("logs_reveal")) {
                             logStore.revealInFinder()
                         }
                         .pmButton()
 
-                        Button("logs_export") {
+                        Button(LanguageSettings.localizedString("logs_export")) {
                             logStore.share()
                         }
                         .pmButton()
@@ -60,7 +60,7 @@ struct LogsView: View {
                     HStack(spacing: searchButtonSpacing) {
                         SearchField(
                             text: $searchText,
-                            placeholder: String(localized: "logs_search_placeholder"),
+                            placeholder: LanguageSettings.localizedString("logs_search_placeholder"),
                             isDark: themeManager.isDarkAppearance,
                             isVisible: showSearchField,
                             focusToken: $searchFocusToken
@@ -84,7 +84,7 @@ struct LogsView: View {
                             Image(systemName: showSearchField ? "xmark" : "magnifyingglass")
                         }
                         .pmButton(role: .secondary, size: .compact)
-                        .help(showSearchField ? String(localized: "logs_search_close") : String(localized: "logs_search"))
+                        .help(showSearchField ? LanguageSettings.localizedString("logs_search_close") : LanguageSettings.localizedString("logs_search"))
                     }
                     .frame(width: searchColumnWidth, alignment: .trailing)
                 }
@@ -92,30 +92,21 @@ struct LogsView: View {
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
-                            (Text("logs_level_filter") + Text(":"))
+                            (Text(LanguageSettings.localizedString("logs_level_filter")) + Text(":"))
                                 .font(.caption)
                                 .foregroundColor(PMTheme.textSecondary)
                             Picker("", selection: $selectedLevel) {
-                                Text("logs_level_all").tag(Logger.Level?.none)
-                                Text("logs_level_info").tag(Logger.Level?.some(.info))
-                                Text("logs_level_warning").tag(Logger.Level?.some(.warning))
-                                Text("logs_level_error").tag(Logger.Level?.some(.error))
-                                Text("logs_level_debug").tag(Logger.Level?.some(.debug))
+                                Text(LanguageSettings.localizedString("logs_level_all")).tag(Logger.Level?.none)
+                                Text(LanguageSettings.localizedString("logs_level_info")).tag(Logger.Level?.some(.info))
+                                Text(LanguageSettings.localizedString("logs_level_warning")).tag(Logger.Level?.some(.warning))
+                                Text(LanguageSettings.localizedString("logs_level_error")).tag(Logger.Level?.some(.error))
+                                Text(LanguageSettings.localizedString("logs_level_debug")).tag(Logger.Level?.some(.debug))
                             }
                             .labelsHidden()
                             .pickerStyle(.segmented)
                             .frame(width: levelsColumnWidth - 80, alignment: .leading)
                         }
 
-                        HStack(spacing: 8) {
-                            (Text("logs_legend") + Text(":"))
-                                .font(.caption)
-                                .foregroundColor(PMTheme.textSecondary)
-                            LegendDot(color: PMTheme.textPrimary, labelKey: "logs_level_info")
-                            LegendDot(color: PMTheme.warning, labelKey: "logs_level_warning")
-                            LegendDot(color: PMTheme.danger, labelKey: "logs_level_error")
-                            LegendDot(color: PMTheme.textMuted, labelKey: "logs_level_debug")
-                        }
                     }
                     .frame(width: levelsColumnWidth, alignment: .leading)
 
@@ -123,21 +114,21 @@ struct LogsView: View {
 
                     VStack(alignment: .trailing, spacing: 6) {
                         HStack(spacing: 8) {
-                            (Text("logs_refresh_label") + Text(":"))
+                            (Text(LanguageSettings.localizedString("logs_refresh_label")) + Text(":"))
                                 .font(.caption)
                                 .foregroundColor(PMTheme.textSecondary)
                                 .padding(.trailing, 10)
                             Picker("", selection: $logStore.refreshMode) {
-                                Text("logs_refresh_immediate").tag(LogStore.RefreshMode.immediate)
-                                Text("logs_refresh_1m").tag(LogStore.RefreshMode.oneMinute)
-                                Text("logs_refresh_5m").tag(LogStore.RefreshMode.fiveMinutes)
+                                Text(LanguageSettings.localizedString("logs_refresh_immediate")).tag(LogStore.RefreshMode.immediate)
+                                Text(LanguageSettings.localizedString("logs_refresh_1m")).tag(LogStore.RefreshMode.oneMinute)
+                                Text(LanguageSettings.localizedString("logs_refresh_5m")).tag(LogStore.RefreshMode.fiveMinutes)
                             }
                             .labelsHidden()
                             .pickerStyle(.segmented)
                             .frame(width: 220, alignment: .trailing)
                         }
 
-                        Text("logs_privacy_notice")
+                        Text(LanguageSettings.localizedString("logs_privacy_notice"))
                             .font(.caption)
                             .foregroundColor(PMTheme.textSecondary)
                             .italic()
@@ -179,13 +170,7 @@ struct LogsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .layoutPriority(1)
 
-            VStack(spacing: 2) {
-                Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
-            }
-            .font(.caption2)
-            .foregroundColor(PMTheme.textSecondary)
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            PMWindowFooter()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
@@ -195,7 +180,11 @@ struct LogsView: View {
             scrollToBottomToken = UUID()
             DispatchQueue.main.async {
                 appState.activateApp()
+                refreshWindowTitle()
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .appLanguageChanged)) { _ in
+            refreshWindowTitle()
         }
         .onDisappear {
             logStore.stop()
@@ -226,7 +215,7 @@ struct LogsView: View {
     private func attributedContent() -> NSAttributedString {
         if filteredContent.isEmpty {
             return NSAttributedString(
-                string: String(localized: "logs_empty"),
+                string: LanguageSettings.localizedString("logs_empty"),
                 attributes: [
                     .font: NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
                     .foregroundColor: NSColor(PMTheme.textSecondary)
@@ -254,6 +243,17 @@ struct LogsView: View {
             }
         }
         return result
+    }
+
+    private func refreshWindowTitle() {
+        let title = LanguageSettings.localizedString("logs_window_title")
+        if let keyWindow = NSApp.keyWindow {
+            keyWindow.title = title
+            return
+        }
+        if let logsWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == "logs-window" }) {
+            logsWindow.title = title
+        }
     }
 }
 
@@ -411,28 +411,12 @@ private struct LogTextView: NSViewRepresentable {
     }
 }
 
-private struct LegendDot: View {
-    let color: Color
-    let labelKey: LocalizedStringKey
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
-            Text(labelKey)
-                .font(.caption)
-                .foregroundColor(PMTheme.textSecondary)
-        }
-    }
-}
-
 private struct LoadingOverlay: View {
     var body: some View {
         VStack(spacing: 8) {
             ProgressView()
                 .controlSize(.large)
-            Text("logs_loading")
+            Text(LanguageSettings.localizedString("logs_loading"))
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
         }
@@ -453,7 +437,7 @@ private struct LogsThemePlaceholder: View {
         VStack(spacing: 8) {
             ProgressView()
                 .controlSize(.large)
-            Text("common_loading")
+            Text(LanguageSettings.localizedString("common_loading"))
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
         }

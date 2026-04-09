@@ -333,6 +333,20 @@ public enum PMLayout {
     public static let windowPanelInset: CGFloat = 16
 }
 
+public struct PMWindowFooter: View {
+    public init() {}
+
+    public var body: some View {
+        VStack(spacing: 2) {
+            Text("Copyright (c) 2026 Kamil Popowicz. All rights reserved.")
+        }
+        .font(.caption2)
+        .foregroundColor(PMTheme.textSecondary)
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+    }
+}
+
 private struct PMWindowMinSizeEnforcer: NSViewRepresentable {
     let size: NSSize
 

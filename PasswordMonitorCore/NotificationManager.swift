@@ -19,6 +19,7 @@ public final class NotificationManager: ObservableObject {
         case scheduledTime
         case manual
         case menuOpen
+        case checkNow
     }
 
     public static let shared = NotificationManager()
@@ -83,6 +84,8 @@ public final class NotificationManager: ObservableObject {
     private let stateStore = NotificationStateStore.shared
     private var lastLogTimestamps: [String: Date] = [:]
     private var lastLoggedDaysRemaining: Int?
+    // Temporary testing gate: set to true only for local QA sessions.
+    private let forceBypassShownTodayForTesting = false
 
     static func resolvedWarningThreshold(from defaults: UserDefaults = .standard) -> Int {
         let configuredThreshold = defaults.integer(forKey: "warning_threshold")
@@ -121,7 +124,7 @@ public final class NotificationManager: ObservableObject {
         guard isWithinQuietHours(now: now, defaults: defaults) else {
             return false
         }
-        return reason != .manual && reason != .scheduledTime
+        return reason != .manual && reason != .scheduledTime && reason != .checkNow
     }
 
     static func isNotificationSuppressedBySnooze(
@@ -138,7 +141,7 @@ public final class NotificationManager: ObservableObject {
             return false
         }
 
-        return reason != .manual
+        return reason != .manual && reason != .checkNow
     }
     
     // MARK: - Initialization
@@ -467,11 +470,17 @@ public final class NotificationManager: ObservableObject {
             return
         }
         
-        guard !hasShownNotificationToday else {
+        let bypassShownToday = forceBypassShownTodayForTesting || reason == .checkNow
+        guard !hasShownNotificationToday || bypassShownToday else {
             if shouldLog(key: "notification_already_shown", interval: 30 * 60) {
                 Logger.shared.logLocalized("log_notification_already_shown_today")
             }
             return
+        }
+        if hasShownNotificationToday && bypassShownToday {
+            if shouldLog(key: "notification_shown_today_bypass", interval: 10) {
+                Logger.shared.log("Bypassing shownToday gate for testing (reason=\(reason.rawValue))")
+            }
         }
         
         let now = Date()
@@ -490,7 +499,7 @@ public final class NotificationManager: ObservableObject {
             return
         }
 
-        if snoozeStillActive && reason == .manual {
+        if snoozeStillActive && (reason == .manual || reason == .checkNow) {
             Logger.shared.log("Bypassing active snooze for notification (reason=\(reason.rawValue), snoozeUntil=\(snoozeEndTime?.formatted() ?? "unknown"))")
             isSnoozed = false
             snoozeEndTime = nil
@@ -511,7 +520,8 @@ public final class NotificationManager: ObservableObject {
 
         // Jeśli hasło wygasa w progu ostrzeżenia, pokaż alert od razu (nie czekaj na godzinę).
         if Self.isWithinWarningThreshold(now: now, expirationDate: expirationDate, thresholdDays: thresholdDays) {
-            if allowLiveCheck {
+            let shouldShowImmediately = (reason == .checkNow)
+            if allowLiveCheck && !shouldShowImmediately {
                 refreshPasswordStatusLive(
                     reason: reason,
                     shouldCheckNotification: false,
@@ -742,7 +752,7 @@ public final class NotificationManager: ObservableObject {
     }
 
     private func shouldHandleNotifications(for reason: CheckReason) -> Bool {
-        if reason == .manual || reason == .menuOpen {
+        if reason == .manual || reason == .menuOpen || reason == .checkNow {
             return true
         }
 

@@ -61,33 +61,36 @@ struct PasswordMonitorApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("settings_window_title", id: "settings-window") {
+        Window(LanguageSettings.localizedString("settings_window_title", languageCode: languageSettings.selectedLanguageCode), id: "settings-window") {
             SettingsView()
                 .environmentObject(appState)
                 .environmentObject(themeManager)
                 .environmentObject(languageSettings)
                 .environment(\.locale, languageSettings.locale)
+                .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
         .windowResizability(.contentMinSize)
 
-        Window("logs_window_title", id: "logs-window") {
+        Window(LanguageSettings.localizedString("logs_window_title", languageCode: languageSettings.selectedLanguageCode), id: "logs-window") {
             LogsView()
                 .environmentObject(appState)
                 .environmentObject(themeManager)
                 .environment(\.locale, languageSettings.locale)
+                .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
         .windowResizability(.contentMinSize)
 
-        Window("ai_requirements_window_title", id: "ai-check-window") {
+        Window(LanguageSettings.localizedString("ai_requirements_window_title", languageCode: languageSettings.selectedLanguageCode), id: "ai-check-window") {
             AIRequirementsView()
                 .environmentObject(themeManager)
                 .environment(\.locale, languageSettings.locale)
+                .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
@@ -106,12 +109,12 @@ struct AppCommands: Commands {
     
     var body: some Commands {
         CommandGroup(replacing: .appSettings) {
-            Button("settings_menu_title") {
+            Button(LanguageSettings.localizedString("settings_menu_title")) {
                 openWindow(id: "settings-window")
             }
             .keyboardShortcut(",", modifiers: .command)
 
-            Button("menu_logs") {
+            Button(LanguageSettings.localizedString("menu_logs")) {
                 openWindow(id: "logs-window")
             }
             .keyboardShortcut("l", modifiers: .command)
@@ -123,7 +126,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger.shared.logLocalized("log_app_launched")
-        
+
+        LocalizationRetryManager.shared.handleAppLaunch()
+
         // Rejestracja helpera
         registerHelperService()
 
