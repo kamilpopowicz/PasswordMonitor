@@ -178,7 +178,7 @@ struct MenuBarView: View {
         guard let info = notificationManager.latestPasswordInfo else { return false }
         // Zachowujemy dotychczasową logikę: aktywuj od 28 dni przed deadlinem
         let withinThreshold = info.currentDaysUntilExpiration <= 28
-        let domainAvailable = notificationManager.isDomainAvailable || !notificationManager.hasPerformedRefresh
+        let domainAvailable = notificationManager.isDomainAvailable
         return withinThreshold && domainAvailable
     }
 }

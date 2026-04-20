@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.7.1
+- Restored user-intent semantics for manual verification (issues #34/#30/#29 follow-up):
+  - `checkNow` again bypasses the `shownToday` gate so a manual "Check now" always surfaces the latest state, even if an alert already fired earlier today,
+  - manual/`checkNow` still displays the alert despite active snooze, but no longer clears the snooze state globally (automatic/scheduled checks keep respecting the existing snooze window).
+- Scheduled notification moment now overrides both the `shownToday` gate and an active snooze:
+  - if an alert already fired earlier today, the scheduled hour still triggers another one,
+  - if snooze is active until, e.g., 10:01 and the scheduled hour is 09:30, the alert fires at 09:30,
+  - the old snooze state is cleared at that moment so any new snooze starts fresh from the scheduled trigger.
+- Updated unit coverage: `testScheduledNotificationsBypassActiveSnooze` asserts scheduled triggers are not suppressed by snooze.
+- Ensure the helper process is actually running after registration: main app now launches the embedded helper via `NSWorkspace.openApplication` when `SMAppService` reports enabled but the process is not alive (previously `.status == .enabled` only meant "registered for next login", so scheduled alerts never fired until logout/restart).
+- Cross-process settings consistency (main app ↔ helper):
+  - main app now mirrors saved settings to the shared suite `popo.PasswordMonitor` (values previously lived only in the main app's own `UserDefaults.standard` plist, so the helper process never saw user-changed thresholds or notification time),
+  - save/reset now posts `HelperForceRefresh` distributed notification so the helper immediately re-syncs via `syncSharedSettings` and re-schedules the next notification moment,
+  - helper now logs a full settings snapshot after every `syncSharedSettings` (so log diagnostics show exactly what the helper is operating on),
+  - main app logs a full settings snapshot at launch (`Settings loaded at launch: ...`) instead of only the notification hour.
+- Settings logging discipline:
+  - removed `.onChange` logs for notification time / quiet hours (they fired on every UI tick before Save and created misleading log noise),
+  - added a single `Settings saved: ...` log with a diff of changed keys only, emitted from the Save path,
+  - removed the redundant load-time log for the notification hour (replaced by the full startup snapshot above).
+- Helper process no longer runs the periodic 60-second `checkTimer` from `NotificationManager.startCheckingForNotificationTime`:
+  - the helper has its own one-shot scheduled timer plus wake observer in `HelperAppDelegate`,
+  - the extra periodic timer was duplicating every `Notification check: reason=automatic` log entry and reading stale `UserDefaults` between `syncSharedSettings` ticks.
+
+## PasswordMonitor 1.7
+- Fixed duplicate alert behavior after wake/manual check by removing runtime bypasses of:
+  - `shownToday` gate for `checkNow`,
+  - active snooze for `manual/checkNow`.
+- Hardened startup domain state for notifications and password-change action:
+  - domain is treated as unavailable until a refresh confirms connectivity.
+- Updated alert countdown presentation to a strict two-line format:
+  - line 1: day count only,
+  - line 2: `HH:mm:SS` only.
+- Menubar password-change action now requires confirmed domain availability.
+
 ## PasswordMonitor 1.6.0
 - Reworked AI localization safety pipeline so low-quality outputs are rejected instead of rendered in UI:
   - placeholder integrity checks (`%@`, `%lld`, `%%`, `stringsdict` plural forms),
