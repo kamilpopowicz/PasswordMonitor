@@ -129,7 +129,6 @@ struct SettingsView: View {
                         .onChange(of: notificationDate) { _, newValue in
                             // Konwersja Date -> String "HH:mm" dla EDYTOWANEJ wartości
                             notificationHourString = dateToTimeString(newValue) ?? "09:00"
-                            Logger.shared.logLocalized("log_settings_notification_time_changed %@", notificationHourString)
                         }
 
                         Text(LanguageSettings.localizedString("settings_notification_footnote"))
@@ -143,7 +142,6 @@ struct SettingsView: View {
                             }
                             .onChange(of: quietHoursStartDate) { _, newValue in
                                 quietHoursStartString = dateToTimeString(newValue) ?? "18:01"
-                                Logger.shared.log("Quiet hours start changed to \(quietHoursStartString)")
                             }
 
                             DatePicker(selection: $quietHoursEndDate, displayedComponents: .hourAndMinute) {
@@ -151,7 +149,6 @@ struct SettingsView: View {
                             }
                             .onChange(of: quietHoursEndDate) { _, newValue in
                                 quietHoursEndString = dateToTimeString(newValue) ?? "05:59"
-                                Logger.shared.log("Quiet hours end changed to \(quietHoursEndString)")
                             }
                         }
 
@@ -532,8 +529,6 @@ struct SettingsView: View {
         let service = SMAppService.loginItem(identifier: helperBundleID)
         helperStatus = service.status
         launchAtLogin = (service.status == .enabled)
-
-        Logger.shared.logLocalized("log_settings_loaded_notification_time %@", notificationHourString)
     }
 
     private func refreshPendingRetryCount() {
@@ -1167,7 +1162,35 @@ struct SettingsView: View {
 
     /// Zapisuje wprowadzone zmiany do AppStorage i helpera
     private func saveChanges() {
-        // Zapisz do AppStorage
+        // Zbierz diff przed zapisem – logujemy tylko realne zmiany po Save
+        var changes: [String] = []
+        if storedMaxPasswordAge != maxPasswordAge {
+            changes.append("max_password_age: \(storedMaxPasswordAge) → \(maxPasswordAge)")
+        }
+        if storedWarningThreshold != warningThreshold {
+            changes.append("warning_threshold: \(storedWarningThreshold) → \(warningThreshold)")
+        }
+        if storedNotificationHour != notificationHourString {
+            changes.append("notification_hour: \(storedNotificationHour) → \(notificationHourString)")
+        }
+        if storedQuietHoursStart != quietHoursStartString {
+            changes.append("quiet_hours_start: \(storedQuietHoursStart) → \(quietHoursStartString)")
+        }
+        if storedQuietHoursEnd != quietHoursEndString {
+            changes.append("quiet_hours_end: \(storedQuietHoursEnd) → \(quietHoursEndString)")
+        }
+        if storedMinimalLogging != minimalLogging {
+            changes.append("minimal_logging: \(storedMinimalLogging) → \(minimalLogging)")
+        }
+        if languageSettings.selectedLanguageCode != selectedLanguageCode {
+            changes.append("appLanguage: \(languageSettings.selectedLanguageCode) → \(selectedLanguageCode)")
+        }
+        let savedLaunchAtLogin = (helperStatus == .enabled)
+        if launchAtLogin != savedLaunchAtLogin {
+            changes.append("launch_at_login: \(savedLaunchAtLogin) → \(launchAtLogin)")
+        }
+
+        // Zapis do AppStorage (czyli UserDefaults.standard = plist main app „popo.PasswordMonitor").
         storedMaxPasswordAge = maxPasswordAge
         storedWarningThreshold = warningThreshold
         storedNotificationHour = notificationHourString
@@ -1175,14 +1198,38 @@ struct SettingsView: View {
         storedQuietHoursEnd = quietHoursEndString
         storedMinimalLogging = minimalLogging
 
+        // Mirror do shared suite — helper czyta z "popo.PasswordMonitor" w syncSharedSettings.
+        // Bez tego helper nigdy nie zobaczy zmian (jego UserDefaults.standard to osobny plist).
+        if let sharedDefaults = UserDefaults(suiteName: "popo.PasswordMonitor") {
+            sharedDefaults.set(maxPasswordAge, forKey: SettingsKeys.maxPasswordAge)
+            sharedDefaults.set(warningThreshold, forKey: SettingsKeys.warningThreshold)
+            sharedDefaults.set(notificationHourString, forKey: SettingsKeys.notificationHour)
+            sharedDefaults.set(quietHoursStartString, forKey: SettingsKeys.quietHoursStart)
+            sharedDefaults.set(quietHoursEndString, forKey: SettingsKeys.quietHoursEnd)
+            sharedDefaults.set(minimalLogging, forKey: SettingsKeys.minimalLogging)
+            sharedDefaults.set(selectedLanguageCode, forKey: "appLanguage")
+        }
+
         // Zastosuj stan helpera tylko jeśli zmieniony
-        let savedLaunchAtLogin = (helperStatus == .enabled)
         if launchAtLogin != savedLaunchAtLogin {
             toggleLaunchAtLogin(launchAtLogin, showUserAlert: false)
         }
 
         // Ustaw język na wybrany po zapisie
         languageSettings.selectedLanguageCode = selectedLanguageCode
+
+        if changes.isEmpty {
+            Logger.shared.log("Settings saved with no changes")
+        } else {
+            Logger.shared.log("Settings saved: \(changes.joined(separator: "; "))")
+            // Poinformuj helpera żeby od razu zsynchronizował się ze zmianami
+            // (bez tego helper podejmie nowe wartości dopiero przy kolejnym własnym tick-u).
+            DistributedNotificationCenter.default().post(
+                name: HelperMessaging.forceRefreshNotification,
+                object: nil,
+                userInfo: nil
+            )
+        }
 
         // Pozostajemy w oknie – stan "dirty" wynika z aktualnych wartości
     }
@@ -1207,6 +1254,23 @@ struct SettingsView: View {
         storedMinimalLogging = true
 
         languageSettings.selectedLanguageCode = "en"
+
+        // Lustrzane odświeżenie shared suite, żeby helper również wrócił do domyślnych wartości.
+        if let sharedDefaults = UserDefaults(suiteName: "popo.PasswordMonitor") {
+            sharedDefaults.set(30, forKey: SettingsKeys.maxPasswordAge)
+            sharedDefaults.set(7, forKey: SettingsKeys.warningThreshold)
+            sharedDefaults.set("09:00", forKey: SettingsKeys.notificationHour)
+            sharedDefaults.set("18:01", forKey: SettingsKeys.quietHoursStart)
+            sharedDefaults.set("05:59", forKey: SettingsKeys.quietHoursEnd)
+            sharedDefaults.set(true, forKey: SettingsKeys.minimalLogging)
+            sharedDefaults.set("en", forKey: "appLanguage")
+        }
+        Logger.shared.log("Settings reset to defaults")
+        DistributedNotificationCenter.default().post(
+            name: HelperMessaging.forceRefreshNotification,
+            object: nil,
+            userInfo: nil
+        )
 
         loadSettings()
     }

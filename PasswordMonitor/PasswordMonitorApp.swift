@@ -126,6 +126,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger.shared.logLocalized("log_app_launched")
+        logLoadedSettingsSnapshot()
 
         LocalizationRetryManager.shared.handleAppLaunch()
 
@@ -175,10 +176,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func registerHelperService() {
         let helperBundleID = "popo.PasswordMonitorHelperApp"
         let service = SMAppService.loginItem(identifier: helperBundleID)
-        
+
         // Debug info
         let bundleURL = Bundle.main.bundleURL
             .appendingPathComponent("Contents/Library/LoginItems/PasswordMonitorHelperApp.app")
+
+        defer { ensureHelperRunning(bundleURL: bundleURL, bundleID: helperBundleID) }
         
         Logger.shared.logLocalized("log_helper_expected_bundle_id %@", helperBundleID)
         Logger.shared.logLocalized("log_helper_bundle_path %@", bundleURL.path)
@@ -230,6 +233,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     
+    private func logLoadedSettingsSnapshot() {
+        let defaults = UserDefaults.standard
+        let snapshot = [
+            "max_password_age=\(defaults.integer(forKey: "max_password_age"))",
+            "warning_threshold=\(defaults.integer(forKey: "warning_threshold"))",
+            "notification_hour=\(defaults.string(forKey: "notification_hour") ?? "(default)")",
+            "quiet_hours_start=\(defaults.string(forKey: "quiet_hours_start") ?? "(default)")",
+            "quiet_hours_end=\(defaults.string(forKey: "quiet_hours_end") ?? "(default)")",
+            "minimal_logging=\(defaults.object(forKey: "minimal_logging") as? Bool ?? true)",
+            "appLanguage=\(defaults.string(forKey: "appLanguage") ?? "(default)")",
+            "theme_mode=\(defaults.string(forKey: "theme_mode") ?? "(default)")"
+        ]
+        Logger.shared.log("Settings loaded at launch: \(snapshot.joined(separator: ", "))")
+    }
+
+    private func ensureHelperRunning(bundleURL: URL, bundleID: String) {
+        let isRunning = NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == bundleID }
+        if isRunning {
+            Logger.shared.log("Helper process already running (bundleID=\(bundleID))")
+            return
+        }
+
+        guard FileManager.default.fileExists(atPath: bundleURL.path) else {
+            Logger.shared.log("Helper bundle missing at \(bundleURL.path); skipping launch")
+            return
+        }
+
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = false
+        configuration.addsToRecentItems = false
+        configuration.hides = true
+        configuration.promptsUserIfNeeded = false
+
+        Logger.shared.log("Launching helper process at \(bundleURL.path)")
+        NSWorkspace.shared.openApplication(at: bundleURL, configuration: configuration) { app, error in
+            if let error = error {
+                Logger.shared.log("Helper launch failed: \(error.localizedDescription)", level: .error)
+            } else if let app = app {
+                Logger.shared.log("Helper launched (pid=\(app.processIdentifier))")
+            } else {
+                Logger.shared.log("Helper launch returned no app and no error")
+            }
+        }
+    }
+
     private func showApprovalAlert() {
         DispatchQueue.main.async {
             let alert = NSAlert()

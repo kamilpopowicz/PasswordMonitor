@@ -4,7 +4,7 @@ PasswordMonitor is a macOS menu bar app that helps users keep track of corporate
 
 This repository currently provides **testing builds**. Depending on your local setup, they may be unsigned, so Gatekeeper can show a warning and users must open the app manually (right‑click → Open).
 
-Current version: **1.6.0**
+Current version: **1.7.1**
 
 ---
 
@@ -33,12 +33,16 @@ If you want automatic checks:
 ## Features
 - Menu bar UI with at‑a‑glance password status
 - Background helper checks on login, wake, hourly cadence, and the configured notification time
+- Background helper is launched immediately after registration (no logout/restart required) and receives setting changes in real time via a shared preference suite
 - Alerts and snooze support for expiring passwords
 - Snooze state and “shown today” persist across relaunch and are shared between the main app and helper
-- Manual checks and the configured notification time can intentionally break through quiet hours and active snooze
-- Menubar **Check now** path supports explicit live-alert verification for QA (bypasses shownToday/snooze/quiet-hours guards)
+- Manual checks and the configured notification time can intentionally break through quiet hours
+- Menubar **Check now** performs a live refresh and, by design, bypasses `shownToday` and active `snooze` so a user-initiated manual verification always surfaces the latest state
+- Scheduled notification moment overrides an active snooze: if snooze is active and the scheduled hour arrives, the alert fires and a fresh snooze window starts from that moment
 - Settings for notification time, warning threshold, quiet hours, and read-only AD domain info pulled from the system configuration
 - Menu open performs a live AD check (with a 30s timeout) before showing alerts
+- Alert countdown format is fixed to 2 lines: line 1 is day count, line 2 is `HH:mm:SS`
+- Password-change action from menu is blocked until domain/VPN availability is confirmed
 - Automatic AD node resolution keeps the read-only domain (FQDN) in sync with the system’s Users & Groups entry so `dscl` can still read `SMBPasswordLastSet`
 - Built‑in logs viewer with filtering, copy, and Finder reveal
 - Privacy-safe log masking for host/domain values

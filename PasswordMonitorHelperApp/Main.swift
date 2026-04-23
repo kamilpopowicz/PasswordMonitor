@@ -173,6 +173,18 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         } else {
             Logger.shared.log("Helper synced settings keys: \(copiedKeys.joined(separator: ", "))")
         }
+
+        let standard = UserDefaults.standard
+        let snapshot = [
+            "max_password_age=\(standard.integer(forKey: "max_password_age"))",
+            "warning_threshold=\(standard.integer(forKey: "warning_threshold"))",
+            "notification_hour=\(standard.string(forKey: "notification_hour") ?? "(default)")",
+            "quiet_hours_start=\(standard.string(forKey: "quiet_hours_start") ?? "(default)")",
+            "quiet_hours_end=\(standard.string(forKey: "quiet_hours_end") ?? "(default)")",
+            "minimal_logging=\(standard.object(forKey: "minimal_logging") as? Bool ?? true)",
+            "appLanguage=\(standard.string(forKey: "appLanguage") ?? "(default)")"
+        ]
+        Logger.shared.log("Helper settings snapshot after sync: \(snapshot.joined(separator: ", "))")
     }
 
     private func handleWakeOrLaunchCheck() {

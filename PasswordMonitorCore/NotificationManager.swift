@@ -54,7 +54,7 @@ public final class NotificationManager: ObservableObject {
     @Published private var snoozeEndTime: Date?
     @Published public private(set) var latestPasswordInfo: PasswordInfo?
     @Published public private(set) var hasPerformedRefresh = false
-    @Published public private(set) var isDomainAvailable = true
+    @Published public private(set) var isDomainAvailable = false
 
     private let automaticRefreshCooldown: TimeInterval = 15 * 60
     private var lastRefreshDate: Date?
@@ -141,9 +141,9 @@ public final class NotificationManager: ObservableObject {
             return false
         }
 
-        return reason != .manual && reason != .checkNow
+        return reason != .manual && reason != .checkNow && reason != .scheduledTime
     }
-    
+
     // MARK: - Initialization
     
     private init() {
@@ -470,7 +470,7 @@ public final class NotificationManager: ObservableObject {
             return
         }
         
-        let bypassShownToday = forceBypassShownTodayForTesting || reason == .checkNow
+        let bypassShownToday = forceBypassShownTodayForTesting || reason == .checkNow || reason == .scheduledTime
         guard !hasShownNotificationToday || bypassShownToday else {
             if shouldLog(key: "notification_already_shown", interval: 30 * 60) {
                 Logger.shared.logLocalized("log_notification_already_shown_today")
@@ -486,6 +486,13 @@ public final class NotificationManager: ObservableObject {
         let now = Date()
         let snoozeStillActive = !hasSnoozeExpired()
 
+        if snoozeStillActive && reason == .scheduledTime {
+            Logger.shared.log("Scheduled moment overrides active snooze (snoozeUntil=\(snoozeEndTime?.formatted() ?? "unknown"))")
+            isSnoozed = false
+            snoozeEndTime = nil
+            persistNotificationState()
+        }
+
         if Self.isNotificationSuppressedBySnooze(
             reason: reason,
             isSnoozed: isSnoozed,
@@ -497,13 +504,6 @@ public final class NotificationManager: ObservableObject {
                 Logger.shared.log("Skipping notification because snooze is active (reason=\(reason.rawValue))")
             }
             return
-        }
-
-        if snoozeStillActive && (reason == .manual || reason == .checkNow) {
-            Logger.shared.log("Bypassing active snooze for notification (reason=\(reason.rawValue), snoozeUntil=\(snoozeEndTime?.formatted() ?? "unknown"))")
-            isSnoozed = false
-            snoozeEndTime = nil
-            persistNotificationState()
         }
 
         let thresholdDays = Self.resolvedWarningThreshold()
@@ -737,6 +737,14 @@ public final class NotificationManager: ObservableObject {
     
     /// Rozpoczyna sprawdzanie co minutę czy nadszedł czas powiadomienia
     private func startCheckingForNotificationTime() {
+        // Helper ma własny one-shot scheduler + wakeObserver w HelperAppDelegate.
+        // Uruchamianie dodatkowego 60s-timera w helperze duplikuje logi
+        // i odczytuje stale UserDefaults przed kolejnym `syncSharedSettings`.
+        if Bundle.main.bundleIdentifier == helperBundleId {
+            Logger.shared.log("Skipping periodic checkTimer in helper process (helper uses its own scheduler)")
+            return
+        }
+
         checkTimer?.invalidate()
         checkTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             Task { @MainActor in
@@ -746,7 +754,6 @@ public final class NotificationManager: ObservableObject {
             }
         }
 
-        
         // Sprawdź od razu przy starcie (na wypadek gdybyśmy uruchomili się po czasie)
         checkAndShowNotificationIfNeeded(reason: .automatic)
     }

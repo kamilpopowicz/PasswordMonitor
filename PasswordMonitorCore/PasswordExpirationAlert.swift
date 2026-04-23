@@ -194,24 +194,17 @@ private struct AlertContentView: View {
                     .font(.caption)
                     .foregroundColor(PMTheme.textSecondary)
 
-                if let lines = formattedTimeRemainingLines() {
-                    VStack(spacing: 2) {
-                        Text(lines.line1)
-                            .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
-                            .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.textPrimary)
-                        Text(lines.line2)
-                            .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
-                            .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.textPrimary)
-                    }
-                    .onAppear { startTimer() }
-                    .onDisappear { stopTimer() }
-                } else {
-                    Text(formattedTimeRemaining())
-                        .font(.system(size: isUrgent ? 34 : 28, weight: .bold, design: .monospaced))
+                let lines = formattedTimeRemainingLines()
+                VStack(spacing: 2) {
+                    Text(lines.line1)
+                        .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
                         .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.textPrimary)
-                        .onAppear { startTimer() }
-                        .onDisappear { stopTimer() }
+                    Text(lines.line2)
+                        .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
+                        .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.textPrimary)
                 }
+                .onAppear { startTimer() }
+                .onDisappear { stopTimer() }
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 20)
@@ -320,34 +313,8 @@ private struct AlertContentView: View {
         return formatter.string(from: expirationDate)
     }
 
-    /// Pokazuje Xd Yh Zm Ts jeśli > 24h, inaczej HH:MM:SS
-    private func formattedTimeRemaining() -> String {
+    private func formattedTimeRemainingLines() -> (line1: String, line2: String) {
         let totalSeconds = max(0, Int(timeRemaining))
-
-        if totalSeconds > 86400 {
-            let days = totalSeconds / 86400
-            let remAfterDays = totalSeconds % 86400
-            let hours = remAfterDays / 3600
-            let minutes = (remAfterDays % 3600) / 60
-            let seconds = remAfterDays % 60
-            let dayText = localizedUnit("unit_day %lld", value: days, singular: "day", plural: "days")
-            let hourText = localizedUnit("unit_hour %lld", value: hours, singular: "hour", plural: "hours")
-            let minuteText = localizedUnit("unit_minute %lld", value: minutes, singular: "minute", plural: "minutes")
-            let secondText = localizedUnit("unit_second %lld", value: seconds, singular: "second", plural: "seconds")
-            return "\(dayText) \(hourText) \(minuteText) \(secondText)"
-        } else {
-            let hours = totalSeconds / 3600
-            let minutes = (totalSeconds % 3600) / 60
-            let seconds = totalSeconds % 60
-            // Keep countdown deterministic; broken translations must not affect this format.
-            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-        }
-    }
-
-    private func formattedTimeRemainingLines() -> (line1: String, line2: String)? {
-        let totalSeconds = max(0, Int(timeRemaining))
-        guard totalSeconds > 86400 else { return nil }
-
         let days = totalSeconds / 86400
         let remAfterDays = totalSeconds % 86400
         let hours = remAfterDays / 3600
@@ -355,11 +322,10 @@ private struct AlertContentView: View {
         let seconds = remAfterDays % 60
 
         let dayText = localizedUnit("unit_day %lld", value: days, singular: "day", plural: "days")
-        let hourText = localizedUnit("unit_hour %lld", value: hours, singular: "hour", plural: "hours")
-        let minuteText = localizedUnit("unit_minute %lld", value: minutes, singular: "minute", plural: "minutes")
-        let secondText = localizedUnit("unit_second %lld", value: seconds, singular: "second", plural: "seconds")
+        // Keep countdown deterministic; broken translations must not affect this format.
+        let timeText = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
 
-        return ("\(dayText) \(hourText)", "\(minuteText) \(secondText)")
+        return (dayText, timeText)
     }
 
     private func startTimer() {
