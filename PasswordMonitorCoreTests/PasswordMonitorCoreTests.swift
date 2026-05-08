@@ -452,15 +452,22 @@ final class PasswordMonitorCoreTests: XCTestCase {
         let home = URL(fileURLWithPath: "/Users/test")
         let paths = AppUninstallCleanupPlan.userDataPaths(
             homeDirectory: home,
+            userInstalledAppURL: home.appendingPathComponent("Applications/PasswordMonitor.app"),
             desktopAppURL: home.appendingPathComponent("Desktop/PasswordMonitor/PasswordMonitor.app")
         ).map(\.path)
 
         XCTAssertTrue(paths.contains("/Users/test/Library/Preferences/popo.PasswordMonitor.plist"))
         XCTAssertTrue(paths.contains("/Users/test/Library/Preferences/popo.PasswordMonitorHelperApp.plist"))
         XCTAssertTrue(paths.contains("/Users/test/Library/Containers/popo.PasswordMonitorHelperApp"))
+        XCTAssertTrue(paths.contains("/Users/test/Library/LaunchAgents/com.company.password-monitor.plist"))
+        XCTAssertTrue(paths.contains("/Users/Shared/password-monitor.sh"))
+        XCTAssertTrue(paths.contains("/tmp/password-monitor.out"))
+        XCTAssertTrue(paths.contains("/tmp/password-monitor.err"))
         XCTAssertTrue(paths.contains("/Applications/PasswordMonitor.app"))
+        XCTAssertTrue(paths.contains("/Users/test/Applications/PasswordMonitor.app"))
         XCTAssertTrue(paths.contains("/Users/test/Desktop/PasswordMonitor/PasswordMonitor.app"))
         XCTAssertTrue(AppUninstallCleanupPlan.preferenceDomains.contains("popo.PasswordMonitorHelperApp"))
+        XCTAssertTrue(AppUninstallCleanupPlan.loginItemIdentifiers.contains("com.company.password-monitor"))
     }
 
     @MainActor

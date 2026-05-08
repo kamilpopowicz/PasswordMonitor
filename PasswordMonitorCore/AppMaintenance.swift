@@ -47,6 +47,14 @@ public enum AppUninstallCleanupPlan {
     public static let mainBundleIdentifier = "popo.PasswordMonitor"
     public static let helperBundleIdentifier = "popo.PasswordMonitorHelperApp"
     public static let sharedSuiteName = "popo.PasswordMonitor"
+    public static let legacyLaunchAgentIdentifier = "com.company.password-monitor"
+
+    public static var loginItemIdentifiers: [String] {
+        [
+            helperBundleIdentifier,
+            legacyLaunchAgentIdentifier
+        ]
+    }
 
     public static var preferenceDomains: [String] {
         [
@@ -59,6 +67,7 @@ public enum AppUninstallCleanupPlan {
     public static func userDataPaths(
         homeDirectory: URL,
         installedAppURL: URL = URL(fileURLWithPath: "/Applications/PasswordMonitor.app"),
+        userInstalledAppURL: URL? = nil,
         desktopAppURL: URL? = nil
     ) -> [URL] {
         var paths = [
@@ -74,8 +83,17 @@ public enum AppUninstallCleanupPlan {
             homeDirectory.appendingPathComponent("Library/Containers/popo.PasswordMonitor"),
             homeDirectory.appendingPathComponent("Library/Containers/popo.PasswordMonitorHelperApp"),
             homeDirectory.appendingPathComponent("Library/LaunchAgents/popo.PasswordMonitorHelperApp.plist"),
+            homeDirectory.appendingPathComponent("Library/LaunchAgents/com.company.password-monitor.plist"),
+            homeDirectory.appendingPathComponent("Library/Application Support/com.company.password-monitor"),
+            URL(fileURLWithPath: "/Users/Shared/password-monitor.sh"),
+            URL(fileURLWithPath: "/tmp/password-monitor.out"),
+            URL(fileURLWithPath: "/tmp/password-monitor.err"),
             installedAppURL
         ]
+
+        if let userInstalledAppURL {
+            paths.append(userInstalledAppURL)
+        }
 
         if let desktopAppURL {
             paths.append(desktopAppURL)

@@ -57,7 +57,7 @@ If you want automatic checks:
   - retries problematic keys (immediate multi-attempt + deferred self-heal retries)
 - Language Assist includes a manual **Retry problematic** action for failed keys
 - Manual Light/Dark/Auto theme switching
-- Settings → Delete app unregisters the helper, terminates running helper processes, and removes app/helper preferences plus local app data
+- Settings → Delete app unregisters the helper, unloads legacy LaunchAgents, terminates running helper processes, and removes app/helper preferences plus local app data
 
 ## Tech Stack
 - Swift 5 / SwiftUI

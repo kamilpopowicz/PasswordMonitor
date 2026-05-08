@@ -1275,6 +1275,7 @@ struct SettingsView: View {
 
     private func deleteAppAndData() {
         disableLaunchAtLoginIfNeeded()
+        unloadLegacyLaunchAgents()
         terminateRunningHelperProcesses()
         removeStoredDefaultsForUninstall()
 
@@ -1282,6 +1283,7 @@ struct SettingsView: View {
         let home = fm.homeDirectoryForCurrentUser
         let paths = AppUninstallCleanupPlan.userDataPaths(
             homeDirectory: home,
+            userInstalledAppURL: home.appendingPathComponent("Applications/PasswordMonitor.app"),
             desktopAppURL: home.appendingPathComponent("Desktop/PasswordMonitor/PasswordMonitor.app")
         )
 
@@ -1323,6 +1325,27 @@ struct SettingsView: View {
         try? service.unregister()
         helperStatus = service.status
         launchAtLogin = false
+    }
+
+    private func unloadLegacyLaunchAgents() {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let legacyPlist = home.appendingPathComponent("Library/LaunchAgents/\(AppUninstallCleanupPlan.legacyLaunchAgentIdentifier).plist")
+        runLaunchctl(arguments: ["bootout", "gui/\(getuid())", legacyPlist.path])
+        runLaunchctl(arguments: ["remove", AppUninstallCleanupPlan.legacyLaunchAgentIdentifier])
+    }
+
+    private func runLaunchctl(arguments: [String]) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        process.arguments = arguments
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            Logger.shared.log("Delete app launchctl \(arguments.joined(separator: " ")) exited with \(process.terminationStatus)")
+        } catch {
+            Logger.shared.log("Delete app launchctl \(arguments.joined(separator: " ")) failed: \(error.localizedDescription)")
+        }
     }
 }
 

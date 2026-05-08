@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## PasswordMonitor 1.7.2
+- `Delete app` now also unloads and removes the legacy `com.company.password-monitor` LaunchAgent plus its shell/log artifacts, preventing old pre-login-item installs from continuing to fire alerts after the app is removed.
 - Added cleanup coverage and stronger uninstall behavior: `Delete app` now unregisters and terminates the helper, removes main/helper/shared preferences, and deletes app/helper user data paths.
 - Added unit tests for stale helper selection, duplicate helper filtering, and uninstall cleanup paths.
 - Main app and helper now clean up stale helper processes from older app bundles so an old login item cannot keep firing duplicate scheduled alerts after an update.
