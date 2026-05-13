@@ -1222,10 +1222,8 @@ struct SettingsView: View {
             Logger.shared.log("Settings saved with no changes")
         } else {
             Logger.shared.log("Settings saved: \(changes.joined(separator: "; "))")
-            // Poinformuj helpera żeby od razu zsynchronizował się ze zmianami
-            // (bez tego helper podejmie nowe wartości dopiero przy kolejnym własnym tick-u).
             DistributedNotificationCenter.default().post(
-                name: HelperMessaging.forceRefreshNotification,
+                name: HelperMessaging.settingsDidChangeNotification,
                 object: nil,
                 userInfo: nil
             )
@@ -1267,7 +1265,7 @@ struct SettingsView: View {
         }
         Logger.shared.log("Settings reset to defaults")
         DistributedNotificationCenter.default().post(
-            name: HelperMessaging.forceRefreshNotification,
+            name: HelperMessaging.settingsDidChangeNotification,
             object: nil,
             userInfo: nil
         )
@@ -1277,31 +1275,49 @@ struct SettingsView: View {
 
     private func deleteAppAndData() {
         disableLaunchAtLoginIfNeeded()
-        resetDefaults()
+        unloadLegacyLaunchAgents()
+        terminateRunningHelperProcesses()
+        removeStoredDefaultsForUninstall()
 
         let fm = FileManager.default
         let home = fm.homeDirectoryForCurrentUser
-
-        let paths: [URL] = [
-            home.appendingPathComponent(".password_monitor.log"),
-            home.appendingPathComponent("Library/Logs/popo.PasswordMonitor"),
-            home.appendingPathComponent("Library/Logs/PasswordMonitor"),
-            home.appendingPathComponent("Library/Caches/popo.PasswordMonitor"),
-            home.appendingPathComponent("Library/Caches/PasswordMonitor"),
-            home.appendingPathComponent("Library/Application Support/PasswordMonitor"),
-            home.appendingPathComponent("Library/Saved Application State/popo.PasswordMonitor.savedState"),
-            home.appendingPathComponent("Library/Preferences/popo.PasswordMonitor.plist"),
-            home.appendingPathComponent("Library/Containers/popo.PasswordMonitor"),
-            home.appendingPathComponent("Library/LaunchAgents/popo.PasswordMonitorHelperApp.plist"),
-            URL(fileURLWithPath: "/Applications/PasswordMonitor.app"),
-            home.appendingPathComponent("Desktop/PasswordMonitor/PasswordMonitor.app")
-        ]
+        let paths = AppUninstallCleanupPlan.userDataPaths(
+            homeDirectory: home,
+            userInstalledAppURL: home.appendingPathComponent("Applications/PasswordMonitor.app"),
+            desktopAppURL: home.appendingPathComponent("Desktop/PasswordMonitor/PasswordMonitor.app")
+        )
 
         for url in paths {
-            try? fm.removeItem(at: url)
+            do {
+                try fm.removeItem(at: url)
+                Logger.shared.log("Delete app removed \(url.path)")
+            } catch {
+                Logger.shared.log("Delete app skipped \(url.path): \(error.localizedDescription)")
+            }
         }
 
         NSApplication.shared.terminate(nil)
+    }
+
+    private func terminateRunningHelperProcesses() {
+        let helpers = NSRunningApplication.runningApplications(withBundleIdentifier: helperBundleID)
+        for helper in helpers {
+            Logger.shared.log("Delete app terminating helper process (pid=\(helper.processIdentifier), path=\(helper.bundleURL?.path ?? "unknown"))")
+            if !helper.terminate() {
+                helper.forceTerminate()
+            }
+        }
+    }
+
+    private func removeStoredDefaultsForUninstall() {
+        for domain in AppUninstallCleanupPlan.preferenceDomains {
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+            UserDefaults(suiteName: domain)?.removePersistentDomain(forName: domain)
+        }
+
+        UserDefaults.standard.synchronize()
+        UserDefaults(suiteName: AppUninstallCleanupPlan.sharedSuiteName)?.synchronize()
+        Logger.shared.log("Delete app removed stored defaults")
     }
 
     private func disableLaunchAtLoginIfNeeded() {
@@ -1309,6 +1325,27 @@ struct SettingsView: View {
         try? service.unregister()
         helperStatus = service.status
         launchAtLogin = false
+    }
+
+    private func unloadLegacyLaunchAgents() {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let legacyPlist = home.appendingPathComponent("Library/LaunchAgents/\(AppUninstallCleanupPlan.legacyLaunchAgentIdentifier).plist")
+        runLaunchctl(arguments: ["bootout", "gui/\(getuid())", legacyPlist.path])
+        runLaunchctl(arguments: ["remove", AppUninstallCleanupPlan.legacyLaunchAgentIdentifier])
+    }
+
+    private func runLaunchctl(arguments: [String]) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        process.arguments = arguments
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            Logger.shared.log("Delete app launchctl \(arguments.joined(separator: " ")) exited with \(process.terminationStatus)")
+        } catch {
+            Logger.shared.log("Delete app launchctl \(arguments.joined(separator: " ")) failed: \(error.localizedDescription)")
+        }
     }
 }
 

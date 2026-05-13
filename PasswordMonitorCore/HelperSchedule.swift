@@ -17,6 +17,7 @@ public enum HelperRefreshReason: String {
 
 public enum HelperMessaging {
     public static let forceRefreshNotification = Notification.Name("PasswordMonitor.HelperForceRefresh")
+    public static let settingsDidChangeNotification = Notification.Name("PasswordMonitor.HelperSettingsDidChange")
 }
 
 public enum HelperSchedule {
@@ -34,6 +35,25 @@ public enum HelperSchedule {
         }
 
         return calendar.date(byAdding: .day, value: 1, to: candidate) ?? date.addingTimeInterval(24 * 3600)
+    }
+
+    public static func scheduledSlotID(for date: Date, timeString: String, calendar: Calendar = .current) -> String {
+        let (hour, minute) = hourAndMinute(from: timeString, defaultHour: 9, defaultMinute: 0)
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        return String(format: "%04d-%02d-%02d@%02d:%02d", year, month, day, hour, minute)
+    }
+
+    public static func triggerBucketID(for date: Date, calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        return String(format: "%04d-%02d-%02d@%02d:%02d", year, month, day, hour, minute)
     }
 
     public static func isWithinQuietHours(

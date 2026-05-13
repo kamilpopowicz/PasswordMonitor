@@ -2,7 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
-## PasswordMonitor 1.7.1
+## PasswordMonitor 1.7.2
+- `Delete app` now also unloads and removes the legacy `com.company.password-monitor` LaunchAgent plus its shell/log artifacts, preventing old pre-login-item installs from continuing to fire alerts after the app is removed.
+- Added cleanup coverage and stronger uninstall behavior: `Delete app` now unregisters and terminates the helper, removes main/helper/shared preferences, and deletes app/helper user data paths.
+- Added unit tests for stale helper selection, duplicate helper filtering, and uninstall cleanup paths.
+- Main app and helper now clean up stale helper processes from older app bundles so an old login item cannot keep firing duplicate scheduled alerts after an update.
+- Main app periodic timer no longer emits `scheduledTime`; scheduled notifications are owned by the helper only, and bare scheduled live refreshes without a helper `requestID` are rejected.
+- Split notification evaluation from live refresh so `scheduledTime` no longer re-enters the same decision path after helper refresh completes.
+- Main app periodic notification timer now bails out when the helper process is actually running, so `scheduledTime` is owned by one process instead of being evaluated twice through an unreliable service-status check.
+- Added an in-process scheduledTime slot guard so the same slot cannot be handled twice by the same helper session even if a second callback slips through after the first alert.
+- Scheduled `scheduledTime` refreshes now perform exactly one explicit notification decision in the helper after the live refresh completes, instead of letting `NotificationManager` auto-check and then re-enter the same slot again through a second callback.
+- Prevented duplicate helper alerts for the same expiration cycle:
+  - settings changes now only sync configuration and reschedule the next check,
+  - scheduled refreshes are deduplicated in the helper so the same scheduled slot does not re-enter the alert flow twice and the same `expirationDate` does not re-present twice in a short window,
+  - the `scheduledTime` decision now claims the slot before any live refresh so a second callback for the same slot cannot reach the alert path,
+  - helper live refresh and notification decision now share one request-scoped identifier so the same refresh cannot re-enter the alert path through a second callback,
+  - alert presentation now keeps a short-lived duplicate guard for the same `expirationDate`,
+  - automatic alerts are suppressed while `PasswordMonitor.app` is active.
 - Restored user-intent semantics for manual verification (issues #34/#30/#29 follow-up):
   - `checkNow` again bypasses the `shownToday` gate so a manual "Check now" always surfaces the latest state, even if an alert already fired earlier today,
   - manual/`checkNow` still displays the alert despite active snooze, but no longer clears the snooze state globally (automatic/scheduled checks keep respecting the existing snooze window).

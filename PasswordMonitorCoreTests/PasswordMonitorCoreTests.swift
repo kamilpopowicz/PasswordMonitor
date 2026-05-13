@@ -18,8 +18,12 @@ final class PasswordMonitorCoreTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: "cached_password_info_last_fetch_cache")
         sharedDefaults?.removeObject(forKey: "cached_password_info_last_fetch_cache")
         UserDefaults.standard.removeObject(forKey: "warning_threshold")
+        UserDefaults.standard.removeObject(forKey: "notification_hour")
         UserDefaults.standard.removeObject(forKey: "quiet_hours_start")
         UserDefaults.standard.removeObject(forKey: "quiet_hours_end")
+        NotificationStateStore.shared.clearNotificationDeliveryClaim()
+        NotificationStateStore.shared.clearScheduledNotificationEventClaim()
+        NotificationStateStore.shared.clearHelperTriggerClaim()
         super.tearDown()
     }
 
@@ -173,6 +177,45 @@ final class PasswordMonitorCoreTests: XCTestCase {
         )
     }
 
+    func testHelperScheduleSlotIDUsesConfiguredNotificationTime() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let sample = Date(timeIntervalSince1970: (30 * 24 * 3600) + (8 * 3600) + (45 * 60))
+
+        XCTAssertEqual(
+            HelperSchedule.scheduledSlotID(for: sample, timeString: "10:00", calendar: calendar),
+            "1970-01-31@10:00"
+        )
+    }
+
+    @MainActor
+    func testScheduledNotificationEventKeyUsesConfiguredNotificationTime() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let sample = Date(timeIntervalSince1970: (30 * 24 * 3600) + (8 * 3600) + (45 * 60))
+        UserDefaults.standard.set("10:00", forKey: "notification_hour")
+
+        XCTAssertEqual(
+            NotificationManager.scheduledNotificationEventKey(
+                now: sample,
+                defaults: .standard,
+                calendar: calendar
+            ),
+            "1970-01-31@10:00"
+        )
+    }
+
+    func testHelperScheduleTriggerBucketIDUsesMinutePrecision() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let sample = Date(timeIntervalSince1970: (30 * 24 * 3600) + (8 * 3600) + (45 * 60) + 34)
+
+        XCTAssertEqual(
+            HelperSchedule.triggerBucketID(for: sample, calendar: calendar),
+            "1970-01-31@08:45"
+        )
+    }
+
     @MainActor
     func testResolvedWarningThresholdFallsBackToSevenDays() {
         XCTAssertEqual(NotificationManager.resolvedWarningThreshold(), 7)
@@ -306,5 +349,179 @@ final class PasswordMonitorCoreTests: XCTestCase {
         XCTAssertTrue(manager.isNotificationShownToday)
         manager.resetDailyNotificationState()
         XCTAssertFalse(manager.isNotificationShownToday)
+    }
+
+    func testNotificationDeliveryClaimBlocksImmediateDuplicate() {
+        let store = NotificationStateStore.shared
+        let now = Date(timeIntervalSince1970: 1_000)
+        let expiryDate = Date(timeIntervalSince1970: 10_000)
+
+        XCTAssertTrue(store.claimNotificationDelivery(expirationDate: expiryDate, now: now))
+        XCTAssertFalse(store.claimNotificationDelivery(expirationDate: expiryDate, now: now))
+    }
+
+    func testNotificationDeliveryClaimExpiresAfterWindow() {
+        let store = NotificationStateStore.shared
+        let now = Date(timeIntervalSince1970: 1_000)
+        let expiryDate = Date(timeIntervalSince1970: 10_000)
+
+        XCTAssertTrue(store.claimNotificationDelivery(expirationDate: expiryDate, now: now))
+        XCTAssertTrue(store.claimNotificationDelivery(expirationDate: expiryDate, now: now.addingTimeInterval(121)))
+    }
+
+    func testNotificationDeliveryClaimAllowsDifferentExpirationDate() {
+        let store = NotificationStateStore.shared
+        let now = Date(timeIntervalSince1970: 1_000)
+        let firstExpiry = Date(timeIntervalSince1970: 10_000)
+        let secondExpiry = Date(timeIntervalSince1970: 20_000)
+
+        XCTAssertTrue(store.claimNotificationDelivery(expirationDate: firstExpiry, now: now))
+        XCTAssertTrue(store.claimNotificationDelivery(expirationDate: secondExpiry, now: now.addingTimeInterval(1)))
+    }
+
+    func testScheduledNotificationEventClaimBlocksDuplicateSlot() {
+        let store = NotificationStateStore.shared
+        let now = Date(timeIntervalSince1970: 1_000)
+        let eventKey = "2026-04-29@10:00"
+
+        XCTAssertTrue(store.claimScheduledNotificationEvent(eventKey: eventKey, now: now))
+        XCTAssertFalse(store.claimScheduledNotificationEvent(eventKey: eventKey, now: now.addingTimeInterval(30)))
+    }
+
+    func testScheduledNotificationEventClaimAllowsDifferentSlot() {
+        let store = NotificationStateStore.shared
+        let now = Date(timeIntervalSince1970: 1_000)
+        let eventKey = "2026-04-29@10:00"
+        let otherEventKey = "2026-04-29@13:00"
+
+        XCTAssertTrue(store.claimScheduledNotificationEvent(eventKey: eventKey, now: now))
+        XCTAssertTrue(store.claimScheduledNotificationEvent(eventKey: otherEventKey, now: now.addingTimeInterval(30)))
+    }
+
+    func testHelperTriggerClaimBlocksDuplicateRequest() {
+        let store = NotificationStateStore.shared
+        let now = Date(timeIntervalSince1970: 1_000)
+        let triggerKey = "helper:scheduled:2026-04-29@10:00"
+
+        XCTAssertTrue(store.claimHelperTrigger(triggerKey: triggerKey, now: now))
+        XCTAssertFalse(store.claimHelperTrigger(triggerKey: triggerKey, now: now.addingTimeInterval(10)))
+    }
+
+    func testHelperTriggerClaimAllowsDifferentRequest() {
+        let store = NotificationStateStore.shared
+        let now = Date(timeIntervalSince1970: 1_000)
+        let firstTriggerKey = "helper:scheduled:2026-04-29@10:00"
+        let secondTriggerKey = "helper:wake:2026-04-29@10:01"
+
+        XCTAssertTrue(store.claimHelperTrigger(triggerKey: firstTriggerKey, now: now))
+        XCTAssertTrue(store.claimHelperTrigger(triggerKey: secondTriggerKey, now: now.addingTimeInterval(30)))
+    }
+
+    func testHelperProcessCleanupSelectsOnlyHelpersFromDifferentBundlePath() {
+        let expectedPath = "/Applications/PasswordMonitor.app/Contents/Library/LoginItems/PasswordMonitorHelperApp.app"
+        let stalePath = "/Users/test/Desktop/PasswordMonitor.app/Contents/Library/LoginItems/PasswordMonitorHelperApp.app"
+        let helpers = [
+            HelperProcessCleanup.RunningHelper(processIdentifier: 10, bundlePath: expectedPath),
+            HelperProcessCleanup.RunningHelper(processIdentifier: 11, bundlePath: stalePath),
+            HelperProcessCleanup.RunningHelper(processIdentifier: 12, bundlePath: nil)
+        ]
+
+        let staleHelpers = HelperProcessCleanup.staleHelpers(
+            expectedBundlePath: expectedPath,
+            runningHelpers: helpers
+        )
+
+        XCTAssertEqual(staleHelpers.map(\.processIdentifier), [11, 12])
+    }
+
+    func testHelperProcessCleanupDoesNotSelectCurrentHelperAsDuplicate() {
+        let helpers = [
+            HelperProcessCleanup.RunningHelper(processIdentifier: 20, bundlePath: "/current/helper.app"),
+            HelperProcessCleanup.RunningHelper(processIdentifier: 21, bundlePath: "/stale/helper.app")
+        ]
+
+        let duplicates = HelperProcessCleanup.duplicateHelpers(
+            currentProcessIdentifier: 20,
+            runningHelpers: helpers
+        )
+
+        XCTAssertEqual(duplicates.map(\.processIdentifier), [21])
+    }
+
+    func testAppUninstallCleanupPlanIncludesHelperPreferencesAndUserData() {
+        let home = URL(fileURLWithPath: "/Users/test")
+        let paths = AppUninstallCleanupPlan.userDataPaths(
+            homeDirectory: home,
+            userInstalledAppURL: home.appendingPathComponent("Applications/PasswordMonitor.app"),
+            desktopAppURL: home.appendingPathComponent("Desktop/PasswordMonitor/PasswordMonitor.app")
+        ).map(\.path)
+
+        XCTAssertTrue(paths.contains("/Users/test/Library/Preferences/popo.PasswordMonitor.plist"))
+        XCTAssertTrue(paths.contains("/Users/test/Library/Preferences/popo.PasswordMonitorHelperApp.plist"))
+        XCTAssertTrue(paths.contains("/Users/test/Library/Containers/popo.PasswordMonitorHelperApp"))
+        XCTAssertTrue(paths.contains("/Users/test/Library/LaunchAgents/com.company.password-monitor.plist"))
+        XCTAssertTrue(paths.contains("/Users/Shared/password-monitor.sh"))
+        XCTAssertTrue(paths.contains("/tmp/password-monitor.out"))
+        XCTAssertTrue(paths.contains("/tmp/password-monitor.err"))
+        XCTAssertTrue(paths.contains("/Applications/PasswordMonitor.app"))
+        XCTAssertTrue(paths.contains("/Users/test/Applications/PasswordMonitor.app"))
+        XCTAssertTrue(paths.contains("/Users/test/Desktop/PasswordMonitor/PasswordMonitor.app"))
+        XCTAssertTrue(AppUninstallCleanupPlan.preferenceDomains.contains("popo.PasswordMonitorHelperApp"))
+        XCTAssertTrue(AppUninstallCleanupPlan.loginItemIdentifiers.contains("com.company.password-monitor"))
+    }
+
+    @MainActor
+    func testDuplicateNotificationPresentationIsSuppressedForSameExpirationDate() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let expirationDate = Date(timeIntervalSince1970: 10_000)
+        let lastPresentedAt = now.addingTimeInterval(-30)
+
+        XCTAssertTrue(
+            NotificationManager.shouldSuppressDuplicateNotificationPresentation(
+                reason: .scheduledTime,
+                expirationDate: expirationDate,
+                lastPresentedExpirationDate: expirationDate,
+                lastPresentedAt: lastPresentedAt,
+                now: now,
+                duplicatePresentationWindow: 120
+            )
+        )
+    }
+
+    @MainActor
+    func testDuplicateNotificationPresentationAllowsDifferentExpirationDate() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let expirationDate = Date(timeIntervalSince1970: 10_000)
+        let otherExpirationDate = Date(timeIntervalSince1970: 11_000)
+        let lastPresentedAt = now.addingTimeInterval(-30)
+
+        XCTAssertFalse(
+            NotificationManager.shouldSuppressDuplicateNotificationPresentation(
+                reason: .checkNow,
+                expirationDate: expirationDate,
+                lastPresentedExpirationDate: otherExpirationDate,
+                lastPresentedAt: lastPresentedAt,
+                now: now,
+                duplicatePresentationWindow: 120
+            )
+        )
+    }
+
+    @MainActor
+    func testDuplicateNotificationPresentationDoesNotSuppressManualCheckNow() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let expirationDate = Date(timeIntervalSince1970: 10_000)
+        let lastPresentedAt = now.addingTimeInterval(-30)
+
+        XCTAssertFalse(
+            NotificationManager.shouldSuppressDuplicateNotificationPresentation(
+                reason: .checkNow,
+                expirationDate: expirationDate,
+                lastPresentedExpirationDate: expirationDate,
+                lastPresentedAt: lastPresentedAt,
+                now: now,
+                duplicatePresentationWindow: 120
+            )
+        )
     }
 }
