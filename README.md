@@ -29,7 +29,8 @@ If you want automatic checks:
 `System Settings → General → Login Items → Allow in Background`
 
 ### 5) Updates
-Open **Settings → Updates** to check GitHub Releases for a newer build.
+Open **About PasswordMonitor...** or use **Settings → Check for updates** to go to the single update panel.
+The About window is the only place where update status, verification, and installation are handled.
 Updates are verified with both SHA256 and a signed manifest before the app bundle is replaced.
 
 ---
@@ -44,7 +45,7 @@ Updates are verified with both SHA256 and a signed manifest before the app bundl
 - Menubar **Check now** performs a live refresh and, by design, bypasses `shownToday` and active `snooze` so a user-initiated manual verification always surfaces the latest state
 - Scheduled notification moment overrides an active snooze: if snooze is active and the scheduled hour arrives, the alert fires and a fresh snooze window starts from that moment
 - Settings for notification time, warning threshold, quiet hours, and read-only AD domain info pulled from the system configuration
-- In-app update flow in Settings that checks GitHub Releases, validates a signed manifest, and installs only the expected `.app` bundle
+- Single in-app update flow centered on the About window, with Settings and the menu bar linking into the same panel
 - Menu open performs a live AD check (with a 30s timeout) before showing alerts
 - Alert countdown format is fixed to 2 lines: line 1 is day count, line 2 is `HH:mm:SS`
 - Password-change action from menu is blocked until domain/VPN availability is confirmed

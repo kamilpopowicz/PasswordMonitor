@@ -10,8 +10,12 @@ All notable changes to this project will be documented in this file.
   - verifies the manifest signature with an embedded public key,
   - verifies SHA256 before installation,
   - stages extraction on the same volume and rejects zip-slip / symlink payloads,
-  - performs a guarded bundle swap and relaunch from Settings.
-- Added a Settings `Updates` section with current version, `Check for updates`, and status/error feedback.
+  - performs a guarded bundle swap and relaunch from the shared update panel.
+- Centralized the UI into a single About window update panel:
+  - Settings, the menu bar, and the app menu all open About for update actions,
+  - opening About alone does not trigger a check,
+  - clicking `Check for updates` in any entry point sends the request to the same panel.
+- Added a Settings `Updates` section with current version and a `Check for updates` entry point that forwards to About.
 - Added core tests for semantic version ordering, archive path validation, symlink rejection, and manifest signature verification.
 
 ## PasswordMonitor 1.7.1
