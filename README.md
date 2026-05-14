@@ -4,7 +4,7 @@ PasswordMonitor is a macOS menu bar app that helps users keep track of corporate
 
 This repository currently provides **testing builds**. Depending on your local setup, they may be unsigned, so Gatekeeper can show a warning and users must open the app manually (right‑click → Open).
 
-Current version: **1.7.1**
+Current version: **1.7.2**
 
 ---
 
@@ -38,8 +38,12 @@ Updates are verified with both SHA256 and a signed manifest before the app bundl
 ## Features
 - Menu bar UI with at‑a‑glance password status
 - Background helper checks on login, wake, hourly cadence, and the configured notification time
+- App startup cleans up stale helper processes from older app bundles so only the current embedded helper can own scheduled alerts
 - Background helper is launched immediately after registration (no logout/restart required) and receives setting changes in real time via a shared preference suite
+- Helper refreshes use a request-scoped ID so the same scheduled/wake/manual cycle cannot re-enter the alert path twice
 - Alerts and snooze support for expiring passwords
+- Automatic helper alerts stay silent while `PasswordMonitor.app` is active; the alert is only surfaced when the main app is inactive
+- Duplicate alerts for the same `expirationDate` are suppressed for a short window, and the scheduled notification slot is only handled once so a single trigger cannot surface twice in a row
 - Snooze state and “shown today” persist across relaunch and are shared between the main app and helper
 - Manual checks and the configured notification time can intentionally break through quiet hours
 - Menubar **Check now** performs a live refresh and, by design, bypasses `shownToday` and active `snooze` so a user-initiated manual verification always surfaces the latest state
@@ -66,6 +70,7 @@ Updates are verified with both SHA256 and a signed manifest before the app bundl
   - staging on the same volume,
   - symlink and zip-slip rejection,
   - atomic replace with restart
+- Settings → Delete app unregisters the helper, unloads legacy LaunchAgents, terminates running helper processes, and removes app/helper preferences plus local app data
 
 ## Tech Stack
 - Swift 5 / SwiftUI

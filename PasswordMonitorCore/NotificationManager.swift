@@ -46,7 +46,12 @@ public final class NotificationManager: ObservableObject {
         hasShownNotificationToday = false
         isSnoozed = false
         snoozeEndTime = nil
+        lastPresentedNotificationExpirationDate = nil
+        lastPresentedNotificationAt = nil
+        lastHandledScheduledNotificationSlotID = nil
         persistNotificationState()
+        stateStore.clearNotificationDeliveryClaim()
+        stateStore.clearScheduledNotificationEventClaim()
     }
     
     /// Czy powiadomienie jest obecnie w trybie snooze (odłożone)
@@ -73,6 +78,9 @@ public final class NotificationManager: ObservableObject {
     
     /// Timer do sprawdzania czy nadszedł czas powiadomienia
     private var checkTimer: Timer?
+
+    /// Ostatni slot scheduledTime obsłużony w tej instancji procesu.
+    private var lastHandledScheduledNotificationSlotID: String?
     
     /// Data wygaśnięcia hasła (ustawiana z zewnątrz przez MainApp)
     private var currentExpirationDate: Date?
@@ -81,9 +89,13 @@ public final class NotificationManager: ObservableObject {
     private var passwordChangeCheckTimer: Timer?
     private var hasLoggedMissingExpirationDate = false
     private let helperBundleId = "popo.PasswordMonitorHelperApp"
+    private let mainAppBundleId = "popo.PasswordMonitor"
     private let stateStore = NotificationStateStore.shared
     private var lastLogTimestamps: [String: Date] = [:]
     private var lastLoggedDaysRemaining: Int?
+    private var lastPresentedNotificationExpirationDate: Date?
+    private var lastPresentedNotificationAt: Date?
+    private let duplicatePresentationWindow: TimeInterval = 5 * 60
     // Temporary testing gate: set to true only for local QA sessions.
     private let forceBypassShownTodayForTesting = false
 
@@ -142,6 +154,23 @@ public final class NotificationManager: ObservableObject {
         }
 
         return reason != .manual && reason != .checkNow && reason != .scheduledTime
+    }
+
+    static func scheduledNotificationEventKey(
+        now: Date,
+        defaults: UserDefaults = .standard,
+        calendar: Calendar = .current
+    ) -> String? {
+        let configuredTime = (defaults.string(forKey: "notification_hour")?.isEmpty == false)
+            ? defaults.string(forKey: "notification_hour")!
+            : "09:00"
+
+        let parts = configuredTime.split(separator: ":")
+        guard parts.count == 2 else {
+            return nil
+        }
+
+        return HelperSchedule.scheduledSlotID(for: now, timeString: configuredTime, calendar: calendar)
     }
 
     // MARK: - Initialization
@@ -232,9 +261,23 @@ public final class NotificationManager: ObservableObject {
         timeout: TimeInterval = 30,
         username: String = NSUserName(),
         shouldCheckNotification: Bool = true,
+        requestID: String? = nil,
         onResult: ((PasswordInfo) -> Void)? = nil,
         onError: ((Error) -> Void)? = nil
     ) {
+        if reason == .scheduledTime && requestID == nil {
+            Logger.shared.log("Skipping scheduledTime live refresh without helper requestID")
+            return
+        }
+
+        if let requestID {
+            let triggerKey = "live:\(reason.rawValue):\(requestID)"
+            guard NotificationStateStore.shared.claimHelperTrigger(triggerKey: triggerKey) else {
+                Logger.shared.log("Skipping live refresh because the same request was already handled recently (reason=\(reason.rawValue), requestID=\(requestID))")
+                return
+            }
+        }
+
         Logger.shared.log("Live password status refresh requested (reason=\(reason.rawValue), username=\(username), timeout=\(timeout))")
 
         if isLiveRefreshInFlight {
@@ -258,6 +301,7 @@ public final class NotificationManager: ObservableObject {
                     reason: reason,
                     error: ADError.notConnected,
                     shouldCheckNotification: shouldCheckNotification,
+                    requestID: requestID,
                     onResult: onResult,
                     onError: onError
                 )
@@ -282,6 +326,7 @@ public final class NotificationManager: ObservableObject {
                     timeoutWorkItem: timeoutWorkItem,
                     reason: reason,
                     shouldCheckNotification: shouldCheckNotification,
+                    requestID: requestID,
                     onResult: onResult,
                     onError: onError
                 )
@@ -296,6 +341,7 @@ public final class NotificationManager: ObservableObject {
         timeoutWorkItem: DispatchWorkItem,
         reason: CheckReason,
         shouldCheckNotification: Bool,
+        requestID: String?,
         onResult: ((PasswordInfo) -> Void)?,
         onError: ((Error) -> Void)?
     ) {
@@ -307,6 +353,7 @@ public final class NotificationManager: ObservableObject {
             with: result,
             reason: reason,
             shouldCheckNotification: shouldCheckNotification,
+            requestID: requestID,
             onResult: onResult,
             onError: onError
         )
@@ -331,7 +378,7 @@ public final class NotificationManager: ObservableObject {
             pendingSuccessCallbacks.forEach { $0(info) }
             pendingSuccessCallbacks.removeAll()
             pendingErrorCallbacks.removeAll()
-            checkAndShowNotificationIfNeeded(reason: reason, allowLiveCheck: false)
+            evaluateNotificationState(reason: reason, now: Date())
         case .failure(let error):
             pendingErrorCallbacks.forEach { $0(error) }
             pendingErrorCallbacks.removeAll()
@@ -344,6 +391,7 @@ public final class NotificationManager: ObservableObject {
         with result: Result<PasswordInfo, Error>,
         reason: CheckReason,
         shouldCheckNotification: Bool,
+        requestID: String?,
         onResult: ((PasswordInfo) -> Void)?,
         onError: ((Error) -> Void)?
     ) {
@@ -356,13 +404,14 @@ public final class NotificationManager: ObservableObject {
             updateExpirationDate(info.expiryDate)
             onResult?(info)
             if shouldCheckNotification {
-                checkAndShowNotificationIfNeeded(reason: reason, allowLiveCheck: false)
+                evaluateNotificationState(reason: reason, requestID: requestID, now: Date())
             }
         case .failure(let error):
             handleLiveRefreshFallback(
                 reason: reason,
                 error: error,
                 shouldCheckNotification: shouldCheckNotification,
+                requestID: requestID,
                 onResult: onResult,
                 onError: onError
             )
@@ -374,14 +423,15 @@ public final class NotificationManager: ObservableObject {
         reason: CheckReason,
         error: Error,
         shouldCheckNotification: Bool,
+        requestID: String?,
         onResult: ((PasswordInfo) -> Void)?,
         onError: ((Error) -> Void)?
     ) {
         hasPerformedRefresh = true
         isDomainAvailable = false
-        if deliverCachedInfo(reason: reason, shouldCheckNotification: false, onResult: onResult) {
+        if deliverCachedInfo(reason: reason, shouldCheckNotification: false, requestID: requestID, onResult: onResult) {
             if shouldCheckNotification {
-                checkAndShowNotificationIfNeeded(reason: reason, allowLiveCheck: false)
+                evaluateNotificationState(reason: reason, requestID: requestID, now: Date())
             }
         } else {
             onError?(error)
@@ -392,6 +442,7 @@ public final class NotificationManager: ObservableObject {
     private func deliverCachedInfo(
         reason: CheckReason,
         shouldCheckNotification: Bool = true,
+        requestID: String? = nil,
         onResult: ((PasswordInfo) -> Void)?
     ) -> Bool {
         guard let info = latestPasswordInfo ?? PasswordCache.shared.load() else {
@@ -400,7 +451,7 @@ public final class NotificationManager: ObservableObject {
         latestPasswordInfo = info
         updateExpirationDate(info.expiryDate)
         if shouldCheckNotification {
-            checkAndShowNotificationIfNeeded(reason: reason)
+            evaluateNotificationState(reason: reason, requestID: requestID, now: Date())
         }
         onResult?(info)
         return true
@@ -426,13 +477,54 @@ public final class NotificationManager: ObservableObject {
     }
     
     /// Sprawdza czy powinniśmy pokazać powiadomienie (wywoływane cyklicznie)
-    public func checkAndShowNotificationIfNeeded(reason: CheckReason = .automatic, allowLiveCheck: Bool = true) {
+    public func checkAndShowNotificationIfNeeded(
+        reason: CheckReason = .automatic,
+        allowLiveCheck: Bool = true,
+        requestID: String? = nil
+    ) {
+        let now = Date()
+
+        if let requestID {
+            let triggerKey = "decision:\(reason.rawValue):\(requestID)"
+            guard NotificationStateStore.shared.claimHelperTrigger(triggerKey: triggerKey) else {
+                Logger.shared.log("Skipping notification decision because the same request was already handled recently (reason=\(reason.rawValue), requestID=\(requestID))")
+                return
+            }
+        }
+
         guard shouldHandleNotifications(for: reason) else {
             if shouldLog(key: "notification_skip_helper_enabled", interval: 5 * 60) {
                 Logger.shared.log("Skipping notification check in main app because helper is enabled (reason=\(reason.rawValue))")
             }
             return
         }
+
+        if reason == .scheduledTime {
+            let scheduledSlotID = Self.scheduledNotificationEventKey(now: now)
+            if let scheduledSlotID,
+               lastHandledScheduledNotificationSlotID == scheduledSlotID {
+                if shouldLog(key: "notification_scheduled_slot_claim", interval: 60) {
+                    Logger.shared.log("Skipping scheduled notification because the slot was already handled in this process (slotID=\(scheduledSlotID))")
+                }
+                return
+            }
+
+            guard claimScheduledNotificationEvent(now: now) else {
+                return
+            }
+
+            lastHandledScheduledNotificationSlotID = scheduledSlotID
+        }
+
+        evaluateNotificationState(reason: reason, allowLiveCheck: allowLiveCheck, requestID: requestID, now: now)
+    }
+
+    private func evaluateNotificationState(
+        reason: CheckReason,
+        allowLiveCheck: Bool = false,
+        requestID: String? = nil,
+        now: Date = Date()
+    ) {
         loadNotificationStateFromStore()
         let cachedInfo = PasswordCache.shared.load()
         if let cachedInfo {
@@ -451,11 +543,12 @@ public final class NotificationManager: ObservableObject {
                 refreshPasswordStatusLive(
                     reason: reason,
                     shouldCheckNotification: false,
-                    onResult: { _ in
-                        self.checkAndShowNotificationIfNeeded(reason: reason, allowLiveCheck: false)
+                    requestID: requestID,
+                    onResult: { [weak self] _ in
+                        self?.evaluateNotificationState(reason: reason, allowLiveCheck: false, requestID: requestID, now: Date())
                     },
-                    onError: { _ in
-                        self.logMissingExpirationDateOnce()
+                    onError: { [weak self] _ in
+                        self?.logMissingExpirationDateOnce()
                     }
                 )
                 return
@@ -467,6 +560,20 @@ public final class NotificationManager: ObservableObject {
 
         guard let expirationDate = currentExpirationDate ?? cachedInfo?.expiryDate else {
             logMissingExpirationDateOnce()
+            return
+        }
+
+        if shouldSuppressNotificationBecauseMainAppIsActive(reason: reason) {
+            if shouldLog(key: "notification_main_app_active", interval: 5 * 60) {
+                Logger.shared.log("Skipping notification because PasswordMonitor.app is active (reason=\(reason.rawValue))")
+            }
+            return
+        }
+
+        if shouldSuppressDuplicateNotificationPresentation(reason: reason, expirationDate: expirationDate, now: now) {
+            if shouldLog(key: "notification_duplicate_presentation", interval: 60) {
+                Logger.shared.log("Skipping notification presentation because the same expirationDate was already handled recently (reason=\(reason.rawValue), expirationDate=\(expirationDate))")
+            }
             return
         }
         
@@ -483,7 +590,6 @@ public final class NotificationManager: ObservableObject {
             }
         }
         
-        let now = Date()
         let snoozeStillActive = !hasSnoozeExpired()
 
         if snoozeStillActive && reason == .scheduledTime {
@@ -518,25 +624,9 @@ public final class NotificationManager: ObservableObject {
             return
         }
 
-        // Jeśli hasło wygasa w progu ostrzeżenia, pokaż alert od razu (nie czekaj na godzinę).
         if Self.isWithinWarningThreshold(now: now, expirationDate: expirationDate, thresholdDays: thresholdDays) {
-            let shouldShowImmediately = (reason == .checkNow)
-            if allowLiveCheck && !shouldShowImmediately {
-                refreshPasswordStatusLive(
-                    reason: reason,
-                    shouldCheckNotification: false,
-                    onResult: { _ in
-                        self.checkAndShowNotificationIfNeeded(reason: reason, allowLiveCheck: false)
-                    },
-                    onError: { _ in
-                        self.checkAndShowNotificationIfNeeded(reason: reason, allowLiveCheck: false)
-                    }
-                )
-                return
-            }
-
             Logger.shared.logLocalized("log_notification_threshold_reached %d", daysRemaining)
-            showNotification(passwordExpirationDate: expirationDate)
+            showNotification(passwordExpirationDate: expirationDate, reason: reason)
             return
         }
 
@@ -544,6 +634,21 @@ public final class NotificationManager: ObservableObject {
             Logger.shared.log("Skipping notification; password expires in \(daysRemaining) days, threshold is \(thresholdDays)")
             lastLoggedDaysRemaining = daysRemaining
         }
+    }
+
+    private func claimScheduledNotificationEvent(now: Date = Date()) -> Bool {
+        guard let eventKey = Self.scheduledNotificationEventKey(now: now) else {
+            return true
+        }
+
+        guard stateStore.claimScheduledNotificationEvent(eventKey: eventKey, now: now) else {
+            if shouldLog(key: "notification_scheduled_slot_claim", interval: 60) {
+                Logger.shared.log("Skipping scheduled notification because the slot was already handled recently (slotID=\(eventKey))")
+            }
+            return false
+        }
+
+        return true
     }
     
     /// Odłóż powiadomienie o określony czas
@@ -607,11 +712,21 @@ public final class NotificationManager: ObservableObject {
     }
     
     /// Pokazuje okienko powiadomienia
-    private func showNotification(passwordExpirationDate: Date) {
+    private func showNotification(passwordExpirationDate: Date, reason: CheckReason) {
         guard currentAlert == nil else {
             Logger.shared.logLocalized("log_notification_window_already_open")
             return
         }
+
+        if shouldProtectAgainstDuplicateDeliveryClaim(reason: reason) {
+            if !stateStore.claimNotificationDelivery(expirationDate: passwordExpirationDate) {
+                Logger.shared.log("Skipping notification presentation because another process already claimed it (reason=\(reason.rawValue))")
+                return
+            }
+        }
+
+        lastPresentedNotificationExpirationDate = passwordExpirationDate
+        lastPresentedNotificationAt = Date()
         
         hasShownNotificationToday = true
         persistNotificationState()
@@ -627,7 +742,7 @@ public final class NotificationManager: ObservableObject {
                     passwordExpirationDate: passwordExpirationDate,
                     allowDuringUrgent: useOfflineFlow,
                     overrideInterval: useOfflineFlow ? 3600 : nil,
-                    shouldScheduleLiveRecheck: useOfflineFlow
+                    shouldScheduleLiveRecheck: reason == .scheduledTime && useOfflineFlow
                 )
             },
             onChangePassword: { [weak self] in
@@ -748,9 +863,22 @@ public final class NotificationManager: ObservableObject {
         checkTimer?.invalidate()
         checkTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             Task { @MainActor in
+                if self.isHelperProcessRunning() {
+                    if self.shouldLog(key: "notification_skip_main_timer_helper_running", interval: 60) {
+                        Logger.shared.log("Skipping periodic notification timer in main app because helper process is running")
+                    }
+                    return
+                }
+
                 let now = Date()
-                let reason: CheckReason = self.isScheduledNotificationMoment(now) ? .scheduledTime : .automatic
-                self.checkAndShowNotificationIfNeeded(reason: reason)
+                if self.isScheduledNotificationMoment(now) {
+                    if self.shouldLog(key: "notification_skip_main_timer_scheduled_time", interval: 60) {
+                        Logger.shared.log("Skipping scheduledTime in main app timer; helper owns scheduled notifications")
+                    }
+                    return
+                }
+
+                self.checkAndShowNotificationIfNeeded(reason: .automatic)
             }
         }
 
@@ -767,8 +895,62 @@ public final class NotificationManager: ObservableObject {
             return true
         }
 
-        let service = SMAppService.loginItem(identifier: helperBundleId)
-        return service.status != .enabled
+        return !isHelperProcessRunning()
+    }
+
+    private func shouldSuppressNotificationBecauseMainAppIsActive(reason: CheckReason) -> Bool {
+        guard reason == .automatic || reason == .scheduledTime else {
+            return false
+        }
+
+        return NSWorkspace.shared.runningApplications.contains { application in
+            application.bundleIdentifier == mainAppBundleId && application.isActive
+        }
+    }
+
+    private func isHelperProcessRunning() -> Bool {
+        NSWorkspace.shared.runningApplications.contains { application in
+            application.bundleIdentifier == helperBundleId
+        }
+    }
+
+    private func shouldSuppressDuplicateNotificationPresentation(reason: CheckReason, expirationDate: Date, now: Date) -> Bool {
+        Self.shouldSuppressDuplicateNotificationPresentation(
+            reason: reason,
+            expirationDate: expirationDate,
+            lastPresentedExpirationDate: lastPresentedNotificationExpirationDate,
+            lastPresentedAt: lastPresentedNotificationAt,
+            now: now,
+            duplicatePresentationWindow: duplicatePresentationWindow
+        )
+    }
+
+    public static func shouldSuppressDuplicateNotificationPresentation(
+        reason: CheckReason,
+        expirationDate: Date,
+        lastPresentedExpirationDate: Date?,
+        lastPresentedAt: Date?,
+        now: Date = Date(),
+        duplicatePresentationWindow: TimeInterval = 5 * 60
+    ) -> Bool {
+        guard reason == .automatic || reason == .scheduledTime else {
+            return false
+        }
+
+        guard let lastPresentedExpirationDate,
+              let lastPresentedAt else {
+            return false
+        }
+
+        guard abs(lastPresentedExpirationDate.timeIntervalSince(expirationDate)) < 1 else {
+            return false
+        }
+
+        return now.timeIntervalSince(lastPresentedAt) < duplicatePresentationWindow
+    }
+
+    private func shouldProtectAgainstDuplicateDeliveryClaim(reason: CheckReason) -> Bool {
+        reason == .automatic || reason == .scheduledTime
     }
 
     private func isScheduledNotificationMoment(_ now: Date) -> Bool {

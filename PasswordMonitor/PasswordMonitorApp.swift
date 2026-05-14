@@ -165,6 +165,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         registerHelperService()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // Usunięcie pliku logu przy zamykaniu
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // Usunięcie pliku logu przy zamykaniu
+        let logFileURL = Logger.shared.fileURL
+        Logger.shared.log("Cleaning up log file: $(logFileURL.path)")
+        try? FileManager.default.removeItem(at: logFileURL)
+    }
+
+        let logFileURL = Logger.shared.fileURL
+        Logger.shared.log("Cleaning up log file: $(logFileURL.path)")
+        try? FileManager.default.removeItem(at: logFileURL)
+    }
+
             self.promptForSystemLanguageIfNeeded()
         }
         
@@ -280,9 +296,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func ensureHelperRunning(bundleURL: URL, bundleID: String) {
-        let isRunning = NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == bundleID }
-        if isRunning {
-            Logger.shared.log("Helper process already running (bundleID=\(bundleID))")
+        let expectedHelperPath = bundleURL.standardizedFileURL.path
+        let runningHelpers = NSWorkspace.shared.runningApplications.filter { $0.bundleIdentifier == bundleID }
+        let staleHelpers = HelperProcessCleanup.staleHelpers(
+            expectedBundlePath: expectedHelperPath,
+            runningHelpers: runningHelpers.map {
+                HelperProcessCleanup.RunningHelper(
+                    processIdentifier: $0.processIdentifier,
+                    bundlePath: $0.bundleURL?.path
+                )
+            }
+        )
+        let staleHelperPIDs = Set(staleHelpers.map(\.processIdentifier))
+
+        for helper in runningHelpers {
+            let helperPath = helper.bundleURL?.standardizedFileURL.path ?? "unknown"
+            guard staleHelperPIDs.contains(helper.processIdentifier) else { continue }
+
+            Logger.shared.log("Terminating stale helper process (pid=\(helper.processIdentifier), path=\(helperPath), expectedPath=\(expectedHelperPath))")
+            if !helper.terminate() {
+                helper.forceTerminate()
+            }
+        }
+
+        if runningHelpers.contains(where: { !staleHelperPIDs.contains($0.processIdentifier) }) {
+            Logger.shared.log("Helper process already running from current bundle (bundleID=\(bundleID), path=\(expectedHelperPath))")
             return
         }
 
