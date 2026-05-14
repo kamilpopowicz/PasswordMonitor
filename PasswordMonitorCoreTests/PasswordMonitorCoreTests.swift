@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import CryptoKit
 @testable import PasswordMonitorCore
 
 final class PasswordMonitorCoreTests: XCTestCase {
@@ -306,5 +307,160 @@ final class PasswordMonitorCoreTests: XCTestCase {
         XCTAssertTrue(manager.isNotificationShownToday)
         manager.resetDailyNotificationState()
         XCTAssertFalse(manager.isNotificationShownToday)
+    }
+
+    func testSemanticVersionComparisonOrdersNumericSegments() throws {
+        let newer = try PMSemanticVersion("1.10.0")
+        let older = try PMSemanticVersion("1.9.9")
+
+        XCTAssertTrue(newer > older)
+        XCTAssertEqual(try PMSemanticVersion("v1.7.1").description, "1.7.1")
+    }
+
+    func testArchiveValidatorRejectsPathTraversal() {
+        XCTAssertThrowsError(
+            try PMUpdateArchiveValidator.validateArchiveEntries(
+                ["PasswordMonitor.app/Contents/../evil.txt"],
+                expectedAppName: "PasswordMonitor.app"
+            )
+        )
+    }
+
+    func testArchiveValidatorRejectsMultipleRoots() {
+        XCTAssertThrowsError(
+            try PMUpdateArchiveValidator.validateArchiveEntries(
+                [
+                    "PasswordMonitor.app/Contents/Info.plist",
+                    "Other.app/Contents/Info.plist"
+                ],
+                expectedAppName: "PasswordMonitor.app"
+            )
+        )
+    }
+
+    func testArchiveValidatorAcceptsSingleAppRoot() throws {
+        try PMUpdateArchiveValidator.validateArchiveEntries(
+            [
+                "PasswordMonitor.app",
+                "PasswordMonitor.app/Contents/Info.plist",
+                "PasswordMonitor.app/Contents/MacOS/PasswordMonitor"
+            ],
+            expectedAppName: "PasswordMonitor.app"
+        )
+    }
+
+    func testValidateNoSymlinksRejectsSymlink() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorSymlinkTest-\(UUID().uuidString)", isDirectory: true)
+        let bundle = root.appendingPathComponent("PasswordMonitor.app", isDirectory: true)
+        let contents = bundle.appendingPathComponent("Contents", isDirectory: true)
+        let symlinkURL = contents.appendingPathComponent("LinkedFile")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: symlinkURL, withDestinationURL: URL(fileURLWithPath: "/tmp"))
+
+        XCTAssertThrowsError(
+            try PMUpdateArchiveValidator.validateNoSymlinks(in: bundle)
+        )
+    }
+
+    func testValidatePermissionsRejectsWorldWritableFile() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorPermissionTest-\(UUID().uuidString)", isDirectory: true)
+        let bundle = root.appendingPathComponent("PasswordMonitor.app", isDirectory: true)
+        let contents = bundle.appendingPathComponent("Contents", isDirectory: true)
+        let fileURL = contents.appendingPathComponent("Info.plist")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        FileManager.default.createFile(atPath: fileURL.path, contents: Data(), attributes: nil)
+        try FileManager.default.setAttributes([.posixPermissions: 0o666], ofItemAtPath: fileURL.path)
+
+        XCTAssertThrowsError(
+            try PMUpdateArchiveValidator.validatePermissions(in: bundle)
+        )
+    }
+
+    func testSignedManifestVerificationAcceptsValidSignature() throws {
+        let privateKey = Curve25519.Signing.PrivateKey()
+        let publicKeyBase64 = privateKey.publicKey.rawRepresentation.base64EncodedString()
+        let manifest = PMUpdateManifest(
+            version: "1.8.0",
+            assetName: "PasswordMonitor.app.zip",
+            assetSHA256: String(repeating: "a", count: 64),
+            bundleIdentifier: "popo.PasswordMonitor"
+        )
+        let signedManifest = try signedManifest(
+            manifest: manifest,
+            privateKey: privateKey
+        )
+
+        let service = PMUpdateService(
+            configuration: PMUpdateConfiguration(
+                owner: "example",
+                repository: "PasswordMonitor",
+                appBundleIdentifier: "popo.PasswordMonitor",
+                appBundleName: "PasswordMonitor.app",
+                appZipAssetName: "PasswordMonitor.app.zip",
+                manifestAssetName: "PasswordMonitor.update-manifest.json",
+                githubAPIBaseURL: URL(string: "https://api.github.com")!,
+                publicKeyBase64: publicKeyBase64
+            )
+        )
+
+        try service.validateSignedManifest(signedManifest)
+    }
+
+    func testSignedManifestVerificationRejectsTampering() throws {
+        let privateKey = Curve25519.Signing.PrivateKey()
+        let publicKeyBase64 = privateKey.publicKey.rawRepresentation.base64EncodedString()
+        let manifest = PMUpdateManifest(
+            version: "1.8.0",
+            assetName: "PasswordMonitor.app.zip",
+            assetSHA256: String(repeating: "b", count: 64),
+            bundleIdentifier: "popo.PasswordMonitor"
+        )
+        let signedManifest = try signedManifest(
+            manifest: manifest,
+            privateKey: privateKey
+        )
+
+        let service = PMUpdateService(
+            configuration: PMUpdateConfiguration(
+                owner: "example",
+                repository: "PasswordMonitor",
+                appBundleIdentifier: "popo.PasswordMonitor",
+                appBundleName: "PasswordMonitor.app",
+                appZipAssetName: "PasswordMonitor.app.zip",
+                manifestAssetName: "PasswordMonitor.update-manifest.json",
+                githubAPIBaseURL: URL(string: "https://api.github.com")!,
+                publicKeyBase64: publicKeyBase64
+            )
+        )
+
+        let tamperedManifest = PMSignedUpdateManifest(
+            manifest: PMUpdateManifest(
+                version: "1.8.1",
+                assetName: manifest.assetName,
+                assetSHA256: manifest.assetSHA256,
+                bundleIdentifier: manifest.bundleIdentifier
+            ),
+            signature: signedManifest.signature
+        )
+
+        XCTAssertThrowsError(try service.validateSignedManifest(tamperedManifest))
+    }
+
+    private func signedManifest(
+        manifest: PMUpdateManifest,
+        privateKey: Curve25519.Signing.PrivateKey
+    ) throws -> PMSignedUpdateManifest {
+        let payloadData = try PMUpdateService.manifestSigningPayload(for: manifest)
+        let signature = try privateKey.signature(for: payloadData)
+        return PMSignedUpdateManifest(
+            manifest: manifest,
+            signature: signature.base64EncodedString()
+        )
     }
 }

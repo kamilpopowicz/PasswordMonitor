@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+- Replaced Sparkle-based updates with a custom GitHub Releases updater:
+  - checks `releases/latest`,
+  - compares the remote version with `CFBundleShortVersionString`,
+  - downloads only the expected `.app.zip` and signed manifest assets,
+  - verifies the manifest signature with an embedded public key,
+  - verifies SHA256 before installation,
+  - stages extraction on the same volume and rejects zip-slip / symlink payloads,
+  - performs a guarded bundle swap and relaunch from the shared update panel.
+- Centralized the UI into a single About window update panel:
+  - Settings, the menu bar, and the app menu all open About for update actions,
+  - opening About alone does not trigger a check,
+  - clicking `Check for updates` in any entry point sends the request to the same panel.
+- Added a Settings `Updates` section with current version and a `Check for updates` entry point that forwards to About.
+- Added core tests for semantic version ordering, archive path validation, symlink rejection, and manifest signature verification.
+
 ## PasswordMonitor 1.7.1
 - Restored user-intent semantics for manual verification (issues #34/#30/#29 follow-up):
   - `checkNow` again bypasses the `shownToday` gate so a manual "Check now" always surfaces the latest state, even if an alert already fired earlier today,

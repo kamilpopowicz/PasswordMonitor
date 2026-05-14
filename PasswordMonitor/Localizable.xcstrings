@@ -2809,6 +2809,22 @@
         }
       }
     },
+    "menu_about": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About PasswordMonitor..."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O PasswordMonitor..."
+          }
+        }
+      }
+    },
     "menu_password_expires_title": {
       "localizations": {
         "en": {
@@ -3453,6 +3469,214 @@
         }
       }
     },
+    "settings_section_updates": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualizacje"
+          }
+        }
+      }
+    },
+    "about_description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PasswordMonitor watches password age, warns before expiry, and can update itself from signed GitHub Releases."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PasswordMonitor monitoruje wiek hasła, ostrzega przed wygaśnięciem i może aktualizować się z podpisanych GitHub Releases."
+          }
+        }
+      }
+    },
+    "about_single_source": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Single update source"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedno źródło aktualizacji"
+          }
+        }
+      }
+    },
+    "about_open_settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz ustawienia"
+          }
+        }
+      }
+    },
+    "about_updates_idle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No update check has been started yet. Opening this window does not query GitHub until you press Check for updates."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie uruchomiono jeszcze sprawdzania aktualizacji. Samo otwarcie tego okna nie pyta GitHuba, dopóki nie klikniesz Sprawdź aktualizacje."
+          }
+        }
+      }
+    },
+    "about_updates_ready": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The candidate update is verified and ready to install."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kandydat aktualizacji został zweryfikowany i jest gotowy do instalacji."
+          }
+        }
+      }
+    },
+    "about_updates_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is the only place where update status is shown and updates are installed."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To jedyne miejsce, w którym widać stan aktualizacji i wykonuje się instalację."
+          }
+        }
+      }
+    },
+    "about_updates_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualizacje"
+          }
+        }
+      }
+    },
+    "about_release_security": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update integrity is verified with SHA256 and authenticity is verified with a signed manifest before installation."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integralność aktualizacji jest sprawdzana przez SHA256, a autentyczność przez podpisany manifest przed instalacją."
+          }
+        }
+      }
+    },
+    "about_security_detail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app only trusts the embedded public key and the GitHub release asset it explicitly asked for."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aplikacja ufa wyłącznie osadzonemu kluczowi publicznemu i assetowi release'a z GitHuba, o który sama poprosiła."
+          }
+        }
+      }
+    },
+    "about_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password security monitor for macOS"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitor bezpieczeństwa haseł dla macOS"
+          }
+        }
+      }
+    },
+    "about_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PasswordMonitor"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PasswordMonitor"
+          }
+        }
+      }
+    },
+    "about_window_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About PasswordMonitor"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O PasswordMonitor"
+          }
+        }
+      }
+    },
     "settings_version": {
       "localizations": {
         "en": {
@@ -3465,6 +3689,118 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wersja"
+          }
+        }
+      }
+    },
+    "settings_check_for_updates": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for updates"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprawdź aktualizacje"
+          }
+        }
+      }
+    },
+    "settings_update_available %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update %@ is available"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualizacja %@ jest dostępna"
+          }
+        }
+      }
+    },
+    "settings_update_error %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update error: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Błąd aktualizacji: %@"
+          }
+        }
+      }
+    },
+    "settings_update_install": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install and restart"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zainstaluj i uruchom ponownie"
+          }
+        }
+      }
+    },
+    "settings_update_installing %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installing %@..."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instalowanie %@..."
+          }
+        }
+      }
+    },
+    "settings_update_installed_restart": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update installed. Restarting..."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualizacja zainstalowana. Ponowne uruchamianie..."
+          }
+        }
+      }
+    },
+    "settings_update_up_to_date %@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to date. Local %@, remote %@."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualne. Lokalna %@, zdalna %@."
           }
         }
       }

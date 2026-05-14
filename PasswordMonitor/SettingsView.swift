@@ -39,6 +39,7 @@ struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var languageSettings: LanguageSettings
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var updateRequestCenter: UpdateRequestCenter
 
     // EDYTOWANE wartości (UI)
     @State private var launchAtLogin = false
@@ -320,14 +321,23 @@ struct SettingsView: View {
                     }
 
                     // MARK: Informacje
-                    Section(header: Text(LanguageSettings.localizedString("settings_section_info")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
+                    Section(header: Text(LanguageSettings.localizedString("settings_section_updates")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         HStack {
                             Text(LanguageSettings.localizedString("settings_version"))
                             Spacer()
-                            Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+                            Text(currentAppVersion)
                                 .foregroundColor(PMTheme.textSecondary)
                         }
 
+                        Button {
+                            handleOpenAboutAndCheckUpdatesTap()
+                        } label: {
+                            Text(LanguageSettings.localizedString("settings_check_for_updates"))
+                        }
+                        .pmButton(role: .primary)
+                    }
+
+                    Section(header: Text(LanguageSettings.localizedString("settings_section_info")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         HStack {
                             Text(LanguageSettings.localizedString("settings_helper_status"))
                             Spacer()
@@ -508,6 +518,10 @@ struct SettingsView: View {
             "language_assist_retry_problematic_count %d",
             pendingTranslationRetryCount
         )
+    }
+
+    private var currentAppVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
 
     private func loadSettings() {
@@ -794,6 +808,11 @@ struct SettingsView: View {
         guard !result.isEmpty else { return nil }
         Logger.shared.log("Loaded base localizations for translation: \(result.count) keys")
         return result
+    }
+
+    private func handleOpenAboutAndCheckUpdatesTap() {
+        updateRequestCenter.requestCheck()
+        openWindow(id: "about-window")
     }
 
     private func isAppleIntelligenceAvailable() async -> Bool {

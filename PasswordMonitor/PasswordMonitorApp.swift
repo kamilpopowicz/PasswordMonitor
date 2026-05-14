@@ -17,6 +17,7 @@ struct PasswordMonitorApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var languageSettings = LanguageSettings()
     @StateObject private var themeManager = ThemeManager()
+    @StateObject private var updateRequestCenter = UpdateRequestCenter()
 
     private var menuBarIconImage: NSImage {
         let targetSize = NSSize(width: 18, height: 18)
@@ -52,6 +53,7 @@ struct PasswordMonitorApp: App {
                 .environmentObject(appState)
                 .environmentObject(themeManager)
                 .environmentObject(languageSettings)
+                .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
@@ -66,6 +68,7 @@ struct PasswordMonitorApp: App {
                 .environmentObject(appState)
                 .environmentObject(themeManager)
                 .environmentObject(languageSettings)
+                .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
                 .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
@@ -74,10 +77,25 @@ struct PasswordMonitorApp: App {
         }
         .windowResizability(.contentMinSize)
 
+        Window(LanguageSettings.localizedString("about_window_title", languageCode: languageSettings.selectedLanguageCode), id: "about-window") {
+            AboutView()
+                .environmentObject(appState)
+                .environmentObject(themeManager)
+                .environmentObject(languageSettings)
+                .environmentObject(updateRequestCenter)
+                .environment(\.locale, languageSettings.locale)
+                .pmWindowMinSize()
+                .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
+                .pmWindowBackground(reduced: themeManager.isApplyingTheme)
+                .pmThemeApplying(themeManager.isApplyingTheme)
+        }
+        .windowResizability(.contentSize)
+
         Window(LanguageSettings.localizedString("logs_window_title", languageCode: languageSettings.selectedLanguageCode), id: "logs-window") {
             LogsView()
                 .environmentObject(appState)
                 .environmentObject(themeManager)
+                .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
                 .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
@@ -89,6 +107,7 @@ struct PasswordMonitorApp: App {
         Window(LanguageSettings.localizedString("ai_requirements_window_title", languageCode: languageSettings.selectedLanguageCode), id: "ai-check-window") {
             AIRequirementsView()
                 .environmentObject(themeManager)
+                .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
                 .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
@@ -106,6 +125,7 @@ struct PasswordMonitorApp: App {
 
 struct AppCommands: Commands {
     @Environment(\.openWindow) private var openWindow
+    @EnvironmentObject private var updateRequestCenter: UpdateRequestCenter
     
     var body: some Commands {
         CommandGroup(replacing: .appSettings) {
@@ -118,6 +138,17 @@ struct AppCommands: Commands {
                 openWindow(id: "logs-window")
             }
             .keyboardShortcut("l", modifiers: .command)
+        }
+
+        CommandGroup(replacing: .appInfo) {
+            Button(LanguageSettings.localizedString("menu_about")) {
+                openWindow(id: "about-window")
+            }
+
+            Button(LanguageSettings.localizedString("settings_check_for_updates")) {
+                updateRequestCenter.requestCheck()
+                openWindow(id: "about-window")
+            }
         }
     }
 }

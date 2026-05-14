@@ -14,6 +14,7 @@ import Combine
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var updateRequestCenter: UpdateRequestCenter
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismiss) private var dismiss
 
@@ -109,6 +110,21 @@ struct MenuBarView: View {
 
             Button(LanguageSettings.localizedString("menu_logs")) {
                 openWindow(id: "logs-window")
+                dismiss()
+            }
+            .controlSize(.regular)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(LanguageSettings.localizedString("menu_about")) {
+                openWindow(id: "about-window")
+                dismiss()
+            }
+            .controlSize(.regular)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(LanguageSettings.localizedString("settings_check_for_updates")) {
+                updateRequestCenter.requestCheck()
+                openWindow(id: "about-window")
                 dismiss()
             }
             .controlSize(.regular)
