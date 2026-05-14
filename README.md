@@ -28,6 +28,10 @@ If you want automatic checks:
 
 `System Settings → General → Login Items → Allow in Background`
 
+### 5) Updates
+Open **Settings → Updates** to check GitHub Releases for a newer build.
+Updates are verified with both SHA256 and a signed manifest before the app bundle is replaced.
+
 ---
 
 ## Features
@@ -40,6 +44,7 @@ If you want automatic checks:
 - Menubar **Check now** performs a live refresh and, by design, bypasses `shownToday` and active `snooze` so a user-initiated manual verification always surfaces the latest state
 - Scheduled notification moment overrides an active snooze: if snooze is active and the scheduled hour arrives, the alert fires and a fresh snooze window starts from that moment
 - Settings for notification time, warning threshold, quiet hours, and read-only AD domain info pulled from the system configuration
+- In-app update flow in Settings that checks GitHub Releases, validates a signed manifest, and installs only the expected `.app` bundle
 - Menu open performs a live AD check (with a 30s timeout) before showing alerts
 - Alert countdown format is fixed to 2 lines: line 1 is day count, line 2 is `HH:mm:SS`
 - Password-change action from menu is blocked until domain/VPN availability is confirmed
@@ -53,6 +58,13 @@ If you want automatic checks:
   - retries problematic keys (immediate multi-attempt + deferred self-heal retries)
 - Language Assist includes a manual **Retry problematic** action for failed keys
 - Manual Light/Dark/Auto theme switching
+- Safe custom updater architecture:
+  - release discovery from `releases/latest`,
+  - version comparison against `CFBundleShortVersionString`,
+  - checksum and signed-manifest verification,
+  - staging on the same volume,
+  - symlink and zip-slip rejection,
+  - atomic replace with restart
 
 ## Tech Stack
 - Swift 5 / SwiftUI

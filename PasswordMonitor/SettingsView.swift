@@ -28,6 +28,12 @@ private enum LanguageAssistStatusKind {
     case error
 }
 
+private enum UpdateStatusKind {
+    case info
+    case success
+    case error
+}
+
 struct SettingsView: View {
     private struct TranslationBatchResult {
         let translations: [String: String]
@@ -71,10 +77,15 @@ struct SettingsView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var helperStatus: SMAppService.Status = .notFound
+    @State private var updateStatusText: String?
+    @State private var updateStatusKind: UpdateStatusKind = .info
+    @State private var updateCheckInProgress = false
+    @State private var pendingUpdateCandidate: PMUpdateCandidate?
     @State private var showResetConfirm = false
     @State private var showDeleteConfirm = false
 
     private let helperBundleID = "popo.PasswordMonitorHelperApp"
+    private let updater = PMUpdateService(configuration: .passwordMonitor)
 
     // ZAPISANE wartości (AppStorage)
     @AppStorage(SettingsKeys.maxPasswordAge) private var storedMaxPasswordAge = 30
@@ -320,14 +331,53 @@ struct SettingsView: View {
                     }
 
                     // MARK: Informacje
-                    Section(header: Text(LanguageSettings.localizedString("settings_section_info")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
+                    Section(header: Text(LanguageSettings.localizedString("settings_section_updates")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         HStack {
                             Text(LanguageSettings.localizedString("settings_version"))
                             Spacer()
-                            Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+                            Text(currentAppVersion)
                                 .foregroundColor(PMTheme.textSecondary)
                         }
 
+                        Button {
+                            handleCheckForUpdatesTap()
+                        } label: {
+                            HStack(spacing: 8) {
+                                if updateCheckInProgress {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                }
+                                Text(LanguageSettings.localizedString("settings_check_for_updates"))
+                            }
+                        }
+                        .pmButton(role: .primary)
+                        .disabled(updateCheckInProgress)
+
+                        if let pendingUpdateCandidate {
+                            HStack {
+                                Text(LanguageSettings.localizedString(
+                                    "settings_update_available %@",
+                                    pendingUpdateCandidate.version.description
+                                ))
+                                Spacer()
+                                Button {
+                                    handleInstallUpdateTap()
+                                } label: {
+                                    Text(LanguageSettings.localizedString("settings_update_install"))
+                                }
+                                .pmButton()
+                                .disabled(updateCheckInProgress)
+                            }
+                        }
+
+                        if let updateStatusText {
+                            Text(updateStatusText)
+                                .font(.caption)
+                                .foregroundColor(updateStatusColor)
+                        }
+                    }
+
+                    Section(header: Text(LanguageSettings.localizedString("settings_section_info")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
                         HStack {
                             Text(LanguageSettings.localizedString("settings_helper_status"))
                             Spacer()
@@ -503,11 +553,23 @@ struct SettingsView: View {
         }
     }
 
+    private var updateStatusColor: Color {
+        switch updateStatusKind {
+        case .info: return PMTheme.textSecondary
+        case .success: return PMTheme.success
+        case .error: return PMTheme.danger
+        }
+    }
+
     private var retryProblematicButtonTitle: String {
         LanguageSettings.localizedString(
             "language_assist_retry_problematic_count %d",
             pendingTranslationRetryCount
         )
+    }
+
+    private var currentAppVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
 
     private func loadSettings() {
@@ -794,6 +856,88 @@ struct SettingsView: View {
         guard !result.isEmpty else { return nil }
         Logger.shared.log("Loaded base localizations for translation: \(result.count) keys")
         return result
+    }
+
+    private func handleCheckForUpdatesTap() {
+        Task { await checkForUpdates() }
+    }
+
+    private func handleInstallUpdateTap() {
+        Task { await installPendingUpdate() }
+    }
+
+    @MainActor
+    private func checkForUpdates() async {
+        updateCheckInProgress = true
+        defer { updateCheckInProgress = false }
+        updateStatusText = nil
+        pendingUpdateCandidate = nil
+
+        do {
+            let result = try await updater.checkForUpdate(currentVersion: currentAppVersion)
+            switch result {
+            case let .upToDate(localVersion, remoteVersion):
+                let remoteText = remoteVersion?.description ?? "?"
+                updateStatusKind = .info
+                updateStatusText = LanguageSettings.localizedString(
+                    "settings_update_up_to_date %@ %@",
+                    localVersion.description,
+                    remoteText
+                )
+            case let .updateAvailable(candidate):
+                pendingUpdateCandidate = candidate
+                updateStatusKind = .success
+                updateStatusText = LanguageSettings.localizedString(
+                    "settings_update_available %@",
+                    candidate.version.description
+                )
+            }
+        } catch {
+            updateStatusKind = .error
+            updateStatusText = LanguageSettings.localizedString(
+                "settings_update_error %@",
+                error.localizedDescription
+            )
+        }
+    }
+
+    @MainActor
+    private func installPendingUpdate() async {
+        guard let candidate = pendingUpdateCandidate else { return }
+        updateCheckInProgress = true
+        defer { updateCheckInProgress = false }
+        updateStatusKind = .info
+        updateStatusText = LanguageSettings.localizedString(
+            "settings_update_installing %@",
+            candidate.version.description
+        )
+
+        do {
+            try await updater.installUpdate(
+                candidate: candidate,
+                currentAppURL: Bundle.main.bundleURL,
+                restartHandler: relaunchMainApp
+            )
+            updateStatusKind = .success
+            updateStatusText = LanguageSettings.localizedString("settings_update_installed_restart")
+            pendingUpdateCandidate = nil
+        } catch {
+            updateStatusKind = .error
+            updateStatusText = LanguageSettings.localizedString(
+                "settings_update_error %@",
+                error.localizedDescription
+            )
+        }
+    }
+
+    private func relaunchMainApp() {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                NSApp.terminate(nil)
+            }
+        }
     }
 
     private func isAppleIntelligenceAvailable() async -> Bool {
