@@ -9,7 +9,7 @@ import SwiftUI
 import AppKit
 import ServiceManagement
 import PasswordMonitorCore
-#if canImport(FoundationModels)
+#if canImport(FoundationModels) && compiler(>=6.2)
 import FoundationModels
 #endif
 
@@ -816,7 +816,7 @@ struct SettingsView: View {
     }
 
     private func isAppleIntelligenceAvailable() async -> Bool {
-        #if canImport(FoundationModels)
+        #if canImport(FoundationModels) && compiler(>=6.2)
         if #available(macOS 26.0, *) {
             do {
                 let session = LanguageModelSession()
@@ -831,7 +831,7 @@ struct SettingsView: View {
     }
 
     private func translateStrings(_ strings: [String: String], to languageCode: String) async throws -> TranslationBatchResult {
-        #if canImport(FoundationModels)
+        #if canImport(FoundationModels) && compiler(>=6.2)
         if #available(macOS 26.0, *) {
             var result: [String: String] = [:]
             var problematicKeys: [String] = []
@@ -1028,6 +1028,7 @@ struct SettingsView: View {
         return cleaned
     }
 
+    #if canImport(FoundationModels) && compiler(>=6.2)
     @available(macOS 26.0, *)
     private func translateText(_ text: String, to languageCode: String, key: String, strict: Bool) async throws -> String {
         do {
@@ -1075,6 +1076,7 @@ struct SettingsView: View {
             throw error
         }
     }
+    #endif
 
     private func protectPlaceholders(in text: String) -> (text: String, placeholders: [String]) {
         let pattern = "%(?:#@[^@]+@|(?:\\d+\\$)?[-+ #0']*(?:\\d+|\\*)?(?:\\.(?:\\d+|\\*))?(?:hh|h|ll|l|L|z|j|t)?[@diuoxXfFeEgGaAcCsSp%])"

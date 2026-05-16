@@ -10,7 +10,7 @@ import AppKit
 import Combine
 import PasswordMonitorCore
 
-#if canImport(FoundationModels)
+#if canImport(FoundationModels) && compiler(>=6.2)
 import FoundationModels
 #endif
 
@@ -393,7 +393,7 @@ final class AIRequirementsModel: ObservableObject {
     }
 
     private func aiAvailabilityText() async -> (text: String, status: RequirementStatus) {
-        #if canImport(FoundationModels)
+        #if canImport(FoundationModels) && compiler(>=6.2)
         if #available(macOS 26.0, *) {
             do {
                 let session = LanguageModelSession()
