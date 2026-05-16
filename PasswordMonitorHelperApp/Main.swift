@@ -34,7 +34,9 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         terminateDuplicateHelperProcesses()
         registerObserversIfNeeded()
 
-        handleWakeOrLaunchCheck()
+        Task { @MainActor in
+            handleWakeOrLaunchCheck()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -157,7 +159,9 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
             guard let helper = self else { return }
             guard helper.shouldHandleTrigger("wake", minimumInterval: 10) else { return }
             Logger.shared.log("Helper wake detected; refreshing notification state")
-            helper.handleWakeOrLaunchCheck()
+            Task { @MainActor in
+                helper.handleWakeOrLaunchCheck()
+            }
         }
 
         manualRefreshObserver = DistributedNotificationCenter.default().addObserver(
@@ -347,6 +351,7 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         Logger.shared.log("Helper settings snapshot after sync: \(snapshot.joined(separator: ", "))")
     }
 
+    @MainActor
     private func handleWakeOrLaunchCheck() {
         syncConfigurationAndScheduleNextNotificationTime()
 
