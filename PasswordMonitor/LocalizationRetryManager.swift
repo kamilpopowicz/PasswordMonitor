@@ -130,27 +130,30 @@ final class LocalizationRetryManager {
             }
 
             var accepted: String?
-            for attempt in 1...3 {
-                guard #available(macOS 26.0, *) else { break }
-                do {
-                    let translated = try await translateText(
-                        source,
-                        to: languageCode,
-                        key: key,
-                        strict: attempt > 1
-                    )
-                    if shouldRetryTranslation(source: source, translated: translated) {
+            #if canImport(FoundationModels) && compiler(>=6.2)
+            if #available(macOS 26.0, *) {
+                for attempt in 1...3 {
+                    do {
+                        let translated = try await translateText(
+                            source,
+                            to: languageCode,
+                            key: key,
+                            strict: attempt > 1
+                        )
+                        if shouldRetryTranslation(source: source, translated: translated) {
+                            continue
+                        }
+                        if !hasCompatiblePlaceholders(source: source, translated: translated) {
+                            continue
+                        }
+                        accepted = translated
+                        break
+                    } catch {
                         continue
                     }
-                    if !hasCompatiblePlaceholders(source: source, translated: translated) {
-                        continue
-                    }
-                    accepted = translated
-                    break
-                } catch {
-                    continue
                 }
             }
+            #endif
 
             guard let accepted else { continue }
             custom[key] = accepted
