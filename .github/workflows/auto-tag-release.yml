@@ -88,4 +88,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh workflow run release.yml --repo "${{ github.repository }}" --ref "${{ steps.version.outputs.tag_name }}"
+          gh workflow run release.yml \
+            --repo "${{ github.repository }}" \
+            --ref main \
+            -f release_version="${{ steps.version.outputs.marketing_version }}"

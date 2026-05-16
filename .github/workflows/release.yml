@@ -2,6 +2,10 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version without the v prefix, for example 1.8.0"
+        required: true
   push:
     tags:
       - "v*"
@@ -14,6 +18,7 @@ jobs:
     runs-on: macos-latest
     outputs:
       release_version: ${{ steps.version.outputs.release_version }}
+      tag_name: ${{ steps.version.outputs.tag_name }}
     env:
       REPO: kamilpopowicz/PasswordMonitor
       APP_SCHEME: PasswordMonitor
@@ -31,12 +36,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG_NAME="${GITHUB_REF_NAME}"
-          RELEASE_VERSION="${TAG_NAME#v}"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            RELEASE_VERSION="${{ inputs.release_version }}"
+            TAG_NAME="v${RELEASE_VERSION}"
+          else
+            TAG_NAME="${GITHUB_REF_NAME}"
+            RELEASE_VERSION="${TAG_NAME#v}"
+          fi
+
           MARKETING_VERSION="$(xcodebuild -project PasswordMonitor.xcodeproj -scheme "${APP_SCHEME}" -showBuildSettings 2>/dev/null | awk -F ' = ' '/MARKETING_VERSION = / {gsub(/^[[:space:]]+/, "", $2); print $2; exit}')"
 
           if [[ -z "${MARKETING_VERSION}" ]]; then
             echo "Unable to resolve MARKETING_VERSION."
+            exit 1
+          fi
+
+          if [[ "${TAG_NAME}" != v* ]]; then
+            echo "Release tag ${TAG_NAME} must start with v."
             exit 1
           fi
 
@@ -46,6 +62,7 @@ jobs:
           fi
 
           echo "release_version=${RELEASE_VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag_name=${TAG_NAME}" >> "${GITHUB_OUTPUT}"
 
       - name: Run tests
         run: xcodebuild test -project PasswordMonitor.xcodeproj -scheme "${CORE_SCHEME}" -destination 'platform=macOS' -derivedDataPath /private/tmp/PasswordMonitorDerivedData CODE_SIGNING_ALLOWED=NO ENABLE_PREVIEWS=NO
@@ -163,7 +180,7 @@ jobs:
           HASH_PATH="${ARTIFACT_DIR}/PasswordMonitor.app.zip.sha256"
           MANIFEST_PATH="${ARTIFACT_DIR}/PasswordMonitor.update-manifest.json"
           NOTES_PATH="${ARTIFACT_DIR}/release-notes.md"
-          TAG_NAME="${GITHUB_REF_NAME}"
+          TAG_NAME="${{ needs.build.outputs.tag_name }}"
           RELEASE_TITLE="PasswordMonitor ${TAG_NAME#v}"
 
           if gh release view "${TAG_NAME}" --repo "${REPO}" >/dev/null 2>&1; then
