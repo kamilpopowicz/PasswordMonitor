@@ -13,6 +13,11 @@ final class PasswordMonitorCoreTests: XCTestCase {
     private let cacheKey = "cached_password_info"
     private let sharedDefaults = UserDefaults(suiteName: "popo.PasswordMonitor")
 
+    override func setUp() {
+        super.setUp()
+        clearNotificationClaims()
+    }
+
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: cacheKey)
         sharedDefaults?.removeObject(forKey: cacheKey)
@@ -21,7 +26,15 @@ final class PasswordMonitorCoreTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: "warning_threshold")
         UserDefaults.standard.removeObject(forKey: "quiet_hours_start")
         UserDefaults.standard.removeObject(forKey: "quiet_hours_end")
+        clearNotificationClaims()
         super.tearDown()
+    }
+
+    private func clearNotificationClaims() {
+        let store = NotificationStateStore.shared
+        store.clearNotificationDeliveryClaim()
+        store.clearScheduledNotificationEventClaim()
+        store.clearHelperTriggerClaim()
     }
 
     func testPasswordCacheSaveLoadMarksFromCache() {
