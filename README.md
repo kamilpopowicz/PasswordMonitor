@@ -1,8 +1,19 @@
 # PasswordMonitor
 
+<p align="center">
+  <img src="PasswordMonitor/Assets.xcassets/AppIcon.appiconset/icon_256.png" alt="PasswordMonitor app icon" width="128" />
+</p>
+
+<p align="center">
+  <img alt="Release" src="https://img.shields.io/github/v/release/kamilpopowicz/PasswordMonitor?label=release" />
+  <img alt="License" src="https://img.shields.io/github/license/kamilpopowicz/PasswordMonitor" />
+  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS-black" />
+  <img alt="Swift" src="https://img.shields.io/badge/swift-5-F05138" />
+</p>
+
 PasswordMonitor is a macOS menu bar app that helps users keep track of corporate password expiration. It checks Active Directory metadata, notifies you ahead of expiration, and can run automatically in the background via a login item helper even when the main app is closed.
 
-This repository currently provides **direct-distribution builds** produced through GitHub Releases. Depending on your local setup, they may be ad hoc signed, so Gatekeeper can show a warning and users must open the app manually (right‑click → Open).
+This repository currently provides **direct-distribution builds** produced through GitHub Releases only. GitHub Packages is not used for app distribution. Depending on your local setup, the builds may be ad hoc signed, so Gatekeeper can show a warning and users must open the app manually (right‑click → Open).
 
 This project is open source under the MIT License. You can use, modify, and redistribute it, but the copyright notice and license text must remain with the code.
 
@@ -14,25 +25,28 @@ Current version: **1.8.0**
 
 ## Quick Start (No Certificate)
 
-### 1) Download
-Get the latest unsigned build from **Releases** as a `.zip` containing `PasswordMonitor.app`.
+### 1) Install
+Download the latest release and install it into `/Applications` in one command:
 
-### 2) Move to Applications
-Drag `PasswordMonitor.app` to `/Applications`.
+```bash
+curl -fsSL https://raw.githubusercontent.com/kamilpopowicz/PasswordMonitor/main/scripts/install.sh | bash
+```
 
-### 3) First Launch (Gatekeeper)
+If you prefer not to run a remote install script, download the `.zip` from Releases and drag `PasswordMonitor.app` into `/Applications`.
+
+### 2) First Launch (Gatekeeper)
 Because the app is unsigned, macOS will block it by default. To run it:
 
 - Right‑click the app → **Open** → **Open**
 
 This is required only the first time.
 
-### 4) Enable Background Helper
+### 3) Enable Background Helper
 If you want automatic checks:
 
 `System Settings → General → Login Items → Allow in Background`
 
-### 5) Updates
+### 4) Updates
 Open **About PasswordMonitor...** or use **Settings → Check for updates** to go to the single update panel.
 The About window is the only place where update status, verification, and installation are handled.
 Updates are verified with both SHA256 and a signed manifest before the app bundle is replaced.
@@ -122,22 +136,6 @@ Logs are stored locally and can be viewed in the **Logs** window. You can copy o
 The Logs window supports auto refresh with three modes: immediate (default), 1 minute, or 5 minutes.
 
 > Tip: For privacy, avoid sharing logs that may contain sensitive data.
-
----
-
-## Build From Source (Optional)
-If you want to build it yourself:
-
-```bash
-xcodebuild -project PasswordMonitor.xcodeproj -scheme PasswordMonitor -destination 'platform=macOS' build
-```
-
----
-
-## Roadmap
-- Add unit tests for core logic
-- Improve privacy controls (PII masking)
-- Refactor alert UI out of core module
 
 ---
 
