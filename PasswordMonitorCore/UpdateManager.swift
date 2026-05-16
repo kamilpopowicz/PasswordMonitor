@@ -16,7 +16,7 @@ public struct PMUpdateConfiguration: Sendable {
     public let appZipAssetName: String
     public let manifestAssetName: String
     public let githubAPIBaseURL: URL
-    public let publicKeyBase64: String
+    public let trustedSigningKeys: [PMUpdateSigningKey]
 
     public init(
         owner: String,
@@ -26,7 +26,7 @@ public struct PMUpdateConfiguration: Sendable {
         appZipAssetName: String,
         manifestAssetName: String,
         githubAPIBaseURL: URL,
-        publicKeyBase64: String
+        trustedSigningKeys: [PMUpdateSigningKey]
     ) {
         self.owner = owner
         self.repository = repository
@@ -35,7 +35,7 @@ public struct PMUpdateConfiguration: Sendable {
         self.appZipAssetName = appZipAssetName
         self.manifestAssetName = manifestAssetName
         self.githubAPIBaseURL = githubAPIBaseURL
-        self.publicKeyBase64 = publicKeyBase64
+        self.trustedSigningKeys = trustedSigningKeys
     }
 
     public static let passwordMonitor = PMUpdateConfiguration(
@@ -46,7 +46,16 @@ public struct PMUpdateConfiguration: Sendable {
         appZipAssetName: "PasswordMonitor.app.zip",
         manifestAssetName: "PasswordMonitor.update-manifest.json",
         githubAPIBaseURL: URL(string: "https://api.github.com")!,
-        publicKeyBase64: "M1zO9iVkkB7TNiFHBv1FAvT9ysEkBUZxNofAND96uJM="
+        trustedSigningKeys: [
+            PMUpdateSigningKey(
+                keyID: "passwordmonitor-2026-04",
+                publicKeyBase64: "M1zO9iVkkB7TNiFHBv1FAvT9ysEkBUZxNofAND96uJM="
+            ),
+            PMUpdateSigningKey(
+                keyID: "passwordmonitor-2026-05",
+                publicKeyBase64: "H1B2cN1t+IkW6UQ2tRKfaEBW1lEekVCnMWL0w717sYc="
+            )
+        ]
     )
 
     public var releaseAPIURL: URL {
@@ -56,6 +65,16 @@ public struct PMUpdateConfiguration: Sendable {
             .appendingPathComponent(repository)
             .appendingPathComponent("releases")
             .appendingPathComponent("latest")
+    }
+}
+
+public struct PMUpdateSigningKey: Hashable, Sendable {
+    public let keyID: String
+    public let publicKeyBase64: String
+
+    public init(keyID: String, publicKeyBase64: String) {
+        self.keyID = keyID
+        self.publicKeyBase64 = publicKeyBase64
     }
 }
 
@@ -73,7 +92,9 @@ private final class PMUpdateSessionDelegate: NSObject, URLSessionTaskDelegate {
         newRequest request: URLRequest,
         completionHandler: @escaping (URLRequest?) -> Void
     ) {
-        guard let host = request.url?.host?.lowercased(),
+        guard let url = request.url,
+              url.scheme?.lowercased() == "https",
+              let host = url.host?.lowercased(),
               allowedHosts.contains(host) else {
             completionHandler(nil)
             return
@@ -196,6 +217,7 @@ public struct PMUpdateManifest: Codable, Hashable, Sendable {
     public let assetName: String
     public let assetSHA256: String
     public let bundleIdentifier: String
+    public let signingKeyID: String
 }
 
 public struct PMSignedUpdateManifest: Codable, Hashable, Sendable {
@@ -246,6 +268,7 @@ public enum PMUpdateError: LocalizedError, Equatable {
     case remoteVersionNotNewer(local: String, remote: String)
     case missingExpectedAsset(String)
     case invalidManifestSignature
+    case unknownManifestKeyID(String)
     case invalidManifestVersion
     case manifestBundleMismatch(expected: String, actual: String)
     case checksumMismatch(expected: String, actual: String)
@@ -274,6 +297,8 @@ public enum PMUpdateError: LocalizedError, Equatable {
             return "Expected release asset not found: \(name)"
         case .invalidManifestSignature:
             return "The update manifest signature is invalid."
+        case let .unknownManifestKeyID(keyID):
+            return "The update manifest uses an unknown signing key ID: \(keyID)."
         case .invalidManifestVersion:
             return "The update manifest version is invalid."
         case let .manifestBundleMismatch(expected, actual):
@@ -544,6 +569,10 @@ public final class PMUpdateService {
         guard let manifest = release.assets.first(where: { $0.name == configuration.manifestAssetName }) else {
             throw PMUpdateError.missingExpectedAsset(configuration.manifestAssetName)
         }
+        guard asset.apiURL.scheme?.lowercased() == "https",
+              manifest.apiURL.scheme?.lowercased() == "https" else {
+            throw PMUpdateError.invalidGitHubResponse
+        }
 
         return PMUpdateCandidate(
             version: version,
@@ -560,7 +589,10 @@ public final class PMUpdateService {
     func validateSignedManifest(_ signedManifest: PMSignedUpdateManifest) throws {
         let manifest = signedManifest.manifest
         let payloadData = try Self.manifestSigningPayload(for: manifest)
-        guard let publicKeyData = Data(base64Encoded: configuration.publicKeyBase64) else {
+        guard let signingKey = configuration.trustedSigningKeys.first(where: { $0.keyID == manifest.signingKeyID }) else {
+            throw PMUpdateError.unknownManifestKeyID(manifest.signingKeyID)
+        }
+        guard let publicKeyData = Data(base64Encoded: signingKey.publicKeyBase64) else {
             throw PMUpdateError.invalidManifestSignature
         }
         let publicKey = try Curve25519.Signing.PublicKey(rawRepresentation: publicKeyData)

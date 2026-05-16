@@ -266,6 +266,24 @@ struct AboutView: View {
                 Text(currentAppVersion)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(PMTheme.textSecondary)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "person.fill")
+                        .font(.caption2.weight(.semibold))
+                    Text(LanguageSettings.localizedString("about_author"))
+                        .font(.caption2.weight(.medium))
+                }
+                .foregroundColor(PMTheme.textMuted)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(PMTheme.fieldBackground.opacity(0.75))
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(PMTheme.fieldStroke.opacity(0.8), lineWidth: 1)
+                        )
+                )
             }
         }
         .frame(width: 118, height: 118)

@@ -1367,11 +1367,3 @@ struct SettingsView: View {
         }
     }
 }
-
-#if DEBUG
-#Preview {
-    SettingsView()
-        .environmentObject(AppState())
-        .environmentObject(LanguageSettings())
-}
-#endif

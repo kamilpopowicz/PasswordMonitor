@@ -2,9 +2,13 @@
 
 PasswordMonitor is a macOS menu bar app that helps users keep track of corporate password expiration. It checks Active Directory metadata, notifies you ahead of expiration, and can run automatically in the background via a login item helper even when the main app is closed.
 
-This repository currently provides **testing builds**. Depending on your local setup, they may be unsigned, so Gatekeeper can show a warning and users must open the app manually (right‑click → Open).
+This repository currently provides **direct-distribution builds** produced through GitHub Releases. Depending on your local setup, they may be ad hoc signed, so Gatekeeper can show a warning and users must open the app manually (right‑click → Open).
 
-Current version: **1.7.2**
+This project is open source under the MIT License. You can use, modify, and redistribute it, but the copyright notice and license text must remain with the code.
+
+Author: Kamil Popowicz
+
+Current version: **1.8.0**
 
 ---
 
@@ -32,6 +36,8 @@ If you want automatic checks:
 Open **About PasswordMonitor...** or use **Settings → Check for updates** to go to the single update panel.
 The About window is the only place where update status, verification, and installation are handled.
 Updates are verified with both SHA256 and a signed manifest before the app bundle is replaced.
+PasswordMonitor does not auto-check on launch; update checks only start when you open the shared update panel or click a check button.
+See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
 
 ---
 
@@ -63,13 +69,7 @@ Updates are verified with both SHA256 and a signed manifest before the app bundl
   - retries problematic keys (immediate multi-attempt + deferred self-heal retries)
 - Language Assist includes a manual **Retry problematic** action for failed keys
 - Manual Light/Dark/Auto theme switching
-- Safe custom updater architecture:
-  - release discovery from `releases/latest`,
-  - version comparison against `CFBundleShortVersionString`,
-  - checksum and signed-manifest verification,
-  - staging on the same volume,
-  - symlink and zip-slip rejection,
-  - atomic replace with restart
+- Safe custom updater architecture; see [SECURITY.md](SECURITY.md) for the updater threat model and hardening details.
 - Settings → Delete app unregisters the helper, unloads legacy LaunchAgents, terminates running helper processes, and removes app/helper preferences plus local app data
 
 ## Tech Stack
@@ -142,4 +142,4 @@ xcodebuild -project PasswordMonitor.xcodeproj -scheme PasswordMonitor -destinati
 ---
 
 ## License
-Specify a license here (e.g., MIT). If not specified, all rights reserved.
+See [LICENSE](LICENSE) for the MIT License. Copyright remains with Kamil Popowicz.

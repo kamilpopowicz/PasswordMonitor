@@ -445,10 +445,3 @@ private struct LogsThemePlaceholder: View {
         .background(PMTheme.fieldBackground.opacity(0.6))
     }
 }
-
-#if DEBUG
-#Preview {
-    LogsView()
-        .environmentObject(AppState())
-}
-#endif

@@ -370,30 +370,3 @@ private struct AlertContentView: View {
         return false
     }
 }
-
-// MARK: - Preview
-
-#if DEBUG
-#Preview {
-    Group {
-        AlertContentView(
-            expirationDate: Date().addingTimeInterval(3 * 24 * 3600),
-            isDomainAvailable: true,
-            mode: .live,
-            isUrgent: false,
-            onSnooze: {},
-            onChangePassword: {},
-            onEndTest: {}
-        )
-        AlertContentView(
-            expirationDate: Date().addingTimeInterval(999 * 24 * 3600),
-            isDomainAvailable: true,
-            mode: .test,
-            isUrgent: false,
-            onSnooze: {},
-            onChangePassword: {},
-            onEndTest: {}
-        )
-    }
-}
-#endif

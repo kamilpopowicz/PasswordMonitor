@@ -47,10 +47,3 @@ struct SettingsLanguageView: View {
         // Window panel and min size are applied at the Window level.
     }
 }
-
-#if DEBUG
-#Preview {
-    SettingsLanguageView()
-        .environmentObject(LanguageSettings())
-}
-#endif

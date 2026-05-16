@@ -389,7 +389,8 @@ final class PasswordMonitorCoreTests: XCTestCase {
             version: "1.8.0",
             assetName: "PasswordMonitor.app.zip",
             assetSHA256: String(repeating: "a", count: 64),
-            bundleIdentifier: "popo.PasswordMonitor"
+            bundleIdentifier: "popo.PasswordMonitor",
+            signingKeyID: "test-key"
         )
         let signedManifest = try signedManifest(
             manifest: manifest,
@@ -405,7 +406,9 @@ final class PasswordMonitorCoreTests: XCTestCase {
                 appZipAssetName: "PasswordMonitor.app.zip",
                 manifestAssetName: "PasswordMonitor.update-manifest.json",
                 githubAPIBaseURL: URL(string: "https://api.github.com")!,
-                publicKeyBase64: publicKeyBase64
+                trustedSigningKeys: [
+                    PMUpdateSigningKey(keyID: "test-key", publicKeyBase64: publicKeyBase64)
+                ]
             )
         )
 
@@ -419,7 +422,8 @@ final class PasswordMonitorCoreTests: XCTestCase {
             version: "1.8.0",
             assetName: "PasswordMonitor.app.zip",
             assetSHA256: String(repeating: "b", count: 64),
-            bundleIdentifier: "popo.PasswordMonitor"
+            bundleIdentifier: "popo.PasswordMonitor",
+            signingKeyID: "test-key"
         )
         let signedManifest = try signedManifest(
             manifest: manifest,
@@ -435,7 +439,9 @@ final class PasswordMonitorCoreTests: XCTestCase {
                 appZipAssetName: "PasswordMonitor.app.zip",
                 manifestAssetName: "PasswordMonitor.update-manifest.json",
                 githubAPIBaseURL: URL(string: "https://api.github.com")!,
-                publicKeyBase64: publicKeyBase64
+                trustedSigningKeys: [
+                    PMUpdateSigningKey(keyID: "test-key", publicKeyBase64: publicKeyBase64)
+                ]
             )
         )
 
@@ -444,12 +450,46 @@ final class PasswordMonitorCoreTests: XCTestCase {
                 version: "1.8.1",
                 assetName: manifest.assetName,
                 assetSHA256: manifest.assetSHA256,
-                bundleIdentifier: manifest.bundleIdentifier
+                bundleIdentifier: manifest.bundleIdentifier,
+                signingKeyID: manifest.signingKeyID
             ),
             signature: signedManifest.signature
         )
 
         XCTAssertThrowsError(try service.validateSignedManifest(tamperedManifest))
+    }
+
+    func testSignedManifestVerificationRejectsUnknownKeyID() throws {
+        let privateKey = Curve25519.Signing.PrivateKey()
+        let publicKeyBase64 = privateKey.publicKey.rawRepresentation.base64EncodedString()
+        let manifest = PMUpdateManifest(
+            version: "1.8.0",
+            assetName: "PasswordMonitor.app.zip",
+            assetSHA256: String(repeating: "c", count: 64),
+            bundleIdentifier: "popo.PasswordMonitor",
+            signingKeyID: "unexpected-key"
+        )
+        let signedManifest = try signedManifest(
+            manifest: manifest,
+            privateKey: privateKey
+        )
+
+        let service = PMUpdateService(
+            configuration: PMUpdateConfiguration(
+                owner: "example",
+                repository: "PasswordMonitor",
+                appBundleIdentifier: "popo.PasswordMonitor",
+                appBundleName: "PasswordMonitor.app",
+                appZipAssetName: "PasswordMonitor.app.zip",
+                manifestAssetName: "PasswordMonitor.update-manifest.json",
+                githubAPIBaseURL: URL(string: "https://api.github.com")!,
+                trustedSigningKeys: [
+                    PMUpdateSigningKey(keyID: "different-key", publicKeyBase64: publicKeyBase64)
+                ]
+            )
+        )
+
+        XCTAssertThrowsError(try service.validateSignedManifest(signedManifest))
     }
 
     private func signedManifest(

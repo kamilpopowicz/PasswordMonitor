@@ -407,9 +407,3 @@ final class AIRequirementsModel: ObservableObject {
         return (LanguageSettings.localizedString("ai_requirements_unavailable"), .fail)
     }
 }
-
-#if DEBUG
-#Preview {
-    AIRequirementsView()
-}
-#endif

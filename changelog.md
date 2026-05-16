@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## PasswordMonitor 1.8.0
+- Added a GitHub Actions release pipeline for tagged releases:
+  - validates the tag version against `MARKETING_VERSION`,
+  - runs core tests and a release build,
+  - ad hoc signs the app bundle,
+  - zips the `.app`, computes SHA256, and signs the update manifest,
+  - publishes the release assets to GitHub Releases,
+  - runs the signing step in a protected `release-signing` environment with required reviewers,
+  - uses a signing key ID so future key rotation is explicit,
+  - keeps both the old and new update signing keys trusted during rotation.
 - Replaced Sparkle-based updates with a custom GitHub Releases updater:
   - checks `releases/latest`,
   - compares the remote version with `CFBundleShortVersionString`,
