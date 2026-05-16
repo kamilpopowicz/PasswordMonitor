@@ -1,0 +1,68 @@
+name: Auto Tag Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: macos-latest
+    if: github.repository == 'kamilpopowicz/PasswordMonitor'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Resolve app version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          MARKETING_VERSION="$(xcodebuild -project PasswordMonitor.xcodeproj -scheme PasswordMonitor -showBuildSettings 2>/dev/null | awk -F ' = ' '/MARKETING_VERSION = / {gsub(/^[[:space:]]+/, "", $2); print $2; exit}')"
+
+          if [[ -z "${MARKETING_VERSION}" ]]; then
+            echo "Unable to resolve MARKETING_VERSION."
+            exit 1
+          fi
+
+          TAG_NAME="v${MARKETING_VERSION}"
+          echo "marketing_version=${MARKETING_VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag_name=${TAG_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: Check release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_HEADING="## PasswordMonitor ${{ steps.version.outputs.marketing_version }}"
+          if ! grep -Fqx "${RELEASE_HEADING}" changelog.md; then
+            echo "Missing changelog heading: ${RELEASE_HEADING}"
+            exit 1
+          fi
+
+      - name: Check existing tag
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          if git rev-parse -q --verify "refs/tags/${{ steps.version.outputs.tag_name }}" >/dev/null; then
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Create release tag
+        if: steps.tag.outputs.exists == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag_name }}" -m "PasswordMonitor ${{ steps.version.outputs.marketing_version }}"
+          git push origin "${{ steps.version.outputs.tag_name }}"

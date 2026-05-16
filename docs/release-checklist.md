@@ -7,10 +7,10 @@ Use this checklist for the first real release and for later release runs.
 3. Update `MARKETING_VERSION` and build number if the release version changes.
 4. Verify `LICENSE`, `README.md`, `RELEASE.md`, and `SECURITY.md` match the intended public state.
 5. Confirm the GitHub Environment `release-signing` exists and contains `UPDATE_MANIFEST_PRIVATE_KEY_BASE64`.
-6. Confirm the `v*` repository ruleset is active.
-7. Create the release tag, for example `v1.8.0`.
-8. Push the tag to GitHub.
-9. Wait for the workflow to finish:
+6. Confirm the `v*` repository ruleset is active and blocks force-move/deletion.
+7. Push the version/build changes to `main`.
+8. Confirm the auto-tag workflow creates the expected tag, for example `v1.8.0`.
+9. Wait for the release workflow to finish:
    - tests
    - build
    - zip

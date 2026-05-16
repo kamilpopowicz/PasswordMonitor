@@ -3,9 +3,11 @@
 This document covers the maintainer-facing release and update pipeline.
 
 ## Release Flow
-Release builds are published from tagged commits on GitHub Actions.
+Release builds are published from version tags created by GitHub Actions.
 
-- Push a tag like `v1.8.0` to trigger the release workflow.
+- Push version/build changes to `main`.
+- The auto-tag workflow reads `MARKETING_VERSION`, verifies the matching changelog heading, and creates `v<MARKETING_VERSION>` if that tag does not exist yet.
+- The release workflow runs from that tag.
 - The workflow runs tests, builds the app, ad hoc signs the bundle, zips it, computes SHA256, and signs the update manifest.
 - The signing step runs in a protected GitHub Environment named `release-signing` with required reviewers.
 - Store `UPDATE_MANIFEST_PRIVATE_KEY_BASE64` as an environment secret there, not as a plain repository secret.

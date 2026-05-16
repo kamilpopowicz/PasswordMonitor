@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## PasswordMonitor 1.8.0
 - Added a GitHub Actions release pipeline for tagged releases:
   - validates the tag version against `MARKETING_VERSION`,
+  - automatically creates the `v<MARKETING_VERSION>` tag from `main` when the version has no tag yet,
   - runs core tests and a release build,
   - ad hoc signs the app bundle,
   - zips the `.app`, computes SHA256, and signs the update manifest,

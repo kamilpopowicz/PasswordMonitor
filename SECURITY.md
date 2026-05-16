@@ -36,7 +36,8 @@ The release workflow is split so the signing step is isolated:
 
 - build/test/archive steps run without the manifest signing secret
 - signing happens only in the protected `release-signing` GitHub Environment
-- a repository ruleset blocks creation, force-move, and deletion of `v*` tags
+- an auto-tag workflow creates `v*` tags from `MARKETING_VERSION`
+- a repository ruleset blocks force-move and deletion of `v*` tags after creation
 
 ## Residual Risk
 No direct-distribution updater can fully eliminate compromise of the publishing account or signing key.
@@ -48,4 +49,4 @@ If the signing key or release signing environment is compromised, an attacker ca
 - Do not publish release assets outside the GitHub Actions release flow.
 - Do not reuse the manifest signing key for other signatures.
 - Rotate the manifest key before removing the old public key from the app.
-- Keep release tags protected so update triggers cannot be faked or rewritten.
+- Keep release tags protected so update triggers cannot be rewritten or removed.
