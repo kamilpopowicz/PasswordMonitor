@@ -11,8 +11,8 @@ Release builds are published from version tags created by GitHub Actions.
 - The workflow runs tests, builds the app, ad hoc signs the bundle, zips it, computes SHA256, and signs the update manifest.
 - The signing step runs in a protected GitHub Environment named `release-signing` with required reviewers.
 - Store `UPDATE_MANIFEST_PRIVATE_KEY_BASE64` as an environment secret there, not as a plain repository secret.
-- The embedded public key list in `PasswordMonitorCore/UpdateManager.swift` currently trusts `passwordmonitor-2026-04` and `passwordmonitor-2026-05` during rotation.
-- New manifests are signed with `passwordmonitor-2026-05`; keep both keys trusted until the next release has shipped.
+- The embedded public key list in `PasswordMonitorCore/UpdateManager.swift` currently trusts `passwordmonitor-2026-04`, `passwordmonitor-2026-05`, and `passwordmonitor-2026-05-17` during rotation.
+- New manifests are signed with `passwordmonitor-2026-05-17`; keep older keys trusted until the next release has shipped.
 - GitHub Releases publishes three assets for the updater:
   - `PasswordMonitor.app.zip`
   - `PasswordMonitor.app.zip.sha256`

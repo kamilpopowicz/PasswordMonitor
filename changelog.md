@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.8.1
+- Fixed the release pipeline after the first auto-update release attempt:
+  - builds now compile on the current GitHub Actions Xcode image without requiring FoundationModels APIs that are unavailable there,
+  - the update manifest signing key was rotated to `passwordmonitor-2026-05-17`,
+  - this version is intentionally released under a new tag because `v1.8.0` was created before the final CI fixes.
+
 ## PasswordMonitor 1.8.0
 - Added a GitHub Actions release pipeline for tagged releases:
   - validates the tag version against `MARKETING_VERSION`,

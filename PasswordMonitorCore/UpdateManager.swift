@@ -54,6 +54,10 @@ public struct PMUpdateConfiguration: Sendable {
             PMUpdateSigningKey(
                 keyID: "passwordmonitor-2026-05",
                 publicKeyBase64: "H1B2cN1t+IkW6UQ2tRKfaEBW1lEekVCnMWL0w717sYc="
+            ),
+            PMUpdateSigningKey(
+                keyID: "passwordmonitor-2026-05-17",
+                publicKeyBase64: "opwZ87MjDQxZmZqc4n8inWau8yzOhfdzP23WPGne4as="
             )
         ]
     )

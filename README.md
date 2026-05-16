@@ -19,7 +19,7 @@ This project is open source under the MIT License. You can use, modify, and redi
 
 Author: Kamil Popowicz
 
-Current version: **1.8.0**
+Current version: **1.8.1**
 
 ---
 

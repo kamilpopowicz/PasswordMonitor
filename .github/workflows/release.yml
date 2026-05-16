@@ -131,7 +131,7 @@ jobs:
       REPO: kamilpopowicz/PasswordMonitor
       APP_SCHEME: PasswordMonitor
       RELEASE_ARTIFACT_DIR: /private/tmp/PasswordMonitorReleaseArtifacts
-      UPDATE_MANIFEST_KEY_ID: passwordmonitor-2026-05
+      UPDATE_MANIFEST_KEY_ID: passwordmonitor-2026-05-17
       UPDATE_MANIFEST_PRIVATE_KEY_BASE64: ${{ secrets.UPDATE_MANIFEST_PRIVATE_KEY_BASE64 }}
     steps:
       - name: Checkout
