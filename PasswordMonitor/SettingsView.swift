@@ -86,331 +86,39 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.minimalLogging) private var storedMinimalLogging = true
     var body: some View {
         ZStack {
-            VStack(spacing: 0) {
-            ScrollView {
-                Form {
-                    // MARK: Appearance
-                    Section(header: Text(LanguageSettings.localizedString("settings_section_appearance")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        Picker(selection: Binding(
-                            get: { themeManager.mode },
-                            set: { newValue in
-                                guard newValue != themeManager.mode else { return }
-                                themeManager.mode = newValue
-                            }
-                        )) {
-                            Text(LanguageSettings.localizedString("theme_mode_auto")).tag(PMTheme.ThemeMode.auto)
-                            Text(LanguageSettings.localizedString("theme_mode_light")).tag(PMTheme.ThemeMode.light)
-                            Text(LanguageSettings.localizedString("theme_mode_dark")).tag(PMTheme.ThemeMode.dark)
-                        } label: {
-                            Text(LanguageSettings.localizedString("settings_theme_mode"))
-                        }
-                        .pickerStyle(.segmented)
-                    }
-
-                    // MARK: Startup
-                    Section(header: Text(LanguageSettings.localizedString("settings_section_startup")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        Toggle(isOn: $launchAtLogin) {
-                            Text(LanguageSettings.localizedString("settings_launch_at_login"))
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(LanguageSettings.localizedString("settings_helper_desc %@", notificationHourString))
-                            Text(LanguageSettings.localizedString("settings_background_helper_info"))
-                        }
-                        .font(.caption)
-                        .foregroundColor(PMTheme.textSecondary)
-                        .italic()
-                    }
-
-                    // MARK: Powiadomienia
-                    Section(header: Text(LanguageSettings.localizedString("settings_section_notifications")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        DatePicker(selection: $notificationDate, displayedComponents: .hourAndMinute) {
-                            Text(LanguageSettings.localizedString("settings_notification_time"))
-                        }
-                        .onChange(of: notificationDate) { _, newValue in
-                            // Konwersja Date -> String "HH:mm" dla EDYTOWANEJ wartości
-                            notificationHourString = dateToTimeString(newValue) ?? "09:00"
-                        }
-
-                        Text(LanguageSettings.localizedString("settings_notification_footnote"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.textSecondary)
-                            .italic()
-
-                        HStack {
-                            DatePicker(selection: $quietHoursStartDate, displayedComponents: .hourAndMinute) {
-                                Text(LanguageSettings.localizedString("settings_quiet_hours_start"))
-                            }
-                            .onChange(of: quietHoursStartDate) { _, newValue in
-                                quietHoursStartString = dateToTimeString(newValue) ?? "18:01"
-                            }
-
-                            DatePicker(selection: $quietHoursEndDate, displayedComponents: .hourAndMinute) {
-                                Text(LanguageSettings.localizedString("settings_quiet_hours_end"))
-                            }
-                            .onChange(of: quietHoursEndDate) { _, newValue in
-                                quietHoursEndString = dateToTimeString(newValue) ?? "05:59"
-                            }
-                        }
-
-                        Text(LanguageSettings.localizedString("settings_quiet_hours_footnote"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.textSecondary)
-                            .italic()
-
-                        HStack(spacing: 8) {
-                            #if DEBUG
-                            Button(LanguageSettings.localizedString("settings_force_helper_refresh")) {
-                                forceHelperRefresh()
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(PMTheme.accent)
-                            #endif
-
-                            Button(LanguageSettings.localizedString("menu_test_notification")) {
-                                let testDate = Date().addingTimeInterval(23 * 3600)
-                                NotificationManager.shared.showTestNotification(expirationDate: testDate)
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(PMTheme.warning)
-
-                            Spacer()
+            VStack(spacing: PMLayout.noSpacing) {
+                ScrollView {
+                    PMWindowContentContainer {
+                        VStack(alignment: .leading, spacing: PMLayout.cardSpacing) {
+                            appearanceCard
+                            startupCard
+                            notificationsCard
+                            activeDirectoryCard
+                            languageCard
+                            languageAssistCard
+                            privacyCard
+                            updatesCard
+                            helperStatusCard
                         }
                     }
-
-                    // MARK: Active Directory
-                    Section(header: Text(LanguageSettings.localizedString("settings_section_ad")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(LanguageSettings.localizedString("settings_domain_name"))
-                                .font(.caption)
-                                .foregroundColor(PMTheme.textSecondary)
-                            if let domain = systemDomain, !domain.isEmpty {
-                                Text(domain)
-                                    .font(.body)
-                                    .foregroundColor(PMTheme.textPrimary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            } else {
-                                Text(LanguageSettings.localizedString("settings_domain_not_configured"))
-                                    .font(.body)
-                                    .foregroundColor(PMTheme.textSecondary)
-                            }
-                            Text(LanguageSettings.localizedString("settings_domain_source_info"))
-                                .font(.caption)
-                                .foregroundColor(PMTheme.textSecondary)
-                                .italic()
-                        }
-                        .padding(.vertical, 2)
-
-                        HStack {
-                            Text(LanguageSettings.localizedString("settings_max_password_age"))
-                            Spacer()
-                            TextField("", value: $maxPasswordAge, format: .number)
-                                .frame(width: 60)
-                                .textFieldStyle(.roundedBorder)
-                                .onChange(of: maxPasswordAge) { _, newValue in
-                                    if newValue < 1 { maxPasswordAge = 1 }
-                                    if newValue > 365 { maxPasswordAge = 365 }
-                                }
-                        }
-
-                        HStack {
-                            Text(LanguageSettings.localizedString("settings_warning_threshold"))
-                            Spacer()
-                            TextField("", value: $warningThreshold, format: .number)
-                                .frame(width: 60)
-                                .textFieldStyle(.roundedBorder)
-                                .onChange(of: warningThreshold) { _, newValue in
-                                    if newValue < 1 { warningThreshold = 1 }
-                                    if newValue > maxPasswordAge {
-                                        warningThreshold = maxPasswordAge
-                                    }
-                                }
-                        }
-                    }
-
-                    // MARK: Język / Language
-                    Section(header: Text(LanguageSettings.localizedString("language_settings_title")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        Picker(selection: $selectedLanguageCode) {
-                            ForEach(languageSettings.availableLanguageOptions()) { option in
-                                Text(option.displayName)
-                                    .tag(option.code)
-                            }
-                        } label: {
-                            Text(LanguageSettings.localizedString("language_picker_label"))
-                        }
-                        .pickerStyle(.segmented)
-
-                        Text(LanguageSettings.localizedString("language_change_footnote"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.textSecondary)
-                            .italic()
-                    }
-                    
-                    // MARK: Language Assist (On-Device)
-                    Section(header: Text(LanguageSettings.localizedString("language_assist_title")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        ZStack(alignment: .topLeading) {
-                            TextEditor(text: $languageAssistText)
-                                .font(.body)
-                                .frame(minHeight: 80)
-                                .padding(6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(PMTheme.fieldBackground)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                                .stroke(PMTheme.fieldStroke, lineWidth: 1)
-                                        )
-                                )
-
-                            if languageAssistText.isEmpty {
-                                Text(LanguageSettings.localizedString("language_assist_placeholder"))
-                                    .foregroundColor(PMTheme.textSecondary)
-                                    .padding(8)
-                                    .allowsHitTesting(false)
-                            }
-                        }
-
-                        HStack(spacing: 8) {
-                            Button(LanguageSettings.localizedString("language_assist_detect")) {
-                                handleDetectLanguageTap()
-                            }
-                            .pmButton(role: .primary)
-                            .disabled(aiDetectInProgress)
-
-                            Button(LanguageSettings.localizedString("language_assist_permissions")) {
-                                openWindow(id: "ai-check-window")
-                            }
-                            .pmButton()
-
-                            Button(retryProblematicButtonTitle) {
-                                handleRetryProblematicTap()
-                            }
-                            .pmButton()
-                            .disabled(aiDetectInProgress || aiRetryInProgress || pendingTranslationRetryCount == 0)
-
-                            Spacer()
-                        }
-
-                        if let aiDetectStatus {
-                            Text(aiDetectStatus)
-                                .font(.caption)
-                                .foregroundColor(aiDetectStatusColor)
-                        }
-
-                        Text(LanguageSettings.localizedString("language_assist_ai_requirements"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.danger)
-                            .italic()
-
-                        Text(LanguageSettings.localizedString("language_assist_footnote"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.textSecondary)
-                            .italic()
-                    }
-
-                    // MARK: Prywatność / Logi
-                    Section(header: Text(LanguageSettings.localizedString("settings_section_privacy")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        Toggle(isOn: $minimalLogging) {
-                            Text(LanguageSettings.localizedString("settings_minimal_logging"))
-                        }
-
-                        Text(LanguageSettings.localizedString("settings_minimal_logging_footnote"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.textSecondary)
-                            .italic()
-                    }
-
-                    // MARK: Informacje
-                    Section(header: Text(LanguageSettings.localizedString("settings_section_updates")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        HStack {
-                            Text(LanguageSettings.localizedString("settings_version"))
-                            Spacer()
-                            Text(currentAppVersion)
-                                .foregroundColor(PMTheme.textSecondary)
-                        }
-
-                        Button {
-                            handleOpenAboutAndCheckUpdatesTap()
-                        } label: {
-                            Text(LanguageSettings.localizedString("settings_check_for_updates"))
-                        }
-                        .pmButton(role: .primary)
-                    }
-
-                    Section(header: Text(LanguageSettings.localizedString("settings_section_info")).font(.headline).foregroundColor(PMTheme.textSecondary)) {
-                        HStack {
-                            Text(LanguageSettings.localizedString("settings_helper_status"))
-                            Spacer()
-                            Circle()
-                                .fill(helperStatusColor)
-                                .frame(width: 10, height: 10)
-                            Text(LanguageSettings.localizedString(helperStatusDescriptionKey))
-                                .foregroundColor(PMTheme.textSecondary)
-                        }
-                    }
+                    .padding(.vertical, PMLayout.contentPadding)
                 }
-                .formStyle(.grouped)
-                .scrollContentBackground(.hidden)
+
+                Divider()
+                PMWindowActionBar {
+                    footerActions
+                }
+                PMWindowFooterHost()
             }
-            .padding()
-
-            Divider()
-
-            HStack {
-                HStack(spacing: 8) {
-                    Button(LanguageSettings.localizedString("settings_reset_defaults")) {
-                        showResetConfirm = true
-                    }
-                    .pmButton()
-                    Button(LanguageSettings.localizedString("settings_delete_app")) {
-                        showDeleteConfirm = true
-                    }
-                    .pmButton(role: .destructive)
-                }
-                Spacer()
-                Button(LanguageSettings.localizedString("common_cancel")) {
-                    cancelChanges()
-                }
-                .pmButton()
-                Button(LanguageSettings.localizedString("common_save")) {
-                    saveChanges()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!isDirty)
-                .pmButton(role: .primary)
-            }
-            .padding(.horizontal)
-            .padding(.top, 12)
-            .padding(.bottom, 0)
-
-            .alert(LanguageSettings.localizedString("settings_reset_confirm_title"), isPresented: $showResetConfirm) {
-                Button(LanguageSettings.localizedString("settings_reset_confirm_action"), role: .destructive) {
-                    resetDefaults()
-                }
-                Button(LanguageSettings.localizedString("common_cancel"), role: .cancel) {}
-            } message: {
-                Text(LanguageSettings.localizedString("settings_reset_confirm_message"))
-            }
-            .alert(LanguageSettings.localizedString("settings_delete_confirm_title"), isPresented: $showDeleteConfirm) {
-                Button(LanguageSettings.localizedString("settings_delete_confirm_yes"), role: .destructive) {
-                    deleteAppAndData()
-                }
-                Button(LanguageSettings.localizedString("common_cancel"), role: .cancel) {}
-            } message: {
-                Text(LanguageSettings.localizedString("settings_delete_confirm_message"))
-            }
-
-            PMWindowFooter()
-            }
-            .blur(radius: aiDetectInProgress ? 6 : 0)
+            .blur(radius: aiDetectInProgress ? PMLayout.aiOverlayBlurRadius : 0)
             .allowsHitTesting(!aiDetectInProgress)
 
             if aiDetectInProgress {
-                Color.black.opacity(0.2)
+                PMTheme.overlayScrim
                     .ignoresSafeArea()
                 ProgressView()
                     .progressViewStyle(.circular)
-                    .scaleEffect(1.2)
+                    .scaleEffect(PMLayout.progressOverlayScale)
                     .tint(PMTheme.textPrimary)
             }
         }
@@ -433,6 +141,22 @@ struct SettingsView: View {
         .onDisappear {
             appState.windowClosed()
         }
+        .alert(LanguageSettings.localizedString("settings_reset_confirm_title"), isPresented: $showResetConfirm) {
+            Button(LanguageSettings.localizedString("settings_reset_confirm_action"), role: .destructive) {
+                resetDefaults()
+            }
+            Button(LanguageSettings.localizedString("common_cancel"), role: .cancel) {}
+        } message: {
+            Text(LanguageSettings.localizedString("settings_reset_confirm_message"))
+        }
+        .alert(LanguageSettings.localizedString("settings_delete_confirm_title"), isPresented: $showDeleteConfirm) {
+            Button(LanguageSettings.localizedString("settings_delete_confirm_yes"), role: .destructive) {
+                deleteAppAndData()
+            }
+            Button(LanguageSettings.localizedString("common_cancel"), role: .cancel) {}
+        } message: {
+            Text(LanguageSettings.localizedString("settings_delete_confirm_message"))
+        }
         .alert(LanguageSettings.localizedString("helper_alert_title"), isPresented: $showAlert) {
             Button(LanguageSettings.localizedString("common_ok")) {}
         } message: {
@@ -445,6 +169,313 @@ struct SettingsView: View {
             Button(translationPromptCancel, role: .cancel) {}
         } message: {
             Text(translationPromptMessage)
+        }
+    }
+
+    private var appearanceCard: some View {
+        settingsCard(LanguageSettings.localizedString("settings_section_appearance")) {
+            Picker(selection: Binding(
+                get: { themeManager.mode },
+                set: { newValue in
+                    guard newValue != themeManager.mode else { return }
+                    themeManager.mode = newValue
+                }
+            )) {
+                Text(LanguageSettings.localizedString("theme_mode_auto")).tag(PMTheme.ThemeMode.auto)
+                Text(LanguageSettings.localizedString("theme_mode_light")).tag(PMTheme.ThemeMode.light)
+                Text(LanguageSettings.localizedString("theme_mode_dark")).tag(PMTheme.ThemeMode.dark)
+            } label: {
+                Text(LanguageSettings.localizedString("settings_theme_mode"))
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    private var startupCard: some View {
+        settingsCard(LanguageSettings.localizedString("settings_section_startup")) {
+            Toggle(isOn: $launchAtLogin) {
+                Text(LanguageSettings.localizedString("settings_launch_at_login"))
+            }
+
+            VStack(alignment: .leading, spacing: PMLayout.microSpacing + PMLayout.microSpacing) {
+                Text(LanguageSettings.localizedString("settings_helper_desc %@", notificationHourString))
+                Text(LanguageSettings.localizedString("settings_background_helper_info"))
+            }
+            .font(.caption)
+            .foregroundColor(PMTheme.textSecondary)
+            .italic()
+        }
+    }
+
+    private var notificationsCard: some View {
+        settingsCard(LanguageSettings.localizedString("settings_section_notifications")) {
+            DatePicker(selection: $notificationDate, displayedComponents: .hourAndMinute) {
+                Text(LanguageSettings.localizedString("settings_notification_time"))
+            }
+            .onChange(of: notificationDate) { _, newValue in
+                notificationHourString = dateToTimeString(newValue) ?? "09:00"
+            }
+
+            Text(LanguageSettings.localizedString("settings_notification_footnote"))
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
+                .italic()
+
+            HStack(spacing: PMLayout.sectionSpacing + PMLayout.microSpacing) {
+                DatePicker(selection: $quietHoursStartDate, displayedComponents: .hourAndMinute) {
+                    Text(LanguageSettings.localizedString("settings_quiet_hours_start"))
+                }
+                .onChange(of: quietHoursStartDate) { _, newValue in
+                    quietHoursStartString = dateToTimeString(newValue) ?? "18:01"
+                }
+
+                DatePicker(selection: $quietHoursEndDate, displayedComponents: .hourAndMinute) {
+                    Text(LanguageSettings.localizedString("settings_quiet_hours_end"))
+                }
+                .onChange(of: quietHoursEndDate) { _, newValue in
+                    quietHoursEndString = dateToTimeString(newValue) ?? "05:59"
+                }
+            }
+
+            Text(LanguageSettings.localizedString("settings_quiet_hours_footnote"))
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
+                .italic()
+
+            HStack(spacing: PMLayout.compactSpacing) {
+                #if DEBUG
+                Button(LanguageSettings.localizedString("settings_force_helper_refresh")) {
+                    forceHelperRefresh()
+                }
+                .pmButton()
+                #endif
+
+                Button(LanguageSettings.localizedString("menu_test_notification")) {
+                    let testDate = Date().addingTimeInterval(23 * 3600)
+                    NotificationManager.shared.showTestNotification(expirationDate: testDate)
+                }
+                .pmButton()
+
+                Spacer()
+            }
+        }
+    }
+
+    private var activeDirectoryCard: some View {
+        settingsCard(LanguageSettings.localizedString("settings_section_ad")) {
+            VStack(alignment: .leading, spacing: PMLayout.microSpacing + PMLayout.microSpacing) {
+                Text(LanguageSettings.localizedString("settings_domain_name"))
+                    .font(.caption)
+                    .foregroundColor(PMTheme.textSecondary)
+                if let domain = systemDomain, !domain.isEmpty {
+                    Text(domain)
+                        .font(.body)
+                        .foregroundColor(PMTheme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(LanguageSettings.localizedString("settings_domain_not_configured"))
+                        .font(.body)
+                        .foregroundColor(PMTheme.textSecondary)
+                }
+                Text(LanguageSettings.localizedString("settings_domain_source_info"))
+                    .font(.caption)
+                    .foregroundColor(PMTheme.textSecondary)
+                    .italic()
+            }
+
+            settingsRow(LanguageSettings.localizedString("settings_max_password_age")) {
+                TextField("", value: $maxPasswordAge, format: .number)
+                    .frame(width: PMLayout.settingsNumberFieldWidth)
+                    .textFieldStyle(.roundedBorder)
+                    .onChange(of: maxPasswordAge) { _, newValue in
+                        if newValue < 1 { maxPasswordAge = 1 }
+                        if newValue > 365 { maxPasswordAge = 365 }
+                    }
+            }
+
+            settingsRow(LanguageSettings.localizedString("settings_warning_threshold")) {
+                TextField("", value: $warningThreshold, format: .number)
+                    .frame(width: PMLayout.settingsNumberFieldWidth)
+                    .textFieldStyle(.roundedBorder)
+                    .onChange(of: warningThreshold) { _, newValue in
+                        if newValue < 1 { warningThreshold = 1 }
+                        if newValue > maxPasswordAge {
+                            warningThreshold = maxPasswordAge
+                        }
+                    }
+            }
+        }
+    }
+
+    private var languageCard: some View {
+        settingsCard(LanguageSettings.localizedString("language_settings_title")) {
+            Picker(selection: $selectedLanguageCode) {
+                ForEach(languageSettings.availableLanguageOptions()) { option in
+                    Text(option.displayName)
+                        .tag(option.code)
+                }
+            } label: {
+                Text(LanguageSettings.localizedString("language_picker_label"))
+            }
+            .pickerStyle(.segmented)
+
+            Text(LanguageSettings.localizedString("language_change_footnote"))
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
+                .italic()
+        }
+    }
+
+    private var languageAssistCard: some View {
+        settingsCard(LanguageSettings.localizedString("language_assist_title")) {
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $languageAssistText)
+                    .font(.body)
+                    .frame(minHeight: PMLayout.languageAssistMinHeight)
+                    .pmFieldPanel(
+                        padding: PMLayout.languageAssistEditorPadding,
+                        cornerRadius: PMLayout.smallFieldCornerRadius,
+                        strokeOpacity: PMTheme.fieldSoftStrokeOpacity
+                    )
+
+                if languageAssistText.isEmpty {
+                    Text(LanguageSettings.localizedString("language_assist_placeholder"))
+                        .foregroundColor(PMTheme.textSecondary)
+                        .padding(PMLayout.languageAssistPlaceholderPadding)
+                        .allowsHitTesting(false)
+                }
+            }
+
+            HStack(spacing: PMLayout.compactSpacing) {
+                Button(LanguageSettings.localizedString("language_assist_detect")) {
+                    handleDetectLanguageTap()
+                }
+                .pmButton(role: .primary)
+                .disabled(aiDetectInProgress)
+
+                Button(LanguageSettings.localizedString("language_assist_permissions")) {
+                    openWindow(id: "ai-check-window")
+                }
+                .pmButton()
+
+                Button(retryProblematicButtonTitle) {
+                    handleRetryProblematicTap()
+                }
+                .pmButton()
+                .disabled(aiDetectInProgress || aiRetryInProgress || pendingTranslationRetryCount == 0)
+
+                Spacer()
+            }
+
+            if let aiDetectStatus {
+                Text(aiDetectStatus)
+                    .font(.caption)
+                    .foregroundColor(aiDetectStatusColor)
+            }
+
+            Text(LanguageSettings.localizedString("language_assist_ai_requirements"))
+                .font(.caption)
+                .foregroundColor(PMTheme.danger)
+                .italic()
+
+            Text(LanguageSettings.localizedString("language_assist_footnote"))
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
+                .italic()
+        }
+    }
+
+    private var privacyCard: some View {
+        settingsCard(LanguageSettings.localizedString("settings_section_privacy")) {
+            Toggle(isOn: $minimalLogging) {
+                Text(LanguageSettings.localizedString("settings_minimal_logging"))
+            }
+
+            Text(LanguageSettings.localizedString("settings_minimal_logging_footnote"))
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
+                .italic()
+        }
+    }
+
+    private var updatesCard: some View {
+        settingsCard(LanguageSettings.localizedString("settings_section_updates")) {
+            settingsRow(LanguageSettings.localizedString("settings_version")) {
+                Text(currentAppVersion)
+                    .foregroundColor(PMTheme.textSecondary)
+            }
+
+            Button {
+                handleOpenAboutAndCheckUpdatesTap()
+            } label: {
+                Text(LanguageSettings.localizedString("settings_check_for_updates"))
+            }
+            .pmButton(role: .primary)
+        }
+    }
+
+    private var helperStatusCard: some View {
+        settingsCard(LanguageSettings.localizedString("settings_section_info")) {
+            HStack {
+                Text(LanguageSettings.localizedString("settings_helper_status"))
+                Spacer()
+                Circle()
+                    .fill(helperStatusColor)
+                    .frame(width: PMLayout.statusIndicatorSize, height: PMLayout.statusIndicatorSize)
+                Text(LanguageSettings.localizedString(helperStatusDescriptionKey))
+                    .foregroundColor(PMTheme.textSecondary)
+            }
+        }
+    }
+
+    private var footerActions: some View {
+        HStack {
+            HStack(spacing: PMLayout.compactSpacing) {
+                Button(LanguageSettings.localizedString("settings_reset_defaults")) {
+                    showResetConfirm = true
+                }
+                .pmButton()
+                Button(LanguageSettings.localizedString("settings_delete_app")) {
+                    showDeleteConfirm = true
+                }
+                .pmButton(role: .destructive)
+            }
+            Spacer()
+            Button(LanguageSettings.localizedString("common_cancel")) {
+                cancelChanges()
+            }
+            .pmButton()
+            Button(LanguageSettings.localizedString("common_save")) {
+                saveChanges()
+            }
+            .keyboardShortcut(.defaultAction)
+            .disabled(!isDirty)
+            .pmButton(role: .primary)
+        }
+    }
+
+    private func settingsCard<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: PMLayout.sectionSpacing) {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(PMTheme.textPrimary)
+            content()
+        }
+        .pmContentCard()
+    }
+
+    private func settingsRow<Content: View>(
+        _ title: String,
+        @ViewBuilder trailing: () -> Content
+    ) -> some View {
+        HStack(alignment: .center, spacing: PMLayout.sectionSpacing) {
+            Text(title)
+                .foregroundColor(PMTheme.textPrimary)
+            Spacer()
+            trailing()
         }
     }
 

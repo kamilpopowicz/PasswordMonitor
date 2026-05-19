@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.8.2
+- Tightened theme guard coverage for UI literals:
+  - centralized zero spacing, zero spacer minimum length, visible/hidden opacity, and default window minimum-size tokens,
+  - aligned Settings, Logs, AI Requirements, and About on the shared fixed `660 x 620` window size,
+  - made the menu bar About label omit the ellipsis without changing the app menu About label.
+- Restored the app icon in the menu bar and About window through a shared icon provider.
+- Fixed menu bar navigation so Settings, Logs, and About open in front on the active screen instead of behind other windows.
+- Reworked Logs controls into a fixed-width, multi-row layout that fits the shared window size without clipping.
+- Added theme guard coverage for shared window content containers and footer hosts so card widths and copyright placement stay aligned across windows.
+- Refined the menu bar popover so it matches the app UI instead of default macOS button styling:
+  - removed the duplicate update check entry point from the menu bar,
+  - grouped password status, primary actions, settings/logs, and footer actions,
+  - moved About next to Quit in the footer.
+- Improved the About window:
+  - uses a fixed, non-resizable window size without unnecessary scroll content,
+  - uses the shared theme card system without the previous custom icon tile,
+  - activates the app properly when opened from an accessory/menu bar context.
+- Restored useful Logs diagnostics:
+  - the app no longer deletes the log file during normal termination,
+  - Logs reloads on open and keeps follow-latest behavior working with manual refresh.
+- Fixed the Swift 6 compatibility warning for `PMCustomBundle` by restating inherited `@unchecked Sendable` conformance.
+
 ## PasswordMonitor 1.8.1
 - Fixed the release pipeline after the first auto-update release attempt:
   - builds now compile on the current GitHub Actions Xcode image without requiring FoundationModels APIs that are unavailable there,

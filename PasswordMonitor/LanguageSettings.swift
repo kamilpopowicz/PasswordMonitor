@@ -447,7 +447,7 @@ struct LanguageOption: Identifiable, Hashable {
     var id: String { code }
 }
 
-private final class PMCustomBundle: Bundle {
+private final class PMCustomBundle: Bundle, @unchecked Sendable {
     override func localizedString(forKey key: String, value: String?, table tableName: String?) -> String {
         let languageCode = LanguageSettings.currentLanguageCode()
         let localized = super.localizedString(forKey: key, value: value, table: tableName)

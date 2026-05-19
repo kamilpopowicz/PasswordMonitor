@@ -121,7 +121,6 @@ final class LogStore: ObservableObject {
     }
 
     func setRefreshMode(_ mode: RefreshMode) {
-        guard refreshMode != mode else { return }
         refreshMode = mode
         applyRefreshMode()
         load()

@@ -19,162 +19,46 @@ struct LogsView: View {
     @State private var scrollToBottomToken = UUID()
     @State private var showSearchField = false
     @State private var searchFocusToken = UUID()
-    private let searchColumnWidth: CGFloat = 260
-    private let searchButtonSpacing: CGFloat = 6
-    private let levelsColumnWidth: CGFloat = 430
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 10) {
-                HStack(alignment: .center) {
-                    HStack(spacing: 8) {
-                        Button(LanguageSettings.localizedString("logs_now")) {
-                            isFollowingLatest = true
-                            scrollToBottomToken = UUID()
-                        }
-                        .pmButton(role: isFollowingLatest ? .primary : .secondary)
+        VStack(spacing: PMLayout.noSpacing) {
+            PMWindowContentContainer {
+                controlsCard
+                    .pmContentCard()
+            }
+            .padding(.top, PMLayout.contentPadding)
+            .padding(.bottom, PMLayout.sectionSpacing)
 
-                        Button(LanguageSettings.localizedString("logs_clear")) {
-                            logStore.clear()
-                        }
-                        .pmButton(role: .destructive)
-
-                        Button(LanguageSettings.localizedString("logs_reload")) {
-                            logStore.reload()
-                        }
-                        .pmButton()
-
-                        Button(LanguageSettings.localizedString("logs_reveal")) {
-                            logStore.revealInFinder()
-                        }
-                        .pmButton()
-
-                        Button(LanguageSettings.localizedString("logs_export")) {
-                            logStore.share()
-                        }
-                        .pmButton()
-                    }
-
-                    Spacer()
-
-                    HStack(spacing: searchButtonSpacing) {
-                        SearchField(
-                            text: $searchText,
-                            placeholder: LanguageSettings.localizedString("logs_search_placeholder"),
-                            isDark: themeManager.isDarkAppearance,
-                            isVisible: showSearchField,
-                            focusToken: $searchFocusToken
+            PMWindowContentContainer {
+                ZStack {
+                    if themeManager.isApplyingTheme {
+                        LogsThemePlaceholder()
+                    } else {
+                        LogTextView(
+                            attributedText: attributedContent(),
+                            isFollowingLatest: $isFollowingLatest,
+                            scrollToBottomToken: $scrollToBottomToken,
+                            isDark: themeManager.isDarkAppearance
                         )
-                        .frame(width: showSearchField ? (searchColumnWidth - 32 - searchButtonSpacing) : 0)
-                        .opacity(showSearchField ? 1 : 0)
-                        .clipped()
-                        .animation(.easeInOut(duration: 0.18), value: showSearchField)
-                        .allowsHitTesting(showSearchField)
-
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.18)) {
-                                showSearchField.toggle()
-                                if showSearchField {
-                                    searchFocusToken = UUID()
-                                } else {
-                                    searchText = ""
-                                }
-                            }
-                        } label: {
-                            Image(systemName: showSearchField ? "xmark" : "magnifyingglass")
-                        }
-                        .pmButton(role: .secondary, size: .compact)
-                        .help(showSearchField ? LanguageSettings.localizedString("logs_search_close") : LanguageSettings.localizedString("logs_search"))
+                        .pmFieldPanel(strokeOpacity: PMTheme.fieldSoftStrokeOpacity)
                     }
-                    .frame(width: searchColumnWidth, alignment: .trailing)
-                }
 
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            (Text(LanguageSettings.localizedString("logs_level_filter")) + Text(":"))
-                                .font(.caption)
-                                .foregroundColor(PMTheme.textSecondary)
-                            Picker("", selection: $selectedLevel) {
-                                Text(LanguageSettings.localizedString("logs_level_all")).tag(Logger.Level?.none)
-                                Text(LanguageSettings.localizedString("logs_level_info")).tag(Logger.Level?.some(.info))
-                                Text(LanguageSettings.localizedString("logs_level_warning")).tag(Logger.Level?.some(.warning))
-                                Text(LanguageSettings.localizedString("logs_level_error")).tag(Logger.Level?.some(.error))
-                                Text(LanguageSettings.localizedString("logs_level_debug")).tag(Logger.Level?.some(.debug))
-                            }
-                            .labelsHidden()
-                            .pickerStyle(.segmented)
-                            .frame(width: levelsColumnWidth - 80, alignment: .leading)
-                        }
-
-                    }
-                    .frame(width: levelsColumnWidth, alignment: .leading)
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 6) {
-                        HStack(spacing: 8) {
-                            (Text(LanguageSettings.localizedString("logs_refresh_label")) + Text(":"))
-                                .font(.caption)
-                                .foregroundColor(PMTheme.textSecondary)
-                                .padding(.trailing, 10)
-                            Picker("", selection: $logStore.refreshMode) {
-                                Text(LanguageSettings.localizedString("logs_refresh_immediate")).tag(LogStore.RefreshMode.immediate)
-                                Text(LanguageSettings.localizedString("logs_refresh_1m")).tag(LogStore.RefreshMode.oneMinute)
-                                Text(LanguageSettings.localizedString("logs_refresh_5m")).tag(LogStore.RefreshMode.fiveMinutes)
-                            }
-                            .labelsHidden()
-                            .pickerStyle(.segmented)
-                            .frame(width: 220, alignment: .trailing)
-                        }
-
-                        Text(LanguageSettings.localizedString("logs_privacy_notice"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.textSecondary)
-                            .italic()
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: searchColumnWidth, alignment: .trailing)
+                    if logStore.isLoading {
+                        LoadingOverlay()
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .pmContentCard(padding: PMLayout.contentCardCompactPadding)
             }
-            .padding()
-
-            Divider()
-
-            ZStack {
-                if themeManager.isApplyingTheme {
-                    LogsThemePlaceholder()
-                } else {
-                    LogTextView(
-                        attributedText: attributedContent(),
-                        isFollowingLatest: $isFollowingLatest,
-                        scrollToBottomToken: $scrollToBottomToken,
-                        isDark: themeManager.isDarkAppearance
-                    )
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(PMTheme.fieldBackground)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(PMTheme.fieldStroke, lineWidth: 1)
-                            )
-                    )
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-                }
-
-                if logStore.isLoading {
-                    LoadingOverlay()
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.bottom, PMLayout.sectionSpacing)
             .layoutPriority(1)
 
-            PMWindowFooter()
+            PMWindowFooterHost()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             logStore.start()
+            logStore.reload()
             appState.windowOpened()
             isFollowingLatest = true
             scrollToBottomToken = UUID()
@@ -198,6 +82,121 @@ struct LogsView: View {
         .onChange(of: logStore.refreshMode) { _, newValue in
             logStore.setRefreshMode(newValue)
         }
+    }
+
+    private var controlsCard: some View {
+        VStack(alignment: .leading, spacing: PMLayout.controlSpacing) {
+            HStack(spacing: PMLayout.compactSpacing) {
+                logActionButton(LanguageSettings.localizedString("logs_now"), role: isFollowingLatest ? .primary : .secondary) {
+                    isFollowingLatest = true
+                    logStore.reload()
+                    scrollToBottomToken = UUID()
+                }
+
+                logActionButton(LanguageSettings.localizedString("logs_clear"), role: .destructive) {
+                    logStore.clear()
+                }
+
+                logActionButton(LanguageSettings.localizedString("logs_reload")) {
+                    logStore.reload()
+                }
+
+                logActionButton(LanguageSettings.localizedString("logs_reveal")) {
+                    logStore.revealInFinder()
+                }
+
+                logActionButton(LanguageSettings.localizedString("logs_export")) {
+                    logStore.share()
+                }
+            }
+
+            HStack(spacing: PMLayout.compactSpacing) {
+                (Text(LanguageSettings.localizedString("logs_level_filter")) + Text(":"))
+                    .font(.caption)
+                    .foregroundColor(PMTheme.textSecondary)
+                    .frame(width: PMLayout.logsFilterLabelWidth, alignment: .leading)
+                Picker("", selection: $selectedLevel) {
+                    Text(LanguageSettings.localizedString("logs_level_all")).tag(Logger.Level?.none)
+                    Text(LanguageSettings.localizedString("logs_level_info")).tag(Logger.Level?.some(.info))
+                    Text(LanguageSettings.localizedString("logs_level_warning")).tag(Logger.Level?.some(.warning))
+                    Text(LanguageSettings.localizedString("logs_level_error")).tag(Logger.Level?.some(.error))
+                    Text(LanguageSettings.localizedString("logs_level_debug")).tag(Logger.Level?.some(.debug))
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            HStack(spacing: PMLayout.compactSpacing) {
+                (Text(LanguageSettings.localizedString("logs_refresh_label")) + Text(":"))
+                    .font(.caption)
+                    .foregroundColor(PMTheme.textSecondary)
+                    .frame(width: PMLayout.logsFilterLabelWidth, alignment: .leading)
+                Picker("", selection: $logStore.refreshMode) {
+                    Text(LanguageSettings.localizedString("logs_refresh_immediate")).tag(LogStore.RefreshMode.immediate)
+                    Text(LanguageSettings.localizedString("logs_refresh_1m")).tag(LogStore.RefreshMode.oneMinute)
+                    Text(LanguageSettings.localizedString("logs_refresh_5m")).tag(LogStore.RefreshMode.fiveMinutes)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: PMLayout.logsRefreshPickerWidth, alignment: .leading)
+
+                Spacer(minLength: PMLayout.zeroMinLength)
+
+                HStack(spacing: PMLayout.logsSearchButtonSpacing) {
+                    SearchField(
+                        text: $searchText,
+                        placeholder: LanguageSettings.localizedString("logs_search_placeholder"),
+                        isDark: themeManager.isDarkAppearance,
+                        isVisible: showSearchField,
+                        focusToken: $searchFocusToken
+                    )
+                    .frame(width: showSearchField ? PMLayout.logsCompactSearchFieldWidth : PMLayout.noSpacing)
+                    .opacity(showSearchField ? PMControlMetrics.visibleOpacity : PMControlMetrics.hiddenOpacity)
+                    .clipped()
+                    .animation(.easeInOut(duration: PMMotion.quickAnimationDuration), value: showSearchField)
+                    .allowsHitTesting(showSearchField)
+
+                    Button {
+                        withAnimation(.easeInOut(duration: PMMotion.quickAnimationDuration)) {
+                            showSearchField.toggle()
+                            if showSearchField {
+                                searchFocusToken = UUID()
+                            } else {
+                                searchText = ""
+                            }
+                        }
+                    } label: {
+                        Image(systemName: showSearchField ? "xmark" : "magnifyingglass")
+                    }
+                    .pmButton(role: .secondary, size: .compact)
+                    .help(showSearchField ? LanguageSettings.localizedString("logs_search_close") : LanguageSettings.localizedString("logs_search"))
+                }
+                .frame(width: showSearchField ? PMLayout.logsCompactSearchColumnWidth : PMLayout.logsSearchButtonWidth, alignment: .trailing)
+            }
+
+            Text(LanguageSettings.localizedString("logs_privacy_notice"))
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
+                .italic()
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func logActionButton(
+        _ title: String,
+        role: PMButtonRole = .secondary,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(PMLayout.menuButtonMinimumScale)
+                .frame(maxWidth: .infinity)
+        }
+        .pmButton(role: role, size: .compact)
+        .frame(maxWidth: .infinity)
     }
 
     private var filteredContent: String {
@@ -340,7 +339,7 @@ private struct LogTextView: NSViewRepresentable {
         textView.isEditable = false
         textView.isSelectable = true
         textView.drawsBackground = false
-        textView.textContainerInset = NSSize(width: 12, height: 10)
+        textView.textContainerInset = NSSize(width: PMLayout.logTextInsetWidth, height: PMLayout.logTextInsetHeight)
         textView.font = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
         textView.textColor = isDark ? NSColor(PMTheme.textPrimary) : NSColor(PMTheme.textPrimary)
 
@@ -403,7 +402,7 @@ private struct LogTextView: NSViewRepresentable {
             let visible = scrollView.contentView.documentVisibleRect
             let maxY = textView.bounds.maxY
             let distance = maxY - visible.maxY
-            let nearBottom = distance < 40
+            let nearBottom = distance < PMLayout.logFollowThreshold
             if isFollowingLatest != nearBottom {
                 isFollowingLatest = nearBottom
             }
@@ -413,28 +412,20 @@ private struct LogTextView: NSViewRepresentable {
 
 private struct LoadingOverlay: View {
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: PMLayout.compactSpacing) {
             ProgressView()
                 .controlSize(.large)
             Text(LanguageSettings.localizedString("logs_loading"))
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(PMTheme.fieldBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(PMTheme.fieldStroke, lineWidth: 1)
-                )
-        )
+        .pmFieldPanel(padding: PMLayout.contentCardPadding)
     }
 }
 
 private struct LogsThemePlaceholder: View {
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: PMLayout.compactSpacing) {
             ProgressView()
                 .controlSize(.large)
             Text(LanguageSettings.localizedString("common_loading"))
@@ -442,6 +433,6 @@ private struct LogsThemePlaceholder: View {
                 .foregroundColor(PMTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(PMTheme.fieldBackground.opacity(0.6))
+        .background(PMTheme.fieldBackground.opacity(PMTheme.fieldPlaceholderFillOpacity))
     }
 }

@@ -11,28 +11,26 @@ import ServiceManagement
 import PasswordMonitorCore
 import Combine
 
-@main
-struct PasswordMonitorApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var appState = AppState()
-    @StateObject private var languageSettings = LanguageSettings()
-    @StateObject private var themeManager = ThemeManager()
-    @StateObject private var updateRequestCenter = UpdateRequestCenter()
+enum AppIconImageProvider {
+    static func image(size: CGFloat) -> NSImage {
+        let candidates = [
+            NSImage(named: NSImage.Name("AppIcon")),
+            NSImage(named: NSImage.applicationIconName),
+            NSApp.applicationIconImage
+        ]
 
-    private var menuBarIconImage: NSImage {
-        let targetSize = NSSize(width: 18, height: 18)
-        guard let source = NSApp.applicationIconImage else {
-            return NSImage(size: targetSize)
+        guard let source = candidates.compactMap({ $0 }).first(where: { $0.isValid }) else {
+            return NSImage(size: NSSize(width: size, height: size))
         }
 
-        let image = NSImage(size: targetSize)
+        let image = NSImage(size: NSSize(width: size, height: size))
         image.lockFocus()
         let sourceSize = source.size
-        let aspect = min(targetSize.width / sourceSize.width, targetSize.height / sourceSize.height)
+        let aspect = min(size / sourceSize.width, size / sourceSize.height)
         let drawSize = NSSize(width: sourceSize.width * aspect, height: sourceSize.height * aspect)
         let drawRect = NSRect(
-            x: (targetSize.width - drawSize.width) * 0.5,
-            y: (targetSize.height - drawSize.height) * 0.5,
+            x: (size - drawSize.width) * PMLayout.centeringMultiplier,
+            y: (size - drawSize.height) * PMLayout.centeringMultiplier,
             width: drawSize.width,
             height: drawSize.height
         )
@@ -40,11 +38,20 @@ struct PasswordMonitorApp: App {
             in: drawRect,
             from: .zero,
             operation: .sourceOver,
-            fraction: 1.0
+            fraction: PMControlMetrics.visibleOpacity
         )
         image.unlockFocus()
         return image
     }
+}
+
+@main
+struct PasswordMonitorApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var appState = AppState()
+    @StateObject private var languageSettings = LanguageSettings()
+    @StateObject private var themeManager = ThemeManager()
+    @StateObject private var updateRequestCenter = UpdateRequestCenter()
 
     var body: some Scene {
         // Menu bar extra (macOS 13+)
@@ -59,7 +66,8 @@ struct PasswordMonitorApp: App {
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         } label: {
-            Image(nsImage: menuBarIconImage)
+            Image(nsImage: AppIconImageProvider.image(size: PMLayout.menuBarIconSize))
+                .renderingMode(.original)
         }
         .menuBarExtraStyle(.window)
 
@@ -70,12 +78,12 @@ struct PasswordMonitorApp: App {
                 .environmentObject(languageSettings)
                 .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
-                .pmWindowMinSize()
+                .pmWindowFixedSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
-        .windowResizability(.contentMinSize)
+        .windowResizability(.contentSize)
 
         Window(LanguageSettings.localizedString("about_window_title", languageCode: languageSettings.selectedLanguageCode), id: "about-window") {
             AboutView()
@@ -84,7 +92,7 @@ struct PasswordMonitorApp: App {
                 .environmentObject(languageSettings)
                 .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
-                .pmWindowMinSize()
+                .pmWindowFixedSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
@@ -97,24 +105,24 @@ struct PasswordMonitorApp: App {
                 .environmentObject(themeManager)
                 .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
-                .pmWindowMinSize()
+                .pmWindowFixedSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
-        .windowResizability(.contentMinSize)
+        .windowResizability(.contentSize)
 
         Window(LanguageSettings.localizedString("ai_requirements_window_title", languageCode: languageSettings.selectedLanguageCode), id: "ai-check-window") {
             AIRequirementsView()
                 .environmentObject(themeManager)
                 .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
-                .pmWindowMinSize()
+                .pmWindowFixedSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
-        .windowResizability(.contentMinSize)
+        .windowResizability(.contentSize)
         
         // Skróty i menu
         .commands {
@@ -164,23 +172,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Rejestracja helpera
         registerHelperService()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-
-    func applicationWillTerminate(_ notification: Notification) {
-        // Usunięcie pliku logu przy zamykaniu
-
-    func applicationWillTerminate(_ notification: Notification) {
-        // Usunięcie pliku logu przy zamykaniu
-        let logFileURL = Logger.shared.fileURL
-        Logger.shared.log("Cleaning up log file: $(logFileURL.path)")
-        try? FileManager.default.removeItem(at: logFileURL)
-    }
-
-        let logFileURL = Logger.shared.fileURL
-        Logger.shared.log("Cleaning up log file: $(logFileURL.path)")
-        try? FileManager.default.removeItem(at: logFileURL)
-    }
-
+        DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.languagePromptDelay) {
             self.promptForSystemLanguageIfNeeded()
         }
         

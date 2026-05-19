@@ -19,7 +19,7 @@ This project is open source under the MIT License. You can use, modify, and redi
 
 Author: Kamil Popowicz
 
-Current version: **1.8.1**
+Current version: **1.8.2**
 
 ---
 
@@ -82,7 +82,7 @@ See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
   - falls back to English when needed,
   - retries problematic keys (immediate multi-attempt + deferred self-heal retries)
 - Language Assist includes a manual **Retry problematic** action for failed keys
-- Manual Light/Dark/Auto theme switching
+- Manual Light/Dark/Auto theme switching with guarded shared UI tokens for spacing, opacity, and default window sizing
 - Safe custom updater architecture; see [SECURITY.md](SECURITY.md) for the updater threat model and hardening details.
 - Settings → Delete app unregisters the helper, unloads legacy LaunchAgents, terminates running helper processes, and removes app/helper preferences plus local app data
 
