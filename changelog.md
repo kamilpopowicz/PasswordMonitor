@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.8.7
+- Fixed relaunch after in-app updates by opening the replaced app bundle from a detached relaunch process.
+- Updated the install script to register and open the installed app automatically after copying it to `/Applications`.
+
 ## PasswordMonitor 1.8.6
 - Version-only release for verifying the fixed framework-symlink updater install flow.
 

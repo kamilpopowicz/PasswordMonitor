@@ -39,3 +39,14 @@ else
 fi
 
 echo "Installed ${target_path}"
+
+lsregister_path="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
+if [[ -x "${lsregister_path}" ]]; then
+  "${lsregister_path}" -f -R -trusted "${target_path}" >/dev/null 2>&1 || true
+fi
+
+echo "Opening ${APP_NAME}..."
+if ! /usr/bin/open "${target_path}"; then
+  echo "Installed, but macOS did not open ${APP_NAME} automatically." >&2
+  echo "Open it manually with right-click → Open if Gatekeeper asks for confirmation." >&2
+fi

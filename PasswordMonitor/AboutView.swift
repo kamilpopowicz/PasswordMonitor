@@ -307,6 +307,7 @@ struct AboutView: View {
     @MainActor
     private func installPendingUpdate() async {
         guard let candidate = pendingUpdateCandidate else { return }
+        let currentAppURL = Bundle.main.bundleURL
         updateCheckInProgress = true
         defer { updateCheckInProgress = false }
         updateStatusKind = .info
@@ -318,10 +319,10 @@ struct AboutView: View {
         do {
             try await updater.installUpdate(
                 candidate: candidate,
-                currentAppURL: Bundle.main.bundleURL,
+                currentAppURL: currentAppURL,
                 restartHandler: {
                     Task { @MainActor in
-                        Self.relaunchMainApp()
+                        Self.scheduleRelaunchMainApp(at: currentAppURL)
                     }
                 }
             )
@@ -337,12 +338,28 @@ struct AboutView: View {
         }
     }
 
-    private static func relaunchMainApp() {
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = true
-        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
+    private static func scheduleRelaunchMainApp(at appURL: URL) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = [
+            "-c",
+            "sleep 0.8; /usr/bin/open \"$1\"",
+            "passwordmonitor-relaunch",
+            appURL.path
+        ]
+
+        do {
+            try process.run()
             DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.relaunchDelay) {
                 NSApp.terminate(nil)
+            }
+        } catch {
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+            NSWorkspace.shared.openApplication(at: appURL, configuration: configuration) { _, _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.relaunchDelay) {
+                    NSApp.terminate(nil)
+                }
             }
         }
     }
