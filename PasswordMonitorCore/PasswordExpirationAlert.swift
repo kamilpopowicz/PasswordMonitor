@@ -91,7 +91,12 @@ final class PasswordExpirationAlert {
         let contentSize = hostingView.fittingSize
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: max(420, contentSize.width), height: max(240, contentSize.height)),
+            contentRect: NSRect(
+                x: 0,
+                y: 0,
+                width: max(PMLayout.alertWindowMinWidth, contentSize.width),
+                height: max(PMLayout.alertWindowMinHeight, contentSize.height)
+            ),
             styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -171,9 +176,9 @@ private struct AlertContentView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: PMLayout.cardSpacing) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
+                .font(.system(size: PMLayout.alertIconSize))
                 .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.warning)
 
             Text(localizedOrFallback("alert_title_expiring", fallback: "Your password is expiring soon!"))
@@ -185,51 +190,51 @@ private struct AlertContentView: View {
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(PMTheme.textSecondary)
-                .frame(maxWidth: 320)
+                .frame(maxWidth: PMLayout.alertAdviceMaxWidth)
                 .fixedSize(horizontal: false, vertical: true)
 
             // Live timer – zawsze pokazuje rzeczywisty czas do wygaśnięcia
-            VStack(spacing: 8) {
+            VStack(spacing: PMLayout.compactSpacing) {
                 Text(remainingTitleText)
                     .font(.caption)
                     .foregroundColor(PMTheme.textSecondary)
 
                 let lines = formattedTimeRemainingLines()
-                VStack(spacing: 2) {
+                VStack(spacing: PMLayout.microSpacing) {
                     Text(lines.line1)
-                        .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
+                        .font(.system(size: isUrgent ? PMLayout.alertTimerUrgentFontSize : PMLayout.alertTimerFontSize, weight: .bold, design: .monospaced))
                         .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.textPrimary)
                     Text(lines.line2)
-                        .font(.system(size: isUrgent ? 32 : 26, weight: .bold, design: .monospaced))
+                        .font(.system(size: isUrgent ? PMLayout.alertTimerUrgentFontSize : PMLayout.alertTimerFontSize, weight: .bold, design: .monospaced))
                         .foregroundColor(isUrgent ? PMTheme.danger : PMTheme.textPrimary)
                 }
                 .onAppear { startTimer() }
                 .onDisappear { stopTimer() }
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 20)
+            .padding(.vertical, PMLayout.alertTimerVerticalPadding)
+            .padding(.horizontal, PMLayout.alertTimerHorizontalPadding)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: PMLayout.alertTimerCornerRadius, style: .continuous)
                     .fill(PMTheme.fieldBackground)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(isUrgent ? PMTheme.danger.opacity(0.6) : PMTheme.fieldStroke, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: PMLayout.alertTimerCornerRadius, style: .continuous)
+                            .stroke(isUrgent ? PMTheme.danger.opacity(PMTheme.alertUrgentStrokeOpacity) : PMTheme.fieldStroke, lineWidth: PMLayout.hairlineWidth)
                     )
             )
 
             let snoozeDisabled = isUrgent && isDomainAvailable
             let changePasswordDisabled = !isDomainAvailable
 
-            HStack(spacing: 12) {
+            HStack(spacing: PMLayout.sectionSpacing) {
                 // "Odłóż" – niedostępny tylko gdy hasło wygasa za ≤ 24h
                 Button(action: onSnooze) {
                     Text(localizedOrFallback("alert_snooze", fallback: "Snooze"))
-                        .frame(minWidth: 100)
+                        .frame(minWidth: PMLayout.alertButtonMinWidth)
                 }
                 .buttonStyle(.bordered)
                 .tint(PMTheme.danger)
                 .disabled(snoozeDisabled)
-                .opacity(snoozeDisabled ? 0.5 : 1.0)
+                .opacity(snoozeDisabled ? PMControlMetrics.disabledOpacity : PMControlMetrics.enabledOpacity)
                 .help(snoozeDisabled
                       ? Text(localizedOrFallback("alert_snooze_help_disabled", fallback: "You can’t snooze when the password expires in less than 24 hours."))
                       : Text(localizedOrFallback("alert_snooze_help_enabled", fallback: "Remind me in 3 hours")))
@@ -237,15 +242,15 @@ private struct AlertContentView: View {
                 // "Zmień hasło" – na razie tylko log + zamknięcie okna
                 Button(action: onChangePassword) {
                     Text(localizedOrFallback("alert_change_password", fallback: "Change Password"))
-                        .frame(minWidth: 100)
+                        .frame(minWidth: PMLayout.alertButtonMinWidth)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(PMTheme.accent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(changePasswordDisabled)
-                .opacity(changePasswordDisabled ? 0.5 : 1.0)
+                .opacity(changePasswordDisabled ? PMControlMetrics.disabledOpacity : PMControlMetrics.enabledOpacity)
             }
-            .padding(.top, 10)
+            .padding(.top, PMLayout.alertTimerVerticalPadding)
 
             if !isDomainAvailable {
                 Text(localizedOrFallback("alert_domain_unavailable", fallback: "Connect to VPN and change your password."))
@@ -257,11 +262,11 @@ private struct AlertContentView: View {
 
             if mode == .test {
                 Divider()
-                    .padding(.top, 4)
+                    .padding(.top, PMLayout.microSpacing + PMLayout.microSpacing)
 
                 Button(action: onEndTest) {
                     Text(localizedOrFallback("alert_end_test", fallback: "End Test"))
-                        .frame(minWidth: 120)
+                        .frame(minWidth: PMLayout.alertEndTestButtonMinWidth)
                 }
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -269,12 +274,12 @@ private struct AlertContentView: View {
 
             PMWindowFooter()
         }
-        .padding(24)
+        .padding(PMLayout.alertContentPadding)
         .pmPanel()
-        .padding()
+        .padding(PMLayout.alertOuterPadding)
         .id(themeToken)
         .pmWindowBackground()
-        .frame(width: 420)
+        .frame(width: PMLayout.alertWidth)
         .onReceive(NotificationCenter.default.publisher(for: .themeDidChange)) { _ in
             themeToken = UUID()
         }

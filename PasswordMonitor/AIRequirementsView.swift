@@ -17,96 +17,90 @@ import FoundationModels
 struct AIRequirementsView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = AIRequirementsModel()
-    private let contentWidth: CGFloat = 640
-    private let optionColumnWidth: CGFloat = 200
-    private let statusColumnWidth: CGFloat = 14
-    private let optionLeadingInset: CGFloat = 12
-    private let valueColumnWidth: CGFloat = 220
-    private let buttonColumnWidth: CGFloat = 200
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 12) {
-                RequirementRow(
-                    titleKey: "ai_requirements_system_language",
-                    value: model.systemLanguageDisplay,
-                    status: model.systemStatus,
-                    statusWidth: statusColumnWidth,
-                    optionWidth: optionColumnWidth,
-                    optionLeadingInset: optionLeadingInset,
-                    valueWidth: valueColumnWidth,
-                    buttonKey: "ai_requirements_open_language",
-                    buttonWidth: buttonColumnWidth,
-                    action: { model.openLanguageSettings() }
-                )
-                RequirementRow(
-                    titleKey: "ai_requirements_siri_language",
-                    value: model.siriLanguageDisplay,
-                    status: model.siriStatus,
-                    statusWidth: statusColumnWidth,
-                    optionWidth: optionColumnWidth,
-                    optionLeadingInset: optionLeadingInset,
-                    valueWidth: valueColumnWidth,
-                    buttonKey: "ai_requirements_open_siri",
-                    buttonWidth: buttonColumnWidth,
-                    action: { model.openSiriSettings() }
-                )
-                RequirementRow(
-                    titleKey: "ai_requirements_ai_enabled",
-                    value: model.aiAvailabilityDisplay,
-                    status: model.aiStatus,
-                    statusWidth: statusColumnWidth,
-                    optionWidth: optionColumnWidth,
-                    optionLeadingInset: optionLeadingInset,
-                    valueWidth: valueColumnWidth,
-                    buttonKey: "ai_requirements_open_ai",
-                    buttonWidth: buttonColumnWidth,
-                    action: { model.openAISettings() }
-                )
+        VStack(spacing: PMLayout.noSpacing) {
+            PMWindowContentContainer {
+                VStack(alignment: .leading, spacing: PMLayout.sectionSpacing) {
+                    RequirementRow(
+                        titleKey: "ai_requirements_system_language",
+                        value: model.systemLanguageDisplay,
+                        status: model.systemStatus,
+                        statusWidth: PMLayout.aiRequirementsStatusColumnWidth,
+                        optionWidth: PMLayout.aiRequirementsOptionColumnWidth,
+                        optionLeadingInset: PMLayout.aiRequirementsOptionLeadingInset,
+                        valueWidth: PMLayout.aiRequirementsValueColumnWidth,
+                        buttonKey: "ai_requirements_open_language",
+                        buttonWidth: PMLayout.aiRequirementsButtonColumnWidth,
+                        action: { model.openLanguageSettings() }
+                    )
+                    RequirementRow(
+                        titleKey: "ai_requirements_siri_language",
+                        value: model.siriLanguageDisplay,
+                        status: model.siriStatus,
+                        statusWidth: PMLayout.aiRequirementsStatusColumnWidth,
+                        optionWidth: PMLayout.aiRequirementsOptionColumnWidth,
+                        optionLeadingInset: PMLayout.aiRequirementsOptionLeadingInset,
+                        valueWidth: PMLayout.aiRequirementsValueColumnWidth,
+                        buttonKey: "ai_requirements_open_siri",
+                        buttonWidth: PMLayout.aiRequirementsButtonColumnWidth,
+                        action: { model.openSiriSettings() }
+                    )
+                    RequirementRow(
+                        titleKey: "ai_requirements_ai_enabled",
+                        value: model.aiAvailabilityDisplay,
+                        status: model.aiStatus,
+                        statusWidth: PMLayout.aiRequirementsStatusColumnWidth,
+                        optionWidth: PMLayout.aiRequirementsOptionColumnWidth,
+                        optionLeadingInset: PMLayout.aiRequirementsOptionLeadingInset,
+                        valueWidth: PMLayout.aiRequirementsValueColumnWidth,
+                        buttonKey: "ai_requirements_open_ai",
+                        buttonWidth: PMLayout.aiRequirementsButtonColumnWidth,
+                        action: { model.openAISettings() }
+                    )
 
-                Text(LanguageSettings.localizedString("ai_requirements_notice"))
-                    .font(.caption)
-                    .foregroundColor(PMTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(LanguageSettings.localizedString("ai_requirements_notice"))
+                        .font(.caption)
+                        .foregroundColor(PMTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(PMLayout.aiRequirementsContentPadding)
             }
-            .padding()
-            .frame(maxWidth: contentWidth, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .center)
 
             Divider()
 
-            HStack(spacing: 8) {
-                Color.clear
-                    .frame(width: statusColumnWidth)
+            PMWindowContentContainer {
+                HStack(spacing: PMLayout.compactSpacing) {
+                    Color.clear
+                        .frame(width: PMLayout.aiRequirementsStatusColumnWidth)
 
-                Color.clear
-                    .frame(width: optionLeadingInset + optionColumnWidth)
+                    Color.clear
+                        .frame(width: PMLayout.aiRequirementsOptionLeadingInset + PMLayout.aiRequirementsOptionColumnWidth)
 
-                Color.clear
-                    .frame(width: valueColumnWidth)
+                    Color.clear
+                        .frame(width: PMLayout.aiRequirementsValueColumnWidth)
 
-                HStack(spacing: 8) {
-                    Button(LanguageSettings.localizedString("ai_requirements_refresh")) {
-                        Task { await model.refresh() }
+                    HStack(spacing: PMLayout.compactSpacing) {
+                        Button(LanguageSettings.localizedString("ai_requirements_refresh")) {
+                            Task { await model.refresh() }
+                        }
+                        .pmButton(role: .primary)
+
+                        Button(LanguageSettings.localizedString("common_close")) {
+                            dismiss()
+                        }
+                        .pmButton()
                     }
-                    .pmButton(role: .primary)
-
-                    Button(LanguageSettings.localizedString("common_close")) {
-                        dismiss()
-                    }
-                    .pmButton()
+                    .frame(width: PMLayout.aiRequirementsButtonColumnWidth, alignment: .leading)
                 }
-                .frame(width: buttonColumnWidth, alignment: .leading)
+                .padding(.horizontal, PMLayout.aiRequirementsFooterHorizontalPadding)
+                .padding(.top, PMLayout.microSpacing)
+                .frame(height: PMLayout.aiRequirementsFooterHeight)
             }
-            .padding(.horizontal)
-            .padding(.top, 2)
-            .frame(height: 46)
-            .frame(maxWidth: contentWidth, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .center)
 
-            Spacer(minLength: 0)
+            Spacer(minLength: PMLayout.zeroMinLength)
 
-            PMWindowFooter()
+            PMWindowFooterHost()
         }
         .onAppear {
             Task { await model.refresh() }
@@ -145,8 +139,8 @@ private struct RequirementRow: View {
         HStack {
             Circle()
                 .fill(status.color)
-                .frame(width: 8, height: 8)
-                .padding(.trailing, 6)
+                .frame(width: PMLayout.requirementStatusDotSize, height: PMLayout.requirementStatusDotSize)
+                .padding(.trailing, PMLayout.requirementStatusTrailingPadding)
                 .frame(width: statusWidth, alignment: .leading)
             Text(LanguageSettings.localizedString(titleKey))
                 .foregroundColor(PMTheme.textSecondary)
@@ -169,7 +163,7 @@ private struct RequirementRow: View {
             }
             .pmButton()
             .frame(width: buttonWidth, alignment: .leading)
-            Spacer(minLength: 0)
+            Spacer(minLength: PMLayout.zeroMinLength)
         }
     }
 }

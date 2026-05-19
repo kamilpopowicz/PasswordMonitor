@@ -14,7 +14,6 @@ import Combine
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var themeManager: ThemeManager
-    @EnvironmentObject var updateRequestCenter: UpdateRequestCenter
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismiss) private var dismiss
 
@@ -24,30 +23,81 @@ struct MenuBarView: View {
     @State private var lastMenuRefreshAt: Date = .distantPast
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Status
+        VStack(alignment: .leading, spacing: PMLayout.sectionSpacing) {
+            statusBlock
+
+            VStack(spacing: PMLayout.compactSpacing) {
+                menuButton(LanguageSettings.localizedString("menu_check_now"), role: .primary) {
+                    checkPasswordNow()
+                }
+                .disabled(isChecking)
+
+                menuButton(LanguageSettings.localizedString("menu_change_password")) {
+                    Logger.shared.logLocalized("log_menu_change_password_selected")
+                    PasswordChangeHelper.openSystemPasswordSettings()
+                }
+                .disabled(!canChangePasswordNow)
+            }
+
+            VStack(spacing: PMLayout.compactSpacing) {
+                helperStatusRow
+
+                HStack(spacing: PMLayout.compactSpacing) {
+                    menuButton(LanguageSettings.localizedString("menu_settings")) {
+                        presentWindow(id: "settings-window")
+                    }
+
+                    menuButton(LanguageSettings.localizedString("menu_logs")) {
+                        presentWindow(id: "logs-window")
+                    }
+                }
+            }
+
+            Divider()
+
+            VStack(spacing: PMLayout.compactSpacing) {
+                menuButton(LanguageSettings.localizedString("menu_about_menubar"), role: .ghost) {
+                    presentWindow(id: "about-window")
+                }
+
+                menuButton(LanguageSettings.localizedString("menu_quit"), role: .destructive) {
+                    NSApplication.shared.terminate(nil)
+                }
+            }
+
+            copyrightText
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .pmPanel()
+        .frame(width: PMLayout.menuBarWidth, alignment: .leading)
+        .onAppear {
+            refreshPasswordStatus(reason: .menuOpen, shouldCheckNotification: true)
+        }
+    }
+
+    private var statusBlock: some View {
+        VStack(alignment: .leading, spacing: PMLayout.compactSpacing) {
             if let info = notificationManager.latestPasswordInfo {
                 let daysRemaining = info.currentDaysUntilExpiration
 
                 Text(LanguageSettings.localizedString("menu_password_expires_title"))
-                    .font(.headline)
+                    .font(.caption.weight(.semibold))
                     .foregroundColor(PMTheme.textSecondary)
 
                 Text(LanguageSettings.localizedString("days_remaining %lld", daysRemaining))
-                    .font(.title2)
+                    .font(.system(size: PMLayout.menuStatusNumberSize, weight: .semibold, design: .rounded))
                     .foregroundColor(daysRemaining <= 7 ? PMTheme.danger : PMTheme.success)
 
                 Divider()
 
-                Text(LanguageSettings.localizedString("menu_last_change_title"))
-                    .font(.caption)
-                    .foregroundColor(PMTheme.textSecondary)
+                HStack {
+                    Text(LanguageSettings.localizedString("menu_last_change_title"))
+                    Spacer()
+                    Text(info.lastSetDate, style: .date)
+                }
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
 
-                Text(info.lastSetDate, style: .date)
-                    .font(.caption)
-                    .foregroundColor(PMTheme.textSecondary)
-                
-                // ostrzeżenie, jeśli dane są z cache (domena niedostępna)
                 if notificationManager.hasPerformedRefresh && !notificationManager.isDomainAvailable {
                     Text(LanguageSettings.localizedString("menu_domain_warning"))
                         .font(.caption)
@@ -58,10 +108,11 @@ struct MenuBarView: View {
                 Text(LanguageSettings.localizedString("menu_check_status"))
                     .font(.headline)
                     .foregroundColor(PMTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             if isChecking {
-                HStack(spacing: 8) {
+                HStack(spacing: PMLayout.compactSpacing) {
                     ProgressView()
                         .controlSize(.small)
                     Text(LanguageSettings.localizedString("menu_checking_now"))
@@ -69,92 +120,60 @@ struct MenuBarView: View {
                         .foregroundColor(PMTheme.textSecondary)
                 }
             }
-
-            Divider()
-
-            // Akcje
-            Button(LanguageSettings.localizedString("menu_check_now")) {
-                checkPasswordNow()
-            }
-            .disabled(isChecking)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button(LanguageSettings.localizedString("menu_change_password")) {
-                Logger.shared.logLocalized("log_menu_change_password_selected")
-                PasswordChangeHelper.openSystemPasswordSettings()
-            }
-            .disabled(!canChangePasswordNow)
-            .opacity(canChangePasswordNow ? 1.0 : 0.5)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Divider()
-
-            // Helper service status
-            HStack {
-                Circle()
-                    .fill(helperServiceColor)
-                    .frame(width: 8, height: 8)
-
-                Text(LanguageSettings.localizedString("menu_background_service"))
-                    .font(.caption)
-                    .foregroundColor(PMTheme.textSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button(LanguageSettings.localizedString("menu_settings")) {
-                openWindow(id: "settings-window")
-                dismiss()
-            }
-            .controlSize(.regular)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button(LanguageSettings.localizedString("menu_logs")) {
-                openWindow(id: "logs-window")
-                dismiss()
-            }
-            .controlSize(.regular)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button(LanguageSettings.localizedString("menu_about")) {
-                openWindow(id: "about-window")
-                dismiss()
-            }
-            .controlSize(.regular)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button(LanguageSettings.localizedString("settings_check_for_updates")) {
-                updateRequestCenter.requestCheck()
-                openWindow(id: "about-window")
-                dismiss()
-            }
-            .controlSize(.regular)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Divider()
-
-            Button(LanguageSettings.localizedString("menu_quit")) {
-                NSApplication.shared.terminate(nil)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Divider()
-
-            VStack(spacing: 2) {
-                Text("Copyright (c) 2026 Kamil Popowicz.")
-                Text("All rights reserved.")
-            }
-            .font(.caption2)
-            .foregroundColor(PMTheme.textSecondary)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .multilineTextAlignment(.center)
-            .padding(.vertical, 12)
         }
+        .padding(PMLayout.menuStatusPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .pmPanel()
-        .frame(width: 260, alignment: .leading)
-        .onAppear {
-            refreshPasswordStatus(reason: .menuOpen, shouldCheckNotification: true)
+        .pmFieldPanel(
+            cornerRadius: PMLayout.fieldCornerRadius,
+            fillOpacity: PMTheme.fieldStatusFillOpacity
+        )
+    }
+
+    private func presentWindow(id: String) {
+        openWindow(id: id)
+        dismiss()
+        appState.presentWindow(id: id)
+    }
+
+    private var helperStatusRow: some View {
+        HStack(spacing: PMLayout.compactSpacing) {
+            Circle()
+                .fill(helperServiceColor)
+                .frame(width: PMLayout.menuStatusIndicatorSize, height: PMLayout.menuStatusIndicatorSize)
+
+            Text(LanguageSettings.localizedString("menu_background_service"))
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
+
+            Spacer(minLength: PMLayout.zeroMinLength)
         }
+        .padding(.horizontal, PMLayout.microSpacing)
+    }
+
+    private var copyrightText: some View {
+        VStack(spacing: PMLayout.microSpacing) {
+            Text("Copyright (c) 2026 Kamil Popowicz.")
+            Text("All rights reserved.")
+        }
+        .font(.caption2)
+        .foregroundColor(PMTheme.textSecondary)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
+        .padding(.top, PMLayout.microSpacing)
+    }
+
+    private func menuButton(
+        _ title: String,
+        role: PMButtonRole = .secondary,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(PMLayout.menuButtonMinimumScale)
+                .frame(maxWidth: .infinity)
+        }
+        .pmButton(role: role, size: .compact)
     }
 
     private var helperServiceColor: Color {
@@ -237,6 +256,12 @@ class AppState: ObservableObject {
         }
     }
 
+    func presentWindow(id: String) {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        focusWindow(id: id, remainingAttempts: PMLayout.windowFocusRetryCount)
+    }
+
     func windowClosed() {
         windowCount = max(0, windowCount - 1)
         updateActivationPolicy()
@@ -245,5 +270,40 @@ class AppState: ObservableObject {
     private func updateActivationPolicy() {
         let shouldShowDock = (windowCount > 0) || alertVisible
         NSApp.setActivationPolicy(shouldShowDock ? .regular : .accessory)
+    }
+
+    private func focusWindow(id: String, remainingAttempts: Int) {
+        guard remainingAttempts > 0 else { return }
+
+        if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == id }) {
+            moveToActiveScreenIfNeeded(window)
+            if window.isMiniaturized {
+                window.deminiaturize(nil)
+            }
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.windowFocusRetryDelay) {
+            self.focusWindow(id: id, remainingAttempts: remainingAttempts - 1)
+        }
+    }
+
+    private func moveToActiveScreenIfNeeded(_ window: NSWindow) {
+        let mouseLocation = NSEvent.mouseLocation
+        guard let activeScreen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main else {
+            return
+        }
+        guard window.screen != activeScreen else { return }
+
+        let visibleFrame = activeScreen.visibleFrame
+        let frame = window.frame
+        let origin = NSPoint(
+            x: visibleFrame.midX - (frame.width * PMLayout.centeringMultiplier),
+            y: visibleFrame.midY - (frame.height * PMLayout.centeringMultiplier)
+        )
+        window.setFrameOrigin(origin)
     }
 }

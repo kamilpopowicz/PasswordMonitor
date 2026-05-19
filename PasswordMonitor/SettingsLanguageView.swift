@@ -16,7 +16,7 @@ struct SettingsLanguageView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: PMLayout.noSpacing) {
             Form {
                 Section {
                     Picker(selection: $languageSettings.selectedLanguageCode) {
@@ -37,11 +37,11 @@ struct SettingsLanguageView: View {
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .padding()
+            .padding(PMLayout.settingsLanguageFormPadding)
 
             Divider()
 
-            PMWindowFooter()
+            PMWindowFooterHost()
         }
         .navigationTitle(LanguageSettings.localizedString("language_settings_title"))
         // Window panel and min size are applied at the Window level.

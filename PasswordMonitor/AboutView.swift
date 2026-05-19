@@ -18,6 +18,7 @@ private enum AboutUpdateStatusKind {
 struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openWindow) private var openWindow
+    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var updateRequestCenter: UpdateRequestCenter
 
     @State private var updateStatusText: String?
@@ -41,29 +42,46 @@ struct AboutView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            heroCard
-            securityCard
-            updateCard
-            footerActions
+        VStack(spacing: PMLayout.noSpacing) {
+            PMWindowContentContainer {
+                VStack(alignment: .leading, spacing: PMLayout.cardSpacing) {
+                    heroCard
+                    securityCard
+                    updateCard
+                    PMWindowActionBar {
+                        footerActions
+                    }
+                }
+            }
+            .padding(.top, PMLayout.contentPadding)
+
+            Spacer(minLength: PMLayout.zeroMinLength)
+
+            PMWindowFooterHost()
         }
-        .padding(24)
-        .frame(width: 560)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear {
+            appState.windowOpened()
             handlePendingCheckRequestIfNeeded()
+            DispatchQueue.main.async {
+                appState.activateApp()
+            }
         }
         .onChange(of: updateRequestCenter.checkRequestID) { _, _ in
             handlePendingCheckRequestIfNeeded()
         }
+        .onDisappear {
+            appState.windowClosed()
+        }
     }
 
     private var heroCard: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: PMLayout.cardSpacing) {
             appIconTile
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: PMLayout.controlSpacing) {
                 Text(LanguageSettings.localizedString("about_title"))
-                    .font(.system(size: 31, weight: .semibold, design: .rounded))
+                    .font(.system(size: PMLayout.aboutHeroTitleSize, weight: .semibold, design: .rounded))
                     .foregroundColor(PMTheme.textPrimary)
 
                 Text(LanguageSettings.localizedString("about_subtitle"))
@@ -76,7 +94,7 @@ struct AboutView: View {
                     .foregroundColor(PMTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                HStack(spacing: 8) {
+                HStack(spacing: PMLayout.compactSpacing) {
                     Label {
                         Text(currentAppVersion)
                     } icon: {
@@ -85,9 +103,9 @@ struct AboutView: View {
                     .font(.caption)
                     .foregroundColor(PMTheme.textSecondary)
 
-                    Text("•")
-                        .foregroundColor(PMTheme.textMuted)
-                        .font(.caption)
+                    Circle()
+                        .fill(PMTheme.textMuted)
+                        .frame(width: PMLayout.metadataDotSize, height: PMLayout.metadataDotSize)
 
                     Text(LanguageSettings.localizedString("about_single_source"))
                         .font(.caption)
@@ -95,15 +113,14 @@ struct AboutView: View {
                 }
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: PMLayout.zeroMinLength)
         }
-        .padding(18)
-        .pmPanel()
+        .pmContentCard(padding: PMLayout.contentCardHeroPadding)
     }
 
     private var securityCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: PMLayout.controlSpacing) {
+            HStack(spacing: PMLayout.controlSpacing) {
                 Image(systemName: "checkmark.shield.fill")
                     .foregroundColor(PMTheme.success)
                 Text(LanguageSettings.localizedString("about_release_security"))
@@ -116,14 +133,13 @@ struct AboutView: View {
                 .foregroundColor(PMTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
-        .pmPanel()
+        .pmContentCard()
     }
 
     private var updateCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: PMLayout.sectionSpacing) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: PMLayout.microSpacing + PMLayout.microSpacing) {
                     Text(LanguageSettings.localizedString("about_updates_title"))
                         .font(.headline)
                         .foregroundColor(PMTheme.textPrimary)
@@ -142,17 +158,17 @@ struct AboutView: View {
             }
 
             if let updateStatusText {
-                HStack(alignment: .top, spacing: 8) {
+                HStack(alignment: .top, spacing: PMLayout.compactSpacing) {
                     Image(systemName: updateStatusIcon)
                         .foregroundColor(updateStatusColor)
                         .font(.caption.weight(.semibold))
-                        .padding(.top, 2)
+                        .padding(.top, PMLayout.microSpacing)
                     Text(updateStatusText)
                         .font(.callout)
                         .foregroundColor(updateStatusColor)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.top, 2)
+                .padding(.top, PMLayout.microSpacing)
             } else {
                 Text(LanguageSettings.localizedString("about_updates_idle"))
                     .font(.callout)
@@ -161,8 +177,8 @@ struct AboutView: View {
             }
 
             if let pendingUpdateCandidate {
-                HStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: PMLayout.controlSpacing) {
+                    VStack(alignment: .leading, spacing: PMLayout.microSpacing) {
                         Text(LanguageSettings.localizedString(
                             "settings_update_available %@",
                             pendingUpdateCandidate.version.description
@@ -185,25 +201,21 @@ struct AboutView: View {
                     .pmButton(role: .primary)
                     .disabled(updateCheckInProgress)
                 }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(PMTheme.fieldBackground.opacity(0.45))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(PMTheme.fieldStroke, lineWidth: 1)
-                        )
+                .pmFieldPanel(
+                    padding: PMLayout.sectionSpacing,
+                    cornerRadius: PMLayout.updateCandidateCornerRadius,
+                    fillOpacity: PMTheme.fieldSubtleFillOpacity
                 )
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: PMLayout.controlSpacing) {
                 Button {
                     handleCheckForUpdatesTap()
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: PMLayout.compactSpacing) {
                         if updateCheckInProgress {
                             ProgressView()
-                                .scaleEffect(0.8)
+                                .scaleEffect(PMLayout.inlineProgressScale)
                         }
                         Text(LanguageSettings.localizedString("settings_check_for_updates"))
                     }
@@ -222,8 +234,7 @@ struct AboutView: View {
                 Spacer()
             }
         }
-        .padding(16)
-        .pmPanel()
+        .pmContentCard()
     }
 
     private var footerActions: some View {
@@ -237,56 +248,14 @@ struct AboutView: View {
             }
             .pmButton()
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var appIconTile: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            PMTheme.accent.opacity(0.35),
-                            PMTheme.panelStroke.opacity(0.15)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(PMTheme.panelStroke, lineWidth: 1)
-                )
-
-            VStack(spacing: 8) {
-                Image(nsImage: NSApp.applicationIconImage ?? NSImage(size: NSSize(width: 72, height: 72)))
-                    .resizable()
-                    .scaledToFit()
-                    .padding(12)
-
-                Text(currentAppVersion)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(PMTheme.textSecondary)
-
-                HStack(spacing: 6) {
-                    Image(systemName: "person.fill")
-                        .font(.caption2.weight(.semibold))
-                    Text(LanguageSettings.localizedString("about_author"))
-                        .font(.caption2.weight(.medium))
-                }
-                .foregroundColor(PMTheme.textMuted)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(PMTheme.fieldBackground.opacity(0.75))
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(PMTheme.fieldStroke.opacity(0.8), lineWidth: 1)
-                        )
-                )
-            }
-        }
-        .frame(width: 118, height: 118)
+        Image(nsImage: AppIconImageProvider.image(size: PMLayout.aboutIconImageSize))
+            .resizable()
+            .scaledToFit()
+            .frame(width: PMLayout.aboutIconImageSize, height: PMLayout.aboutIconImageSize)
     }
 
     private func handleCheckForUpdatesTap() {
@@ -322,6 +291,9 @@ struct AboutView: View {
                     "settings_update_available %@",
                     candidate.version.description
                 )
+            @unknown default:
+                updateStatusKind = .error
+                updateStatusText = LanguageSettings.localizedString("settings_update_error %@", "Unknown update result")
             }
         } catch {
             updateStatusKind = .error
@@ -347,7 +319,11 @@ struct AboutView: View {
             try await updater.installUpdate(
                 candidate: candidate,
                 currentAppURL: Bundle.main.bundleURL,
-                restartHandler: relaunchMainApp
+                restartHandler: {
+                    Task { @MainActor in
+                        Self.relaunchMainApp()
+                    }
+                }
             )
             updateStatusKind = .success
             updateStatusText = LanguageSettings.localizedString("settings_update_installed_restart")
@@ -361,11 +337,11 @@ struct AboutView: View {
         }
     }
 
-    private func relaunchMainApp() {
+    private static func relaunchMainApp() {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
         NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.relaunchDelay) {
                 NSApp.terminate(nil)
             }
         }
