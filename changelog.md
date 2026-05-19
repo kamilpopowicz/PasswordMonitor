@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.8.8
+- Version-only release for verifying automatic app launch after the fixed in-app updater flow.
+
 ## PasswordMonitor 1.8.7
 - Fixed relaunch after in-app updates by opening the replaced app bundle from a detached relaunch process.
 - Updated the install script to register and open the installed app automatically after copying it to `/Applications`.
