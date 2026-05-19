@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.8.3
+- Fixed the custom updater extraction step so install no longer fails with `ditto --keepParent only works with -c`.
+
 ## PasswordMonitor 1.8.2
 - Tightened theme guard coverage for UI literals:
   - centralized zero spacing, zero spacer minimum length, visible/hidden opacity, and default window minimum-size tokens,

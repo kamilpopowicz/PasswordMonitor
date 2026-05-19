@@ -657,7 +657,7 @@ public final class PMUpdateService {
     private func extractZip(at zipURL: URL, to stagingRoot: URL) throws {
         _ = try runCommand(
             "/usr/bin/ditto",
-            arguments: ["-x", "-k", "--sequesterRsrc", "--keepParent", zipURL.path, stagingRoot.path]
+            arguments: ["-x", "-k", "--sequesterRsrc", zipURL.path, stagingRoot.path]
         )
     }
 
