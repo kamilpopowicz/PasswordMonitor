@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.8.5
+- Fixed updater validation so standard macOS framework symlinks are accepted while unsafe symlinks remain blocked.
+
 ## PasswordMonitor 1.8.4
 - Version-only release for verifying the fixed in-app updater install flow.
 

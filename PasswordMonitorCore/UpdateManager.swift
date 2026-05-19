@@ -384,9 +384,88 @@ public enum PMUpdateArchiveValidator {
         while let itemURL = enumerator?.nextObject() as? URL {
             let values = try itemURL.resourceValues(forKeys: [.isSymbolicLinkKey])
             if values.isSymbolicLink == true {
-                throw PMUpdateError.archiveContainsSymlink(itemURL.path)
+                guard try isAllowedFrameworkSymlink(itemURL, bundleURL: bundleURL, fileManager: fileManager) else {
+                    throw PMUpdateError.archiveContainsSymlink(itemURL.path)
+                }
             }
         }
+    }
+
+    private static func isAllowedFrameworkSymlink(_ symlinkURL: URL, bundleURL: URL, fileManager: FileManager) throws -> Bool {
+        let bundlePath = bundleURL.standardizedFileURL.path
+        let symlinkPath = symlinkURL.standardizedFileURL.path
+        guard symlinkPath.hasPrefix(bundlePath + "/") else { return false }
+
+        let relativePath = String(symlinkPath.dropFirst(bundlePath.count + 1))
+        let components = relativePath.split(separator: "/").map(String.init)
+        guard let frameworkIndex = components.firstIndex(where: { $0.hasSuffix(".framework") }) else {
+            return false
+        }
+
+        let frameworkRelativeComponents = Array(components[...(frameworkIndex)])
+        let linkRelativeComponents = Array(components[(frameworkIndex + 1)...])
+        guard !linkRelativeComponents.isEmpty else { return false }
+
+        let allowedLink = isAllowedFrameworkLink(linkRelativeComponents, frameworkName: components[frameworkIndex])
+        guard allowedLink else { return false }
+
+        let destination = try fileManager.destinationOfSymbolicLink(atPath: symlinkPath)
+        guard !destination.hasPrefix("/") else { return false }
+
+        let destinationComponents = destination.split(separator: "/").map(String.init)
+        guard !destinationComponents.isEmpty,
+              !destinationComponents.contains("."),
+              !destinationComponents.contains("..") else {
+            return false
+        }
+
+        var resolvedComponents = frameworkRelativeComponents + linkRelativeComponents.dropLast() + destinationComponents
+        resolvedComponents = normalizedPathComponents(resolvedComponents)
+        guard resolvedComponents.starts(with: frameworkRelativeComponents) else {
+            return false
+        }
+
+        let resolvedURL = bundleURL.appendingPathComponent(resolvedComponents.joined(separator: "/"))
+        return resolvedURL.standardizedFileURL.path.hasPrefix(
+            bundleURL
+                .appendingPathComponent(frameworkRelativeComponents.joined(separator: "/"))
+                .standardizedFileURL
+                .path + "/"
+        )
+    }
+
+    private static func isAllowedFrameworkLink(_ components: [String], frameworkName: String) -> Bool {
+        guard !components.contains(where: { $0 == "." || $0 == ".." }) else {
+            return false
+        }
+
+        if components == ["Versions", "Current"] {
+            return true
+        }
+
+        if components.count == 1 {
+            let frameworkExecutableName = String(frameworkName.dropLast(".framework".count))
+            return components[0] == "Resources" || components[0] == frameworkExecutableName
+        }
+
+        return false
+    }
+
+    private static func normalizedPathComponents(_ components: [String]) -> [String] {
+        var result: [String] = []
+        for component in components {
+            switch component {
+            case "", ".":
+                continue
+            case "..":
+                if !result.isEmpty {
+                    result.removeLast()
+                }
+            default:
+                result.append(component)
+            }
+        }
+        return result
     }
 
     public static func validatePermissions(in bundleURL: URL, fileManager: FileManager = .default) throws {
