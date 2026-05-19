@@ -378,6 +378,95 @@ final class PasswordMonitorCoreTests: XCTestCase {
         )
     }
 
+    func testValidateNoSymlinksAcceptsStandardFrameworkSymlinks() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorFrameworkSymlinkTest-\(UUID().uuidString)", isDirectory: true)
+        let bundle = root.appendingPathComponent("PasswordMonitor.app", isDirectory: true)
+        let framework = bundle.appendingPathComponent("Contents/Frameworks/PasswordMonitorCore.framework", isDirectory: true)
+        let version = framework.appendingPathComponent("Versions/A", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(
+            at: version.appendingPathComponent("Resources", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        FileManager.default.createFile(
+            atPath: version.appendingPathComponent("PasswordMonitorCore").path,
+            contents: Data(),
+            attributes: nil
+        )
+        try FileManager.default.createSymbolicLink(
+            atPath: framework.appendingPathComponent("Resources").path,
+            withDestinationPath: "Versions/Current/Resources"
+        )
+        try FileManager.default.createSymbolicLink(
+            atPath: framework.appendingPathComponent("PasswordMonitorCore").path,
+            withDestinationPath: "Versions/Current/PasswordMonitorCore"
+        )
+        try FileManager.default.createSymbolicLink(
+            atPath: framework.appendingPathComponent("Versions/Current").path,
+            withDestinationPath: "A"
+        )
+
+        XCTAssertNoThrow(
+            try PMUpdateArchiveValidator.validateNoSymlinks(in: bundle)
+        )
+    }
+
+    func testValidateNoSymlinksRejectsAbsoluteFrameworkSymlinkTarget() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorAbsoluteFrameworkSymlinkTest-\(UUID().uuidString)", isDirectory: true)
+        let bundle = root.appendingPathComponent("PasswordMonitor.app", isDirectory: true)
+        let framework = bundle.appendingPathComponent("Contents/Frameworks/PasswordMonitorCore.framework", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: framework, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(
+            atPath: framework.appendingPathComponent("Resources").path,
+            withDestinationPath: "/tmp"
+        )
+
+        XCTAssertThrowsError(
+            try PMUpdateArchiveValidator.validateNoSymlinks(in: bundle)
+        )
+    }
+
+    func testValidateNoSymlinksRejectsTraversingFrameworkSymlinkTarget() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorTraversingFrameworkSymlinkTest-\(UUID().uuidString)", isDirectory: true)
+        let bundle = root.appendingPathComponent("PasswordMonitor.app", isDirectory: true)
+        let framework = bundle.appendingPathComponent("Contents/Frameworks/PasswordMonitorCore.framework", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: framework, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(
+            atPath: framework.appendingPathComponent("Resources").path,
+            withDestinationPath: "../Resources"
+        )
+
+        XCTAssertThrowsError(
+            try PMUpdateArchiveValidator.validateNoSymlinks(in: bundle)
+        )
+    }
+
+    func testValidateNoSymlinksRejectsUnexpectedFrameworkSymlinkName() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorUnexpectedFrameworkSymlinkTest-\(UUID().uuidString)", isDirectory: true)
+        let bundle = root.appendingPathComponent("PasswordMonitor.app", isDirectory: true)
+        let framework = bundle.appendingPathComponent("Contents/Frameworks/PasswordMonitorCore.framework", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: framework, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(
+            atPath: framework.appendingPathComponent("Unexpected").path,
+            withDestinationPath: "Versions/Current/Unexpected"
+        )
+
+        XCTAssertThrowsError(
+            try PMUpdateArchiveValidator.validateNoSymlinks(in: bundle)
+        )
+    }
+
     func testValidatePermissionsRejectsWorldWritableFile() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("PasswordMonitorPermissionTest-\(UUID().uuidString)", isDirectory: true)
