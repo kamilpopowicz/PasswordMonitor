@@ -31,6 +31,7 @@ public struct PMButtonStyle: ButtonStyle {
 
     public func makeBody(configuration: Configuration) -> some View {
         let metrics = metricsForSize(size)
+        let buttonShape = RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous)
         return configuration.label
             .font(metrics.font)
             .foregroundColor(foregroundColor(isEnabled: isEnabled))
@@ -38,10 +39,11 @@ public struct PMButtonStyle: ButtonStyle {
             .padding(.vertical, metrics.verticalPadding)
             .background(backgroundColor(isPressed: configuration.isPressed, isEnabled: isEnabled))
             .overlay(
-                RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous)
+                buttonShape
                     .stroke(strokeColor(isEnabled: isEnabled), lineWidth: PMControlMetrics.strokeWidth)
             )
-            .clipShape(RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous))
+            .clipShape(buttonShape)
+            .contentShape(buttonShape)
             .opacity(isEnabled ? (configuration.isPressed ? PMControlMetrics.pressedOpacity : PMControlMetrics.enabledOpacity) : PMControlMetrics.disabledOpacity)
             .saturation(isEnabled ? PMControlMetrics.enabledSaturation : PMControlMetrics.disabledSaturation)
             .brightness(isEnabled ? PMControlMetrics.enabledBrightness : PMControlMetrics.disabledBrightness)
