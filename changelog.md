@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.8.9
+- Fixed shared button hit areas so clicking anywhere inside a styled button triggers the action, not only the text label.
+
 ## PasswordMonitor 1.8.8
 - Version-only release for verifying automatic app launch after the fixed in-app updater flow.
 
