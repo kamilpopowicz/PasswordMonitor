@@ -68,8 +68,7 @@ struct MenuBarView: View {
             copyrightText
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .pmPanel()
-        .frame(width: PMLayout.menuBarWidth, alignment: .leading)
+        .pmMenuBarPanel()
         .onAppear {
             refreshPasswordStatus(reason: .menuOpen, shouldCheckNotification: true)
         }

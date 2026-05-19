@@ -63,7 +63,6 @@ struct PasswordMonitorApp: App {
                 .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
-                .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         } label: {
             Image(nsImage: AppIconImageProvider.image(size: PMLayout.menuBarIconSize))

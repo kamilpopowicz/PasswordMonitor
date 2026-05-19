@@ -245,6 +245,36 @@ public struct PMPanelModifier: ViewModifier {
     }
 }
 
+public struct PMMenuBarPanelModifier: ViewModifier {
+    @Environment(\.pmIsApplyingTheme) private var isApplyingTheme
+    public init() {}
+
+    public func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: PMLayout.panelCornerRadius, style: .continuous)
+        let fillStyle: AnyShapeStyle = isApplyingTheme
+            ? AnyShapeStyle(PMTheme.oceanDeep)
+            : AnyShapeStyle(PMTheme.panelGradient)
+        let highlightStyle: AnyShapeStyle = isApplyingTheme
+            ? AnyShapeStyle(Color.clear)
+            : AnyShapeStyle(PMTheme.panelHighlight)
+
+        content
+            .padding(PMLayout.panelPadding)
+            .frame(width: PMLayout.menuBarWidth, alignment: .leading)
+            .background(
+                shape
+                    .fill(fillStyle)
+                    .overlay(shape.fill(highlightStyle))
+            )
+            .overlay(
+                shape.stroke(PMTheme.panelStroke, lineWidth: PMLayout.hairlineWidth)
+            )
+            .clipShape(shape)
+            .tint(PMTheme.accent)
+            .foregroundColor(PMTheme.textPrimary)
+    }
+}
+
 public struct PMContentCardModifier: ViewModifier {
     @Environment(\.pmIsApplyingTheme) private var isApplyingTheme
     private let padding: CGFloat
@@ -320,6 +350,10 @@ public struct PMFieldPanelModifier: ViewModifier {
 public extension View {
     func pmPanel() -> some View {
         modifier(PMPanelModifier())
+    }
+
+    func pmMenuBarPanel() -> some View {
+        modifier(PMMenuBarPanelModifier())
     }
 
     func pmContentCard(padding: CGFloat = PMLayout.contentCardPadding) -> some View {
