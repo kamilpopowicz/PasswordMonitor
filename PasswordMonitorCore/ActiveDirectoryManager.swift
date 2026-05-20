@@ -55,7 +55,7 @@ public class ActiveDirectoryManager {
             if let resolvedNode, resolvedNode.caseInsensitiveCompare(configuredDomain) != .orderedSame {
                 Logger.shared.logLocalized("log_ad_node_selected %@", maskDomainPartial(resolvedNode))
             } else if resolvedNode == nil {
-                Logger.shared.logLocalized("log_ad_node_fallback %@", maskDomainPartial(configuredDomain))
+                Logger.shared.logLocalized("log_ad_node_fallback %@", "All Domains")
             }
 
             do {
@@ -137,6 +137,8 @@ public class ActiveDirectoryManager {
             return paths
         }
 
+        paths.append("/Active Directory/All Domains")
+        paths.append("/Search")
         paths.append("/Active Directory/\(configuredDomain)/All Domains")
         return paths
     }

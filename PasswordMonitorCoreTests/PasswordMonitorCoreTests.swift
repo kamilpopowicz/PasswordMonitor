@@ -129,7 +129,7 @@ final class PasswordMonitorCoreTests: XCTestCase {
         )
     }
 
-    func testActiveDirectoryUsesConfiguredDomainOnlyWhenNodeCannotBeResolved() throws {
+    func testActiveDirectoryUsesLegacyFallbackPathsWhenNodeCannotBeResolved() throws {
         let cachedInfo = PasswordInfo(
             lastSetDate: Date().addingTimeInterval(-4 * 24 * 3600),
             daysUntilExpiration: 26,
@@ -154,8 +154,41 @@ final class PasswordMonitorCoreTests: XCTestCase {
 
         let info = try manager.getPasswordInfo(for: "tester")
 
-        XCTAssertEqual(attemptedPaths, ["/Active Directory/corp.example.com/All Domains"])
+        XCTAssertEqual(
+            attemptedPaths,
+            [
+                "/Active Directory/All Domains",
+                "/Search",
+                "/Active Directory/corp.example.com/All Domains"
+            ]
+        )
         XCTAssertTrue(info.isFromCache)
+    }
+
+    func testActiveDirectoryFallbackPathCanRecoverWhenNodeCannotBeResolved() throws {
+        let lastSetDate = Date().addingTimeInterval(-5 * 24 * 3600)
+        var attemptedPaths: [String] = []
+        let manager = ActiveDirectoryManager(
+            currentDomain: { "corp.example.com" },
+            adNodeName: { _ in nil },
+            adOutputReader: { _, path in
+                attemptedPaths.append(path)
+                guard path == "/Active Directory/All Domains" else {
+                    throw ADError.commandFailed("unexpected fallback")
+                }
+                return self.smbPasswordLastSetOutput(for: lastSetDate)
+            },
+            localOutputReader: { _ in
+                XCTFail("Local passwordLastSetTime should not be used after a successful AD fallback read")
+                throw ADError.userNotFound
+            }
+        )
+
+        let info = try manager.getPasswordInfo(for: "tester")
+
+        XCTAssertEqual(attemptedPaths, ["/Active Directory/All Domains"])
+        XCTAssertFalse(info.isFromCache)
+        XCTAssertEqual(info.lastSetDate.timeIntervalSince1970, lastSetDate.timeIntervalSince1970, accuracy: 1)
     }
 
     func testActiveDirectoryUsesLocalPasswordInfoOnlyWithoutConfiguredDomain() throws {
