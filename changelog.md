@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.9.0
+- Fixed the menu bar popover container so no extra background strip appears above it.
+- Fixed Logs rendering and scroll follow behavior.
+- Clarified password-status logging when Active Directory is unavailable and cached data is used.
+- Show an unavailable-domain warning in the menu bar when no password data can be loaded.
+
 ## PasswordMonitor 1.8.9
 - Fixed shared button hit areas so clicking anywhere inside a styled button triggers the action, not only the text label.
 

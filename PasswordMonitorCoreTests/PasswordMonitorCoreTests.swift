@@ -37,6 +37,15 @@ final class PasswordMonitorCoreTests: XCTestCase {
         store.clearHelperTriggerClaim()
     }
 
+    private func smbPasswordLastSetOutput(for date: Date) -> String {
+        let windowsFileTime = Int64(date.timeIntervalSince1970 * 10_000_000) + 116_444_736_000_000_000
+        return "SMBPasswordLastSet: \(windowsFileTime)\n"
+    }
+
+    private func localPasswordLastSetOutput(for date: Date) -> String {
+        return "passwordLastSetTime: \(date.timeIntervalSince1970)\n"
+    }
+
     func testPasswordCacheSaveLoadMarksFromCache() {
         let expiryDate = Date().addingTimeInterval(10 * 24 * 3600 + 3600)
         let info = PasswordInfo(
@@ -118,6 +127,113 @@ final class PasswordMonitorCoreTests: XCTestCase {
         XCTAssertNil(
             SystemADDomainResolver.matchingNode(for: "unknown.domain", nodes: nodes)
         )
+    }
+
+    func testActiveDirectoryUsesLegacyFallbackPathsWhenNodeCannotBeResolved() throws {
+        let cachedInfo = PasswordInfo(
+            lastSetDate: Date().addingTimeInterval(-4 * 24 * 3600),
+            daysUntilExpiration: 26,
+            expiryDate: Date().addingTimeInterval(26 * 24 * 3600),
+            isFromCache: false
+        )
+        PasswordCache.shared.save(cachedInfo)
+
+        var attemptedPaths: [String] = []
+        let manager = ActiveDirectoryManager(
+            currentDomain: { "corp.example.com" },
+            adNodeName: { _ in nil },
+            adOutputReader: { _, path in
+                attemptedPaths.append(path)
+                throw ADError.commandFailed("offline")
+            },
+            localOutputReader: { _ in
+                XCTFail("Local passwordLastSetTime should not be used when an AD domain is configured")
+                throw ADError.userNotFound
+            }
+        )
+
+        let info = try manager.getPasswordInfo(for: "tester")
+
+        XCTAssertEqual(
+            attemptedPaths,
+            [
+                "/Active Directory/All Domains",
+                "/Search",
+                "/Active Directory/corp.example.com/All Domains"
+            ]
+        )
+        XCTAssertTrue(info.isFromCache)
+    }
+
+    func testActiveDirectoryFallbackPathCanRecoverWhenNodeCannotBeResolved() throws {
+        let lastSetDate = Date().addingTimeInterval(-5 * 24 * 3600)
+        var attemptedPaths: [String] = []
+        let manager = ActiveDirectoryManager(
+            currentDomain: { "corp.example.com" },
+            adNodeName: { _ in nil },
+            adOutputReader: { _, path in
+                attemptedPaths.append(path)
+                guard path == "/Active Directory/All Domains" else {
+                    throw ADError.commandFailed("unexpected fallback")
+                }
+                return self.smbPasswordLastSetOutput(for: lastSetDate)
+            },
+            localOutputReader: { _ in
+                XCTFail("Local passwordLastSetTime should not be used after a successful AD fallback read")
+                throw ADError.userNotFound
+            }
+        )
+
+        let info = try manager.getPasswordInfo(for: "tester")
+
+        XCTAssertEqual(attemptedPaths, ["/Active Directory/All Domains"])
+        XCTAssertFalse(info.isFromCache)
+        XCTAssertEqual(info.lastSetDate.timeIntervalSince1970, lastSetDate.timeIntervalSince1970, accuracy: 1)
+    }
+
+    func testActiveDirectoryUsesLocalPasswordInfoOnlyWithoutConfiguredDomain() throws {
+        var attemptedADPaths: [String] = []
+        let lastSetDate = Date().addingTimeInterval(-5 * 24 * 3600)
+        let manager = ActiveDirectoryManager(
+            currentDomain: { nil },
+            adNodeName: { _ in nil },
+            adOutputReader: { _, path in
+                attemptedADPaths.append(path)
+                throw ADError.commandFailed("unexpected AD read")
+            },
+            localOutputReader: { _ in
+                self.localPasswordLastSetOutput(for: lastSetDate)
+            }
+        )
+
+        let info = try manager.getPasswordInfo(for: "tester")
+
+        XCTAssertTrue(attemptedADPaths.isEmpty)
+        XCTAssertFalse(info.isFromCache)
+        XCTAssertEqual(info.lastSetDate.timeIntervalSince1970, lastSetDate.timeIntervalSince1970, accuracy: 1)
+    }
+
+    func testActiveDirectoryPrefersResolvedNodeBeforeConfiguredDomainFallback() throws {
+        let lastSetDate = Date().addingTimeInterval(-6 * 24 * 3600)
+        var attemptedPaths: [String] = []
+        let manager = ActiveDirectoryManager(
+            currentDomain: { "corp.example.com" },
+            adNodeName: { _ in "CORP" },
+            adOutputReader: { _, path in
+                attemptedPaths.append(path)
+                return self.smbPasswordLastSetOutput(for: lastSetDate)
+            },
+            localOutputReader: { _ in
+                XCTFail("Local passwordLastSetTime should not be used after a successful AD read")
+                throw ADError.userNotFound
+            }
+        )
+
+        let info = try manager.getPasswordInfo(for: "tester")
+
+        XCTAssertEqual(attemptedPaths, ["/Active Directory/CORP/All Domains"])
+        XCTAssertFalse(info.isFromCache)
+        XCTAssertEqual(info.lastSetDate.timeIntervalSince1970, lastSetDate.timeIntervalSince1970, accuracy: 1)
     }
 
     func testHelperScheduleNextOccurrenceReturnsSameDayFutureTime() {
