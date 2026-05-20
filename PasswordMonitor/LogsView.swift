@@ -335,18 +335,24 @@ private struct LogTextView: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let textView = NSTextView()
+        let textView = NSTextView(frame: .zero)
         textView.isEditable = false
         textView.isSelectable = true
         textView.drawsBackground = false
+        textView.backgroundColor = .clear
         textView.textContainerInset = NSSize(width: PMLayout.logTextInsetWidth, height: PMLayout.logTextInsetHeight)
         textView.font = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
         textView.textColor = isDark ? NSColor(PMTheme.textPrimary) : NSColor(PMTheme.textPrimary)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
 
         let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
         scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
         scrollView.documentView = textView
+        configureTextLayout(textView, in: scrollView)
         scrollView.contentView.postsBoundsChangedNotifications = true
         NotificationCenter.default.addObserver(
             context.coordinator,
@@ -363,6 +369,8 @@ private struct LogTextView: NSViewRepresentable {
         textView.textColor = isDark ? NSColor(PMTheme.textPrimary) : NSColor(PMTheme.textPrimary)
         textView.insertionPointColor = isDark ? NSColor(PMTheme.textPrimary) : NSColor(PMTheme.textPrimary)
         textView.drawsBackground = false
+        textView.backgroundColor = .clear
+        configureTextLayout(textView, in: nsView)
 
         if textView.textStorage?.length != attributedText.length ||
             textView.attributedString() != attributedText {
@@ -372,14 +380,32 @@ private struct LogTextView: NSViewRepresentable {
         if context.coordinator.lastScrollToken != scrollToBottomToken {
             context.coordinator.lastScrollToken = scrollToBottomToken
             scrollToBottom(nsView)
-        } else if isFollowingLatest {
-            scrollToBottom(nsView)
         }
+    }
+
+    static func dismantleNSView(_ nsView: NSScrollView, coordinator: Coordinator) {
+        NotificationCenter.default.removeObserver(
+            coordinator,
+            name: NSView.boundsDidChangeNotification,
+            object: nsView.contentView
+        )
+    }
+
+    private func configureTextLayout(_ textView: NSTextView, in scrollView: NSScrollView) {
+        let contentSize = scrollView.contentSize
+        textView.minSize = NSSize(width: PMLayout.noSpacing, height: contentSize.height)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.textContainer?.containerSize = NSSize(
+            width: contentSize.width,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        textView.textContainer?.widthTracksTextView = true
+        textView.frame.size.width = contentSize.width
     }
 
     private func scrollToBottom(_ scrollView: NSScrollView) {
         guard let textView = scrollView.documentView as? NSTextView else { return }
-        let length = textView.string.count
+        let length = (textView.string as NSString).length
         if length > 0 {
             textView.scrollRangeToVisible(NSRange(location: length - 1, length: 1))
         } else {

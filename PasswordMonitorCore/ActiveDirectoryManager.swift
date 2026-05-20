@@ -11,12 +11,35 @@ import Foundation
 public class ActiveDirectoryManager {
 
     private let maxPasswordAge = 30       // Dni
+    private let currentDomain: () -> String?
+    private let adNodeName: (String) -> String?
+    private let adOutputReader: (_ username: String, _ nodePath: String) throws -> String
+    private let localOutputReader: (_ username: String) throws -> String
     private var warningThreshold: Int {
         let configuredThreshold = UserDefaults.standard.integer(forKey: "warning_threshold")
         return configuredThreshold > 0 ? configuredThreshold : 7
     }
 
-    public init() {}
+    public convenience init() {
+        self.init(
+            currentDomain: SystemADDomainResolver.currentDomain,
+            adNodeName: SystemADDomainResolver.adNodeName(for:),
+            adOutputReader: Self.readADPasswordLastSet(username:nodePath:),
+            localOutputReader: Self.readLocalPasswordLastSet(username:)
+        )
+    }
+
+    init(
+        currentDomain: @escaping () -> String?,
+        adNodeName: @escaping (String) -> String?,
+        adOutputReader: @escaping (_ username: String, _ nodePath: String) throws -> String,
+        localOutputReader: @escaping (_ username: String) throws -> String
+    ) {
+        self.currentDomain = currentDomain
+        self.adNodeName = adNodeName
+        self.adOutputReader = adOutputReader
+        self.localOutputReader = localOutputReader
+    }
 
     // MARK: - Public API
 
@@ -25,14 +48,14 @@ public class ActiveDirectoryManager {
     /// 2. Gdy AD niedostępne / błąd – próbuje lokalnego `passwordLastSetTime`
     /// 3. Gdy oba źródła zawiodą – próbuje z cache
     public func getPasswordInfo(for username: String) throws -> PasswordInfo {
-        if let configuredDomain = SystemADDomainResolver.currentDomain() {
+        if let configuredDomain = currentDomain() {
             Logger.shared.logLocalized("log_ad_domain_requested %@", maskDomainPartial(configuredDomain))
-            let resolvedNode = SystemADDomainResolver.adNodeName(for: configuredDomain)
+            let resolvedNode = adNodeName(configuredDomain)
             let candidatePaths = buildADNodePaths(configuredDomain: configuredDomain, resolvedNode: resolvedNode)
             if let resolvedNode, resolvedNode.caseInsensitiveCompare(configuredDomain) != .orderedSame {
                 Logger.shared.logLocalized("log_ad_node_selected %@", maskDomainPartial(resolvedNode))
             } else if resolvedNode == nil {
-                Logger.shared.logLocalized("log_ad_node_fallback %@", "All Domains")
+                Logger.shared.logLocalized("log_ad_node_fallback %@", maskDomainPartial(configuredDomain))
             }
 
             do {
@@ -40,10 +63,12 @@ public class ActiveDirectoryManager {
                 for path in candidatePaths {
                     do {
                         let info = try getPasswordInfoFromAD(username: username, nodePath: path)
+                        Logger.shared.log("AD password source accepted: \(path)")
                         PasswordCache.shared.markLastFetchWasCache(false)
                         PasswordCache.shared.save(info)
                         return info
                     } catch {
+                        Logger.shared.log("AD password source rejected: \(path) (\(String(describing: error)))")
                         lastError = error
                     }
                 }
@@ -91,38 +116,7 @@ public class ActiveDirectoryManager {
     /// Pobiera SMBPasswordLastSet z AD
     private func getPasswordInfoFromAD(username: String, nodePath: String) throws -> PasswordInfo {
         Logger.shared.log("dscl query path: \(nodePath)")
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
-        task.arguments = [
-            nodePath,
-            "-read",
-            "/Users/\(username)",
-            "SMBPasswordLastSet"
-        ]
-
-        let pipe = Pipe()
-        let errorPipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = errorPipe
-
-        try task.run()
-        task.waitUntilExit()
-
-        // DEBUG stderr
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        if let errorOutput = String(data: errorData, encoding: .utf8), !errorOutput.isEmpty {
-            Logger.shared.logLocalized("log_dscl_stderr %@", errorOutput)
-        }
-
-        guard task.terminationStatus == 0 else {
-            Logger.shared.logLocalized("log_dscl_exit_code %d", task.terminationStatus)
-            throw ADError.commandFailed("dscl failed with code \(task.terminationStatus)")
-        }
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else {
-            throw ADError.invalidData
-        }
+        let output = try adOutputReader(username, nodePath)
         Logger.shared.logLocalized("log_dscl_local_output %@", output)
 
         // DEBUG stdout
@@ -143,8 +137,6 @@ public class ActiveDirectoryManager {
             return paths
         }
 
-        paths.append("/Active Directory/All Domains")
-        paths.append("/Search")
         paths.append("/Active Directory/\(configuredDomain)/All Domains")
         return paths
     }
@@ -153,6 +145,67 @@ public class ActiveDirectoryManager {
 
     /// Fallback: lokalny passwordLastSetTime
     private func getPasswordInfoLocal(username: String) throws -> PasswordInfo {
+        let output = try localOutputReader(username)
+
+        // Parse timestamp lub data string
+        guard let timeString = output
+            .components(separatedBy: "passwordLastSetTime:")
+            .last?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        else {
+            throw ADError.invalidData
+        }
+
+        let lastSetDate: Date
+        if let date = parseDateString(timeString) {
+            lastSetDate = date
+        } else if let timestamp = Double(timeString) {
+            lastSetDate = Date(timeIntervalSince1970: timestamp)
+        } else if let timestamp = firstNumericTimestamp(in: timeString) {
+            lastSetDate = Date(timeIntervalSince1970: timestamp)
+        } else {
+            throw ADError.invalidData
+        }
+
+        return try calculateExpirationInfo(from: lastSetDate)
+    }
+
+    private static func readADPasswordLastSet(username: String, nodePath: String) throws -> String {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
+        task.arguments = [
+            nodePath,
+            "-read",
+            "/Users/\(username)",
+            "SMBPasswordLastSet"
+        ]
+
+        let pipe = Pipe()
+        let errorPipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = errorPipe
+
+        try task.run()
+        task.waitUntilExit()
+
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        if let errorOutput = String(data: errorData, encoding: .utf8), !errorOutput.isEmpty {
+            Logger.shared.logLocalized("log_dscl_stderr %@", errorOutput)
+        }
+
+        guard task.terminationStatus == 0 else {
+            Logger.shared.logLocalized("log_dscl_exit_code %d", task.terminationStatus)
+            throw ADError.commandFailed("dscl failed with code \(task.terminationStatus)")
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else {
+            throw ADError.invalidData
+        }
+        return output
+    }
+
+    private static func readLocalPasswordLastSet(username: String) throws -> String {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
         task.arguments = [
@@ -177,28 +230,7 @@ public class ActiveDirectoryManager {
         guard let output = String(data: data, encoding: .utf8) else {
             throw ADError.invalidData
         }
-
-        // Parse timestamp lub data string
-        guard let timeString = output
-            .components(separatedBy: "passwordLastSetTime:")
-            .last?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        else {
-            throw ADError.invalidData
-        }
-
-        let lastSetDate: Date
-        if let date = parseDateString(timeString) {
-            lastSetDate = date
-        } else if let timestamp = Double(timeString) {
-            lastSetDate = Date(timeIntervalSince1970: timestamp)
-        } else if let timestamp = firstNumericTimestamp(in: timeString) {
-            lastSetDate = Date(timeIntervalSince1970: timestamp)
-        } else {
-            throw ADError.invalidData
-        }
-
-        return try calculateExpirationInfo(from: lastSetDate)
+        return output
     }
 
     // MARK: - Parsing (internal for tests)
