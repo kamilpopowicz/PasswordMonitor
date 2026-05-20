@@ -104,10 +104,18 @@ struct MenuBarView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                Text(LanguageSettings.localizedString("menu_check_status"))
-                    .font(.headline)
-                    .foregroundColor(PMTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: PMLayout.microSpacing) {
+                    Text(LanguageSettings.localizedString("menu_check_status"))
+                        .font(.headline)
+                        .foregroundColor(PMTheme.textSecondary)
+
+                    if notificationManager.hasPerformedRefresh && !notificationManager.isDomainAvailable {
+                        Text(LanguageSettings.localizedString("menu_domain_warning"))
+                            .font(.caption)
+                            .foregroundColor(PMTheme.danger)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
             }
 
             if isChecking {
