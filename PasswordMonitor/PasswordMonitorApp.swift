@@ -77,12 +77,12 @@ struct PasswordMonitorApp: App {
                 .environmentObject(languageSettings)
                 .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
-                .pmWindowFixedSize()
+                .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.automatic)
 
         Window(LanguageSettings.localizedString("about_window_title", languageCode: languageSettings.selectedLanguageCode), id: "about-window") {
             AboutView()
@@ -91,12 +91,12 @@ struct PasswordMonitorApp: App {
                 .environmentObject(languageSettings)
                 .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
-                .pmWindowFixedSize()
+                .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.automatic)
 
         Window(LanguageSettings.localizedString("logs_window_title", languageCode: languageSettings.selectedLanguageCode), id: "logs-window") {
             LogsView()
@@ -104,24 +104,24 @@ struct PasswordMonitorApp: App {
                 .environmentObject(themeManager)
                 .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
-                .pmWindowFixedSize()
+                .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.automatic)
 
         Window(LanguageSettings.localizedString("ai_requirements_window_title", languageCode: languageSettings.selectedLanguageCode), id: "ai-check-window") {
             AIRequirementsView()
                 .environmentObject(themeManager)
                 .environmentObject(updateRequestCenter)
                 .environment(\.locale, languageSettings.locale)
-                .pmWindowFixedSize()
+                .pmWindowMinSize()
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.automatic)
         
         // Skróty i menu
         .commands {
@@ -175,6 +175,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.promptForSystemLanguageIfNeeded()
         }
         
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.windowFocusRetryDelay) {
+            self.hideDockWhenNoAppWindowIsOpen()
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if hasVisibleAppWindow {
+            return true
+        }
+
+        hideDockWhenNoAppWindowIsOpen()
+        return false
+    }
+
+    private var hasVisibleAppWindow: Bool {
+        NSApp.windows.contains { window in
+            guard window.isVisible else { return false }
+            guard window.identifier?.rawValue != nil else { return false }
+            return !window.isMiniaturized
+        }
+    }
+
+    private func hideDockWhenNoAppWindowIsOpen() {
+        guard NSApp.modalWindow == nil else { return }
+        guard !hasVisibleAppWindow else { return }
+        NSApp.setActivationPolicy(.accessory)
     }
 
     private func promptForSystemLanguageIfNeeded() {

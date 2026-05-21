@@ -184,20 +184,21 @@ private struct AlertContentView: View {
             Text(localizedOrFallback("alert_title_expiring", fallback: "Your password is expiring soon!"))
                 .font(.title2)
                 .fontWeight(.bold)
+                .pmMultilineText(alignment: .center)
 
             // Opis z zawijaniem tekstu
             Text(smartAdviceText())
                 .font(.body)
-                .multilineTextAlignment(.center)
                 .foregroundColor(PMTheme.textSecondary)
                 .frame(maxWidth: PMLayout.alertAdviceMaxWidth)
-                .fixedSize(horizontal: false, vertical: true)
+                .pmMultilineText(alignment: .center)
 
             // Live timer – zawsze pokazuje rzeczywisty czas do wygaśnięcia
             VStack(spacing: PMLayout.compactSpacing) {
                 Text(remainingTitleText)
                     .font(.caption)
                     .foregroundColor(PMTheme.textSecondary)
+                    .pmMultilineText(alignment: .center)
 
                 let lines = formattedTimeRemainingLines()
                 VStack(spacing: PMLayout.microSpacing) {
@@ -225,10 +226,11 @@ private struct AlertContentView: View {
             let snoozeDisabled = isUrgent && isDomainAvailable
             let changePasswordDisabled = !isDomainAvailable
 
-            HStack(spacing: PMLayout.sectionSpacing) {
+            PMAdaptiveActionRow(verticalAlignment: .center, spacing: PMLayout.sectionSpacing) {
                 // "Odłóż" – niedostępny tylko gdy hasło wygasa za ≤ 24h
                 Button(action: onSnooze) {
                     Text(localizedOrFallback("alert_snooze", fallback: "Snooze"))
+                        .pmMultilineText(alignment: .center)
                         .frame(minWidth: PMLayout.alertButtonMinWidth)
                 }
                 .buttonStyle(.bordered)
@@ -242,6 +244,7 @@ private struct AlertContentView: View {
                 // "Zmień hasło" – na razie tylko log + zamknięcie okna
                 Button(action: onChangePassword) {
                     Text(localizedOrFallback("alert_change_password", fallback: "Change Password"))
+                        .pmMultilineText(alignment: .center)
                         .frame(minWidth: PMLayout.alertButtonMinWidth)
                 }
                 .buttonStyle(.borderedProminent)
@@ -257,7 +260,7 @@ private struct AlertContentView: View {
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(PMTheme.danger)
-                    .multilineTextAlignment(.center)
+                    .pmMultilineText(alignment: .center)
             }
 
             if mode == .test {
@@ -266,6 +269,7 @@ private struct AlertContentView: View {
 
                 Button(action: onEndTest) {
                     Text(localizedOrFallback("alert_end_test", fallback: "End Test"))
+                        .pmMultilineText(alignment: .center)
                         .frame(minWidth: PMLayout.alertEndTestButtonMinWidth)
                 }
                 .buttonStyle(.bordered)

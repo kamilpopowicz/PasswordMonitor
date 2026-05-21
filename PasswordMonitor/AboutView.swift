@@ -87,16 +87,17 @@ struct AboutView: View {
                 Text(LanguageSettings.localizedString("about_subtitle"))
                     .font(.headline)
                     .foregroundColor(PMTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .pmMultilineText()
 
                 Text(LanguageSettings.localizedString("about_description"))
                     .font(.callout)
                     .foregroundColor(PMTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .pmMultilineText()
 
-                HStack(spacing: PMLayout.compactSpacing) {
+                PMAdaptiveActionRow(spacing: PMLayout.compactSpacing) {
                     Label {
                         Text(currentAppVersion)
+                            .pmMultilineText()
                     } icon: {
                         Image(systemName: "number.circle.fill")
                     }
@@ -110,6 +111,7 @@ struct AboutView: View {
                     Text(LanguageSettings.localizedString("about_single_source"))
                         .font(.caption)
                         .foregroundColor(PMTheme.textSecondary)
+                        .pmMultilineText()
                 }
             }
 
@@ -131,7 +133,7 @@ struct AboutView: View {
             Text(LanguageSettings.localizedString("about_security_detail"))
                 .font(.subheadline)
                 .foregroundColor(PMTheme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+                .pmMultilineText()
         }
         .pmContentCard()
     }
@@ -166,40 +168,28 @@ struct AboutView: View {
                     Text(updateStatusText)
                         .font(.callout)
                         .foregroundColor(updateStatusColor)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .pmMultilineText()
                 }
                 .padding(.top, PMLayout.microSpacing)
             } else {
                 Text(LanguageSettings.localizedString("about_updates_idle"))
                     .font(.callout)
                     .foregroundColor(PMTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .pmMultilineText()
             }
 
             if let pendingUpdateCandidate {
-                HStack(spacing: PMLayout.controlSpacing) {
-                    VStack(alignment: .leading, spacing: PMLayout.microSpacing) {
-                        Text(LanguageSettings.localizedString(
-                            "settings_update_available %@",
-                            pendingUpdateCandidate.version.description
-                        ))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(PMTheme.textPrimary)
-
-                        Text(LanguageSettings.localizedString("about_updates_ready"))
-                            .font(.caption)
-                            .foregroundColor(PMTheme.textSecondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: PMLayout.controlSpacing) {
+                        updateCandidateText(pendingUpdateCandidate)
+                        Spacer(minLength: PMLayout.compactSpacing)
+                        updateInstallButton
                     }
 
-                    Spacer()
-
-                    Button {
-                        handleInstallUpdateTap()
-                    } label: {
-                        Text(LanguageSettings.localizedString("settings_update_install"))
+                    VStack(alignment: .leading, spacing: PMLayout.compactSpacing) {
+                        updateCandidateText(pendingUpdateCandidate)
+                        updateInstallButton
                     }
-                    .pmButton(role: .primary)
-                    .disabled(updateCheckInProgress)
                 }
                 .pmFieldPanel(
                     padding: PMLayout.sectionSpacing,
@@ -208,7 +198,7 @@ struct AboutView: View {
                 )
             }
 
-            HStack(spacing: PMLayout.controlSpacing) {
+            PMAdaptiveActionRow(spacing: PMLayout.controlSpacing) {
                 Button {
                     handleCheckForUpdatesTap()
                 } label: {
@@ -218,6 +208,7 @@ struct AboutView: View {
                                 .scaleEffect(PMLayout.inlineProgressScale)
                         }
                         Text(LanguageSettings.localizedString("settings_check_for_updates"))
+                            .pmMultilineText(alignment: .center)
                     }
                 }
                 .pmButton(role: .primary)
@@ -228,13 +219,40 @@ struct AboutView: View {
                     dismiss()
                 } label: {
                     Text(LanguageSettings.localizedString("about_open_settings"))
+                        .pmMultilineText(alignment: .center)
                 }
                 .pmButton()
-
-                Spacer()
             }
         }
         .pmContentCard()
+    }
+
+    private func updateCandidateText(_ candidate: PMUpdateCandidate) -> some View {
+        VStack(alignment: .leading, spacing: PMLayout.microSpacing) {
+            Text(LanguageSettings.localizedString(
+                "settings_update_available %@",
+                candidate.version.description
+            ))
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(PMTheme.textPrimary)
+            .pmMultilineText()
+
+            Text(LanguageSettings.localizedString("about_updates_ready"))
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
+                .pmMultilineText()
+        }
+    }
+
+    private var updateInstallButton: some View {
+        Button {
+            handleInstallUpdateTap()
+        } label: {
+            Text(LanguageSettings.localizedString("settings_update_install"))
+                .pmMultilineText(alignment: .center)
+        }
+        .pmButton(role: .primary)
+        .disabled(updateCheckInProgress)
     }
 
     private var footerActions: some View {
@@ -245,6 +263,7 @@ struct AboutView: View {
                 dismiss()
             } label: {
                 Text(LanguageSettings.localizedString("common_close"))
+                    .pmMultilineText(alignment: .center)
             }
             .pmButton()
         }

@@ -275,6 +275,37 @@ public struct PMMenuBarPanelModifier: ViewModifier {
     }
 }
 
+public struct PMMenuBarWindowConfigurator: NSViewRepresentable {
+    public init() {}
+
+    public func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        DispatchQueue.main.async {
+            configure(window: view.window)
+        }
+        return view
+    }
+
+    public func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            configure(window: nsView.window)
+        }
+    }
+
+    private func configure(window: NSWindow?) {
+        guard let window else { return }
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
+
+        if window.styleMask.contains(.titled) {
+            window.styleMask.remove(.titled)
+        }
+    }
+}
+
 public struct PMContentCardModifier: ViewModifier {
     @Environment(\.pmIsApplyingTheme) private var isApplyingTheme
     private let padding: CGFloat
@@ -382,11 +413,15 @@ public extension View {
 
     func pmWindowMinSize() -> some View {
         frame(
-            width: PMLayout.defaultWindowWidth,
-            height: PMLayout.defaultWindowHeight,
+            minWidth: PMLayout.defaultWindowWidth,
+            idealWidth: PMLayout.defaultWindowWidth,
+            maxWidth: .infinity,
+            minHeight: PMLayout.defaultWindowHeight,
+            idealHeight: PMLayout.defaultWindowHeight,
+            maxHeight: .infinity,
             alignment: .center
         )
-        .background(PMWindowSizeEnforcer(size: NSSize(width: PMLayout.defaultWindowWidth, height: PMLayout.defaultWindowHeight)))
+        .background(PMWindowMinSizeEnforcer(size: NSSize(width: PMLayout.defaultWindowWidth, height: PMLayout.defaultWindowHeight)))
     }
 
     func pmWindowFixedSize() -> some View {
@@ -408,7 +443,11 @@ public extension View {
             maxHeight: .infinity,
             alignment: .center
         )
-        .background(PMWindowSizeEnforcer(size: NSSize(width: width, height: height)))
+        .background(PMWindowMinSizeEnforcer(size: NSSize(width: width, height: height)))
+    }
+
+    func pmMultilineText(alignment: TextAlignment = .leading) -> some View {
+        modifier(PMMultilineTextModifier(alignment: alignment))
     }
 
     func pmWindowBackground(reduced: Bool = false) -> some View {
@@ -513,7 +552,12 @@ public struct PMWindowContentContainer<Content: View>: View {
 
     public var body: some View {
         content
-            .frame(width: PMLayout.windowContentWidth, alignment: alignment)
+            .frame(
+                minWidth: PMLayout.windowContentMinWidth,
+                maxWidth: .infinity,
+                alignment: alignment
+            )
+            .padding(.horizontal, PMLayout.windowContentHorizontalPadding)
             .frame(maxWidth: .infinity, alignment: .center)
     }
 }
@@ -527,9 +571,60 @@ public struct PMWindowActionBar<Content: View>: View {
 
     public var body: some View {
         content
-            .frame(width: PMLayout.windowContentWidth, alignment: .center)
+            .frame(
+                minWidth: PMLayout.windowContentMinWidth,
+                maxWidth: .infinity,
+                alignment: .center
+            )
+            .padding(.horizontal, PMLayout.windowContentHorizontalPadding)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.top, PMLayout.sectionSpacing)
+    }
+}
+
+public struct PMAdaptiveActionRow<Content: View>: View {
+    private let horizontalAlignment: VerticalAlignment
+    private let verticalAlignment: HorizontalAlignment
+    private let spacing: CGFloat
+    private let content: () -> Content
+
+    public init(
+        horizontalAlignment: VerticalAlignment = .center,
+        verticalAlignment: HorizontalAlignment = .leading,
+        spacing: CGFloat = PMLayout.compactSpacing,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.horizontalAlignment = horizontalAlignment
+        self.verticalAlignment = verticalAlignment
+        self.spacing = spacing
+        self.content = content
+    }
+
+    public var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: horizontalAlignment, spacing: spacing) {
+                content()
+            }
+
+            VStack(alignment: verticalAlignment, spacing: spacing) {
+                content()
+            }
+        }
+    }
+}
+
+public struct PMMultilineTextModifier: ViewModifier {
+    private let alignment: TextAlignment
+
+    public init(alignment: TextAlignment = .leading) {
+        self.alignment = alignment
+    }
+
+    public func body(content: Content) -> some View {
+        content
+            .multilineTextAlignment(alignment)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -552,6 +647,8 @@ public enum PMLayout {
     public static let windowMinHeight = defaultWindowMinHeight
     public static let windowFocusRetryCount = 12
     public static let windowContentWidth: CGFloat = defaultWindowWidth - (contentPadding * 2)
+    public static let windowContentMinWidth: CGFloat = windowContentWidth
+    public static let windowContentHorizontalPadding: CGFloat = contentPadding
     public static let noSpacing: CGFloat = 0
     public static let zeroMinLength: CGFloat = 0
     /// Global window panel inset for consistent padding and rounded panel placement.
@@ -717,6 +814,26 @@ private struct PMWindowSizeEnforcer: NSViewRepresentable {
         DispatchQueue.main.async {
             nsView.window?.minSize = size
             nsView.window?.maxSize = size
+        }
+    }
+}
+
+private struct PMWindowMinSizeEnforcer: NSViewRepresentable {
+    let size: NSSize
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            view.window?.minSize = size
+            view.window?.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            nsView.window?.minSize = size
+            nsView.window?.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         }
     }
 }

@@ -69,6 +69,7 @@ struct MenuBarView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .pmMenuBarPanel()
+        .background(PMMenuBarWindowConfigurator())
         .onAppear {
             refreshPasswordStatus(reason: .menuOpen, shouldCheckNotification: true)
         }
@@ -82,15 +83,18 @@ struct MenuBarView: View {
                 Text(LanguageSettings.localizedString("menu_password_expires_title"))
                     .font(.caption.weight(.semibold))
                     .foregroundColor(PMTheme.textSecondary)
+                    .pmMultilineText()
 
                 Text(LanguageSettings.localizedString("days_remaining %lld", daysRemaining))
                     .font(.system(size: PMLayout.menuStatusNumberSize, weight: .semibold, design: .rounded))
                     .foregroundColor(daysRemaining <= 7 ? PMTheme.danger : PMTheme.success)
+                    .pmMultilineText()
 
                 Divider()
 
                 HStack {
                     Text(LanguageSettings.localizedString("menu_last_change_title"))
+                        .pmMultilineText()
                     Spacer()
                     Text(info.lastSetDate, style: .date)
                 }
@@ -101,21 +105,22 @@ struct MenuBarView: View {
                     Text(LanguageSettings.localizedString("menu_domain_warning"))
                         .font(.caption)
                         .foregroundColor(PMTheme.danger)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .pmMultilineText()
                 }
             } else {
                 VStack(alignment: .leading, spacing: PMLayout.microSpacing) {
                     Text(LanguageSettings.localizedString("menu_check_status"))
                         .font(.headline)
                         .foregroundColor(PMTheme.textSecondary)
+                        .pmMultilineText()
 
                     if notificationManager.hasPerformedRefresh && !notificationManager.isDomainAvailable {
                         Text(LanguageSettings.localizedString("menu_domain_warning"))
                             .font(.caption)
                             .foregroundColor(PMTheme.danger)
+                            .pmMultilineText()
                     }
                 }
-                .fixedSize(horizontal: false, vertical: true)
             }
 
             if isChecking {
@@ -125,6 +130,7 @@ struct MenuBarView: View {
                     Text(LanguageSettings.localizedString("menu_checking_now"))
                         .font(.caption)
                         .foregroundColor(PMTheme.textSecondary)
+                        .pmMultilineText()
                 }
             }
         }
@@ -151,6 +157,7 @@ struct MenuBarView: View {
             Text(LanguageSettings.localizedString("menu_background_service"))
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
+                .pmMultilineText()
 
             Spacer(minLength: PMLayout.zeroMinLength)
         }
@@ -176,7 +183,7 @@ struct MenuBarView: View {
     ) -> some View {
         Button(action: action) {
             Text(title)
-                .lineLimit(1)
+                .pmMultilineText(alignment: .center)
                 .minimumScaleFactor(PMLayout.menuButtonMinimumScale)
                 .frame(maxWidth: .infinity)
         }
