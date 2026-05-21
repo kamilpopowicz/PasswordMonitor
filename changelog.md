@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.9.2
+- Prepare the in-app password change and password strength work for issue #6.
+
 ## PasswordMonitor 1.9.1
 - Fixed Dock activation so clicking the Dock icon no longer opens the menu bar panel as the main window.
 - Restored fixed visual margins while keeping Settings, Logs, About, and AI Requirements windows resizable.
