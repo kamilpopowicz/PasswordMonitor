@@ -160,13 +160,17 @@ struct AppCommands: Commands {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    private var passwordChangeWindow: NSWindow?
+    private var passwordChangeLocalObserver: NSObjectProtocol?
+    private var passwordChangeDistributedObserver: NSObjectProtocol?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger.shared.logLocalized("log_app_launched")
         logLoadedSettingsSnapshot()
 
         LocalizationRetryManager.shared.handleAppLaunch()
+        registerPasswordChangeRequestObservers()
 
         // Rejestracja helpera
         registerHelperService()
@@ -175,6 +179,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.promptForSystemLanguageIfNeeded()
         }
         
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        if let passwordChangeLocalObserver {
+            NotificationCenter.default.removeObserver(passwordChangeLocalObserver)
+        }
+        if let passwordChangeDistributedObserver {
+            DistributedNotificationCenter.default().removeObserver(passwordChangeDistributedObserver)
+        }
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
@@ -204,6 +217,95 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard NSApp.modalWindow == nil else { return }
         guard !hasVisibleAppWindow else { return }
         NSApp.setActivationPolicy(.accessory)
+    }
+
+    private func registerPasswordChangeRequestObservers() {
+        passwordChangeLocalObserver = NotificationCenter.default.addObserver(
+            forName: HelperMessaging.passwordChangeRequestedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.presentPasswordChangeWindow()
+            }
+        }
+
+        passwordChangeDistributedObserver = DistributedNotificationCenter.default().addObserver(
+            forName: HelperMessaging.passwordChangeRequestedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.presentPasswordChangeWindow()
+            }
+        }
+    }
+
+    @MainActor
+    private func presentPasswordChangeWindow() {
+        if let passwordChangeWindow {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            passwordChangeWindow.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let content = PasswordChangeView(
+            onCancel: { [weak self] in
+                self?.closePasswordChangeWindow()
+            },
+            onSuccess: { [weak self] in
+                self?.closePasswordChangeWindow()
+            }
+        )
+        .pmWindowBackground()
+        .preferredColorScheme(PMTheme.preferredColorSchemeFromDefaults)
+        .frame(
+            width: PMLayout.passwordChangeWindowWidth,
+            height: PMLayout.passwordChangeWindowHeight
+        )
+
+        let hostingController = NSHostingController(rootView: content)
+        let window = NSWindow(
+            contentRect: NSRect(
+                origin: .zero,
+                size: NSSize(
+                    width: PMLayout.passwordChangeWindowWidth,
+                    height: PMLayout.passwordChangeWindowHeight
+                )
+            ),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = PasswordChangeCopy.windowTitle
+        window.titlebarAppearsTransparent = true
+        window.contentViewController = hostingController
+        window.minSize = NSSize(
+            width: PMLayout.passwordChangeWindowMinWidth,
+            height: PMLayout.passwordChangeWindowMinHeight
+        )
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+        window.center()
+
+        passwordChangeWindow = window
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    @MainActor
+    private func closePasswordChangeWindow() {
+        passwordChangeWindow?.close()
+        passwordChangeWindow = nil
+        hideDockWhenNoAppWindowIsOpen()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard notification.object as? NSWindow === passwordChangeWindow else { return }
+        passwordChangeWindow = nil
+        hideDockWhenNoAppWindowIsOpen()
     }
 
     private func promptForSystemLanguageIfNeeded() {

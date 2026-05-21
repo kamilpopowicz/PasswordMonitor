@@ -8,9 +8,19 @@
 
 import AppKit
 
-/// Pomocnik do otwierania miejsca, gdzie użytkownik zmienia hasło.
-/// Nie dotykamy samych haseł – tylko wywołujemy systemowy UI.
+/// Pomocnik do otwierania przepływu zmiany hasła z aplikacji lub login itema.
 public enum PasswordChangeHelper {
+    private static let mainAppBundleIdentifier = "popo.PasswordMonitor"
+    private static let helperBundleIdentifier = "popo.PasswordMonitorHelperApp"
+
+    public static func requestPasswordChange() {
+        NotificationCenter.default.post(name: HelperMessaging.passwordChangeRequestedNotification, object: nil)
+        postPasswordChangeRequest()
+        openMainAppFromHelperIfNeeded {
+            postPasswordChangeRequest()
+        }
+    }
+
     public static func openSystemPasswordSettings() {
         // macOS Ventura / Sonoma+: Touch ID & Password
         if let url = URL(string: "x-apple.systempreferences:com.apple.Touch-ID-Settings.extension"),
@@ -33,6 +43,45 @@ public enum PasswordChangeHelper {
             if let url = URL(string: "x-apple.systempreferences:com.apple.preferences") {
                 NSWorkspace.shared.open(url)
             }
+        }
+    }
+
+    private static func postPasswordChangeRequest() {
+        DistributedNotificationCenter.default().post(
+            name: HelperMessaging.passwordChangeRequestedNotification,
+            object: Bundle.main.bundleIdentifier
+        )
+    }
+
+    private static func openMainAppFromHelperIfNeeded(onOpened: @escaping () -> Void) {
+        guard Bundle.main.bundleIdentifier == helperBundleIdentifier else { return }
+
+        if NSRunningApplication.runningApplications(withBundleIdentifier: mainAppBundleIdentifier).isEmpty == false {
+            return
+        }
+
+        let mainAppURL = Bundle.main.bundleURL
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+
+        guard mainAppURL.pathExtension == "app" else { return }
+
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        configuration.addsToRecentItems = false
+
+        NSWorkspace.shared.openApplication(at: mainAppURL, configuration: configuration) { _, error in
+            if let error {
+                Logger.shared.log(
+                    "Nie udało się otworzyć głównej aplikacji do zmiany hasła: \(error.localizedDescription)",
+                    level: .warning
+                )
+                return
+            }
+
+            onOpened()
         }
     }
 }

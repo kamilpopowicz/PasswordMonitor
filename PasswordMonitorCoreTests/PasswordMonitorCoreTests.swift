@@ -7,6 +7,7 @@
 
 import XCTest
 import CryptoKit
+import OpenDirectory
 @testable import PasswordMonitorCore
 
 final class PasswordMonitorCoreTests: XCTestCase {
@@ -79,6 +80,40 @@ final class PasswordMonitorCoreTests: XCTestCase {
         UserDefaults.standard.set(Data([0x00, 0x01, 0x02]), forKey: cacheKey)
         let loaded = PasswordCache.shared.load()
         XCTAssertNil(loaded)
+    }
+
+    func testPasswordStrengthAnalyzerRejectsCommonPassword() {
+        let result = PasswordStrengthAnalyzer.analyze("password123")
+
+        XCTAssertEqual(result.level, .veryWeak)
+        XCTAssertTrue(result.feedback.contains("Avoid common passwords."))
+    }
+
+    func testPasswordStrengthAnalyzerRewardsLongPassphrase() {
+        let result = PasswordStrengthAnalyzer.analyze("correct river battery sunrise")
+
+        XCTAssertGreaterThanOrEqual(result.score, PasswordStrengthLevel.strong.rawValue)
+    }
+
+    func testPasswordStrengthAnalyzerPenalizesUserContext() {
+        let result = PasswordStrengthAnalyzer.analyze(
+            "KamilPassword2026!",
+            userInputs: ["kamil"]
+        )
+
+        XCTAssertTrue(result.feedback.contains("Avoid using your name, domain, or app name."))
+    }
+
+    func testPasswordChangeErrorMappingHandlesInvalidCredentials() {
+        let error = NSError(domain: ODFrameworkErrorDomain, code: Int(kODErrorCredentialsInvalid.rawValue))
+
+        XCTAssertEqual(PasswordChangeManager.map(error), .currentPasswordInvalid)
+    }
+
+    func testPasswordChangeErrorMappingHandlesDomainConnectivity() {
+        let error = NSError(domain: ODFrameworkErrorDomain, code: Int(kODErrorCredentialsServerUnreachable.rawValue))
+
+        XCTAssertEqual(PasswordChangeManager.map(error), .domainUnavailable)
     }
 
     func testParseSMBPasswordLastSetEpoch() throws {

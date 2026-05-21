@@ -3,7 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## PasswordMonitor 1.9.2
-- Prepare the in-app password change and password strength work for issue #6.
+- Added the in-app AD/mobile password change flow for issue #6 using OpenDirectory.
+- Added inline validation, password strength feedback, mapped domain policy errors, and a System Settings fallback.
+- Wired password-change requests from the menu bar, live alerts, test notifications, and the login item helper.
 
 ## PasswordMonitor 1.9.1
 - Fixed Dock activation so clicking the Dock icon no longer opens the menu bar panel as the main window.

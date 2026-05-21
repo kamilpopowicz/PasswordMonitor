@@ -748,7 +748,7 @@ public final class NotificationManager: ObservableObject {
             onChangePassword: { [weak self] in
                 guard let self = self else { return }
                 Logger.shared.logLocalized("log_notification_change_password_selected")
-                PasswordChangeHelper.openSystemPasswordSettings()
+                PasswordChangeHelper.requestPasswordChange()
                 self.scheduleUrgentPasswordChangeVerification(expirationDate: passwordExpirationDate)
                 self.dismissNotification()
             }
@@ -779,8 +779,7 @@ public final class NotificationManager: ObservableObject {
             },
             onChangePassword: { [weak self] in
                 Logger.shared.logLocalized("log_notification_test_change_password_selected")
-                // TODO: Otwórz panel zmiany hasła systemowego
-                NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/TouchID.prefPane"))
+                PasswordChangeHelper.requestPasswordChange()
                 self?.dismissTestNotification()
             },
             onEndTest: { [weak self] in

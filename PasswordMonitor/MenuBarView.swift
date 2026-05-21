@@ -34,7 +34,7 @@ struct MenuBarView: View {
 
                 menuButton(LanguageSettings.localizedString("menu_change_password")) {
                     Logger.shared.logLocalized("log_menu_change_password_selected")
-                    PasswordChangeHelper.openSystemPasswordSettings()
+                    PasswordChangeHelper.requestPasswordChange()
                 }
                 .disabled(!canChangePasswordNow)
             }
