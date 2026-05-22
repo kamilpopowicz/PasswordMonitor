@@ -280,7 +280,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.title = PasswordChangeCopy.windowTitle
         window.identifier = passwordChangeWindowIdentifier
         window.titlebarAppearsTransparent = true
-        window.collectionBehavior = [.moveToActiveSpace]
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        window.level = .floating
         window.contentViewController = hostingController
         window.minSize = NSSize(
             width: PMLayout.passwordChangeWindowMinWidth,
@@ -299,6 +300,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard remainingAttempts > 0 else { return }
 
         NSApp.setActivationPolicy(.regular)
+        window.level = .floating
         NSRunningApplication.current.activate(options: [.activateAllWindows])
         NSApp.activate(ignoringOtherApps: true)
         if window.isMiniaturized {
@@ -328,6 +330,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard notification.object as? NSWindow === passwordChangeWindow else { return }
         passwordChangeWindow = nil
         hideDockWhenNoAppWindowIsOpen()
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        guard notification.object as? NSWindow === passwordChangeWindow else { return }
+        passwordChangeWindow?.level = .normal
     }
 
     private func promptForSystemLanguageIfNeeded() {
