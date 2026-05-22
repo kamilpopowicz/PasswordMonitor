@@ -14,9 +14,14 @@ public enum PasswordChangeHelper {
     private static let helperBundleIdentifier = "popo.PasswordMonitorHelperApp"
 
     public static func requestPasswordChange() {
+        guard Bundle.main.bundleIdentifier == helperBundleIdentifier else {
+            NotificationCenter.default.post(name: HelperMessaging.passwordChangeRequestedNotification, object: nil)
+            postPasswordChangeRequest()
+            return
+        }
+
         NotificationCenter.default.post(name: HelperMessaging.passwordChangeRequestedNotification, object: nil)
-        postPasswordChangeRequest()
-        openMainAppFromHelperIfNeeded {
+        activateMainAppFromHelper {
             postPasswordChangeRequest()
         }
     }
@@ -53,10 +58,12 @@ public enum PasswordChangeHelper {
         )
     }
 
-    private static func openMainAppFromHelperIfNeeded(onOpened: @escaping () -> Void) {
-        guard Bundle.main.bundleIdentifier == helperBundleIdentifier else { return }
-
-        if NSRunningApplication.runningApplications(withBundleIdentifier: mainAppBundleIdentifier).isEmpty == false {
+    private static func activateMainAppFromHelper(onActivated: @escaping () -> Void) {
+        if let runningApp = NSRunningApplication.runningApplications(withBundleIdentifier: mainAppBundleIdentifier).first {
+            runningApp.activate(options: [.activateAllWindows])
+            DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.mainAppActivationDelay) {
+                onActivated()
+            }
             return
         }
 
@@ -81,7 +88,7 @@ public enum PasswordChangeHelper {
                 return
             }
 
-            onOpened()
+            onActivated()
         }
     }
 }

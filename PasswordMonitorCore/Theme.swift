@@ -788,6 +788,7 @@ public enum PMMotion {
     public static let relaunchDelay: Double = 0.25
     public static let languagePromptDelay: Double = 0.3
     public static let windowFocusRetryDelay: Double = 0.05
+    public static let mainAppActivationDelay: Double = 0.15
 }
 
 public struct PMWindowFooter: View {
