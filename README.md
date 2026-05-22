@@ -69,6 +69,7 @@ See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
 - Menubar **Check now** performs a live refresh and, by design, bypasses `shownToday` and active `snooze` so a user-initiated manual verification always surfaces the latest state
 - Scheduled notification moment overrides an active snooze: if snooze is active and the scheduled hour arrives, the alert fires and a fresh snooze window starts from that moment
 - In-app AD/mobile password change flow through OpenDirectory, with inline validation, password strength feedback, mapped domain policy errors, and a Touch ID & Password fallback
+- Password-change actions from scheduled helper alerts activate the main app before presenting the in-app password window
 - Settings for notification time, warning threshold, quiet hours, and read-only AD domain info pulled from the system configuration
 - Single in-app update flow centered on the About window, with Settings and the menu bar linking into the same panel
 - Menu open performs a live AD check (with a 30s timeout) before showing alerts
