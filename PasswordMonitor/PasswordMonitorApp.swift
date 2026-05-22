@@ -161,6 +161,7 @@ struct AppCommands: Commands {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    private let passwordChangeWindowIdentifier = NSUserInterfaceItemIdentifier("password-change-window")
     private var passwordChangeWindow: NSWindow?
     private var passwordChangeLocalObserver: NSObjectProtocol?
     private var passwordChangeDistributedObserver: NSObjectProtocol?
@@ -224,8 +225,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             forName: HelperMessaging.passwordChangeRequestedNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
+        ) { _ in
+            Task { @MainActor [weak self] in
                 self?.presentPasswordChangeWindow()
             }
         }
@@ -234,8 +235,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             forName: HelperMessaging.passwordChangeRequestedNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
+        ) { _ in
+            Task { @MainActor [weak self] in
                 self?.presentPasswordChangeWindow()
             }
         }
@@ -244,9 +245,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @MainActor
     private func presentPasswordChangeWindow() {
         if let passwordChangeWindow {
-            NSApp.setActivationPolicy(.regular)
-            NSApp.activate(ignoringOtherApps: true)
-            passwordChangeWindow.makeKeyAndOrderFront(nil)
+            focusPasswordChangeWindow(passwordChangeWindow, remainingAttempts: PMLayout.windowFocusRetryCount)
             return
         }
 
@@ -279,8 +278,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             defer: false
         )
         window.title = PasswordChangeCopy.windowTitle
-        window.identifier = NSUserInterfaceItemIdentifier("password-change-window")
+        window.identifier = passwordChangeWindowIdentifier
         window.titlebarAppearsTransparent = true
+        window.collectionBehavior = [.moveToActiveSpace]
         window.contentViewController = hostingController
         window.minSize = NSSize(
             width: PMLayout.passwordChangeWindowMinWidth,
@@ -291,9 +291,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.center()
 
         passwordChangeWindow = window
+        focusPasswordChangeWindow(window, remainingAttempts: PMLayout.windowFocusRetryCount)
+    }
+
+    @MainActor
+    private func focusPasswordChangeWindow(_ window: NSWindow, remainingAttempts: Int) {
+        guard remainingAttempts > 0 else { return }
+
         NSApp.setActivationPolicy(.regular)
+        NSRunningApplication.current.activate(options: [.activateAllWindows])
         NSApp.activate(ignoringOtherApps: true)
+        if window.isMiniaturized {
+            window.deminiaturize(nil)
+        }
         window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+
+        guard !NSApp.isActive || !window.isKeyWindow else { return }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.windowFocusRetryDelay) { [weak self, weak window] in
+            guard let self, let window else { return }
+            Task { @MainActor in
+                self.focusPasswordChangeWindow(window, remainingAttempts: remainingAttempts - 1)
+            }
+        }
     }
 
     @MainActor
