@@ -645,10 +645,10 @@ public enum PMLayout {
     public static let defaultWindowMinHeight = defaultWindowHeight
     public static let windowMinWidth = defaultWindowMinWidth
     public static let windowMinHeight = defaultWindowMinHeight
-    public static let passwordChangeWindowWidth: CGFloat = 560
-    public static let passwordChangeWindowHeight: CGFloat = 520
-    public static let passwordChangeWindowMinWidth: CGFloat = 520
-    public static let passwordChangeWindowMinHeight: CGFloat = 480
+    public static let passwordChangeWindowWidth = defaultWindowWidth
+    public static let passwordChangeWindowHeight = defaultWindowHeight
+    public static let passwordChangeWindowMinWidth = defaultWindowMinWidth
+    public static let passwordChangeWindowMinHeight = defaultWindowMinHeight
     public static let passwordChangeFieldMinWidth: CGFloat = 260
     public static let passwordStrengthMeterHeight: CGFloat = 8
     public static let passwordStrengthSegmentMinWidth: CGFloat = 34

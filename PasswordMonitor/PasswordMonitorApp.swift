@@ -279,6 +279,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             defer: false
         )
         window.title = PasswordChangeCopy.windowTitle
+        window.identifier = NSUserInterfaceItemIdentifier("password-change-window")
         window.titlebarAppearsTransparent = true
         window.contentViewController = hostingController
         window.minSize = NSSize(
