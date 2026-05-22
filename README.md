@@ -11,7 +11,7 @@
   <img alt="Swift" src="https://img.shields.io/badge/swift-5-F05138" />
 </p>
 
-PasswordMonitor is a macOS menu bar app that helps users keep track of corporate password expiration. It checks Active Directory metadata, notifies you ahead of expiration, and can run automatically in the background via a login item helper even when the main app is closed.
+PasswordMonitor is a macOS menu bar app that helps users keep track of corporate password expiration. It checks Active Directory metadata, notifies you ahead of expiration, lets AD/mobile users change their domain password from the app, and can run automatically in the background via a login item helper even when the main app is closed.
 
 This repository currently provides **direct-distribution builds** produced through GitHub Releases only. GitHub Packages is not used for app distribution. Depending on your local setup, the builds may be ad hoc signed, so Gatekeeper can show a warning and users must open the app manually (right‑click → Open).
 
@@ -19,7 +19,7 @@ This project is open source under the MIT License. You can use, modify, and redi
 
 Author: Kamil Popowicz
 
-Current version: **1.8.2**
+Current version: **1.9.2**
 
 ---
 
@@ -68,6 +68,7 @@ See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
 - Manual checks and the configured notification time can intentionally break through quiet hours
 - Menubar **Check now** performs a live refresh and, by design, bypasses `shownToday` and active `snooze` so a user-initiated manual verification always surfaces the latest state
 - Scheduled notification moment overrides an active snooze: if snooze is active and the scheduled hour arrives, the alert fires and a fresh snooze window starts from that moment
+- In-app AD/mobile password change flow through OpenDirectory, with inline validation, password strength feedback, mapped domain policy errors, and a Touch ID & Password fallback
 - Settings for notification time, warning threshold, quiet hours, and read-only AD domain info pulled from the system configuration
 - Single in-app update flow centered on the About window, with Settings and the menu bar linking into the same panel
 - Menu open performs a live AD check (with a 30s timeout) before showing alerts
@@ -105,8 +106,9 @@ See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
    - Launch at login
    - Language (with optional AI-assisted detection and retry of problematic keys)
 3. The app will check your password status and alert you as needed.
-4. Automatic background checks respect quiet hours, but a manual check and the exact configured alert time can still show the alert when needed.
-5. Use **Logs** for troubleshooting or export.
+4. Use **Change password** from the menu or expiration alert to change an AD/mobile account password in app. If the domain controller is unavailable, connect VPN or corporate network first.
+5. Automatic background checks respect quiet hours, but a manual check and the exact configured alert time can still show the alert when needed.
+6. Use **Logs** for troubleshooting or export.
 
 ---
 
