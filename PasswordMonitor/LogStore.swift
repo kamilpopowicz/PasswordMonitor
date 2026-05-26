@@ -140,7 +140,9 @@ final class LogStore: ObservableObject {
         stopRefreshTimer()
         guard let interval = refreshMode.interval else { return }
         refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            self?.load()
+            Task { @MainActor [weak self] in
+                self?.load()
+            }
         }
         refreshTimer?.tolerance = min(5, interval * 0.1)
     }

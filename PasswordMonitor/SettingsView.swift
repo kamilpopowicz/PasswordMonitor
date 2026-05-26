@@ -199,7 +199,9 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: PMLayout.microSpacing + PMLayout.microSpacing) {
                 Text(LanguageSettings.localizedString("settings_helper_desc %@", notificationHourString))
+                    .pmMultilineText()
                 Text(LanguageSettings.localizedString("settings_background_helper_info"))
+                    .pmMultilineText()
             }
             .font(.caption)
             .foregroundColor(PMTheme.textSecondary)
@@ -220,10 +222,12 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
                 .italic()
+                .pmMultilineText()
 
-            HStack(spacing: PMLayout.sectionSpacing + PMLayout.microSpacing) {
+            PMAdaptiveActionRow(spacing: PMLayout.sectionSpacing + PMLayout.microSpacing) {
                 DatePicker(selection: $quietHoursStartDate, displayedComponents: .hourAndMinute) {
                     Text(LanguageSettings.localizedString("settings_quiet_hours_start"))
+                        .pmMultilineText()
                 }
                 .onChange(of: quietHoursStartDate) { _, newValue in
                     quietHoursStartString = dateToTimeString(newValue) ?? "18:01"
@@ -231,6 +235,7 @@ struct SettingsView: View {
 
                 DatePicker(selection: $quietHoursEndDate, displayedComponents: .hourAndMinute) {
                     Text(LanguageSettings.localizedString("settings_quiet_hours_end"))
+                        .pmMultilineText()
                 }
                 .onChange(of: quietHoursEndDate) { _, newValue in
                     quietHoursEndString = dateToTimeString(newValue) ?? "05:59"
@@ -241,8 +246,9 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
                 .italic()
+                .pmMultilineText()
 
-            HStack(spacing: PMLayout.compactSpacing) {
+            PMAdaptiveActionRow(spacing: PMLayout.compactSpacing) {
                 #if DEBUG
                 Button(LanguageSettings.localizedString("settings_force_helper_refresh")) {
                     forceHelperRefresh()
@@ -255,8 +261,6 @@ struct SettingsView: View {
                     NotificationManager.shared.showTestNotification(expirationDate: testDate)
                 }
                 .pmButton()
-
-                Spacer()
             }
         }
     }
@@ -271,16 +275,18 @@ struct SettingsView: View {
                     Text(domain)
                         .font(.body)
                         .foregroundColor(PMTheme.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .pmMultilineText()
                 } else {
                     Text(LanguageSettings.localizedString("settings_domain_not_configured"))
                         .font(.body)
                         .foregroundColor(PMTheme.textSecondary)
+                        .pmMultilineText()
                 }
                 Text(LanguageSettings.localizedString("settings_domain_source_info"))
                     .font(.caption)
                     .foregroundColor(PMTheme.textSecondary)
                     .italic()
+                    .pmMultilineText()
             }
 
             settingsRow(LanguageSettings.localizedString("settings_max_password_age")) {
@@ -323,6 +329,7 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
                 .italic()
+                .pmMultilineText()
         }
     }
 
@@ -343,10 +350,11 @@ struct SettingsView: View {
                         .foregroundColor(PMTheme.textSecondary)
                         .padding(PMLayout.languageAssistPlaceholderPadding)
                         .allowsHitTesting(false)
+                        .pmMultilineText()
                 }
             }
 
-            HStack(spacing: PMLayout.compactSpacing) {
+            PMAdaptiveActionRow(spacing: PMLayout.compactSpacing) {
                 Button(LanguageSettings.localizedString("language_assist_detect")) {
                     handleDetectLanguageTap()
                 }
@@ -363,25 +371,26 @@ struct SettingsView: View {
                 }
                 .pmButton()
                 .disabled(aiDetectInProgress || aiRetryInProgress || pendingTranslationRetryCount == 0)
-
-                Spacer()
             }
 
             if let aiDetectStatus {
                 Text(aiDetectStatus)
                     .font(.caption)
                     .foregroundColor(aiDetectStatusColor)
+                    .pmMultilineText()
             }
 
             Text(LanguageSettings.localizedString("language_assist_ai_requirements"))
                 .font(.caption)
                 .foregroundColor(PMTheme.danger)
                 .italic()
+                .pmMultilineText()
 
             Text(LanguageSettings.localizedString("language_assist_footnote"))
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
                 .italic()
+                .pmMultilineText()
         }
     }
 
@@ -395,6 +404,7 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
                 .italic()
+                .pmMultilineText()
         }
     }
 
@@ -405,42 +415,80 @@ struct SettingsView: View {
                     .foregroundColor(PMTheme.textSecondary)
             }
 
-            Button {
-                handleOpenAboutAndCheckUpdatesTap()
-            } label: {
-                Text(LanguageSettings.localizedString("settings_check_for_updates"))
+            PMAdaptiveActionRow {
+                Button {
+                    handleOpenAboutAndCheckUpdatesTap()
+                } label: {
+                    Text(LanguageSettings.localizedString("settings_check_for_updates"))
+                        .pmMultilineText()
+                }
+                .pmButton(role: .primary)
             }
-            .pmButton(role: .primary)
         }
     }
 
     private var helperStatusCard: some View {
         settingsCard(LanguageSettings.localizedString("settings_section_info")) {
-            HStack {
-                Text(LanguageSettings.localizedString("settings_helper_status"))
-                Spacer()
-                Circle()
-                    .fill(helperStatusColor)
-                    .frame(width: PMLayout.statusIndicatorSize, height: PMLayout.statusIndicatorSize)
-                Text(LanguageSettings.localizedString(helperStatusDescriptionKey))
-                    .foregroundColor(PMTheme.textSecondary)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: PMLayout.compactSpacing) {
+                    Text(LanguageSettings.localizedString("settings_helper_status"))
+                        .foregroundColor(PMTheme.textPrimary)
+                        .pmMultilineText()
+                    Spacer(minLength: PMLayout.compactSpacing)
+                    helperStatusValue
+                }
+
+                VStack(alignment: .leading, spacing: PMLayout.compactSpacing) {
+                    Text(LanguageSettings.localizedString("settings_helper_status"))
+                        .foregroundColor(PMTheme.textPrimary)
+                        .pmMultilineText()
+                    helperStatusValue
+                }
             }
         }
     }
 
     private var footerActions: some View {
-        HStack {
+        ViewThatFits(in: .horizontal) {
             HStack(spacing: PMLayout.compactSpacing) {
-                Button(LanguageSettings.localizedString("settings_reset_defaults")) {
-                    showResetConfirm = true
-                }
-                .pmButton()
-                Button(LanguageSettings.localizedString("settings_delete_app")) {
-                    showDeleteConfirm = true
-                }
-                .pmButton(role: .destructive)
+                settingsDangerActions
+                Spacer(minLength: PMLayout.compactSpacing)
+                settingsSaveActions
             }
-            Spacer()
+
+            VStack(alignment: .trailing, spacing: PMLayout.compactSpacing) {
+                settingsDangerActions
+                settingsSaveActions
+            }
+        }
+    }
+
+    private var helperStatusValue: some View {
+        HStack(alignment: .center, spacing: PMLayout.compactSpacing) {
+            Circle()
+                .fill(helperStatusColor)
+                .frame(width: PMLayout.statusIndicatorSize, height: PMLayout.statusIndicatorSize)
+            Text(LanguageSettings.localizedString(helperStatusDescriptionKey))
+                .foregroundColor(PMTheme.textSecondary)
+                .pmMultilineText()
+        }
+    }
+
+    private var settingsDangerActions: some View {
+        PMAdaptiveActionRow(spacing: PMLayout.compactSpacing) {
+            Button(LanguageSettings.localizedString("settings_reset_defaults")) {
+                showResetConfirm = true
+            }
+            .pmButton()
+            Button(LanguageSettings.localizedString("settings_delete_app")) {
+                showDeleteConfirm = true
+            }
+            .pmButton(role: .destructive)
+        }
+    }
+
+    private var settingsSaveActions: some View {
+        PMAdaptiveActionRow(spacing: PMLayout.compactSpacing) {
             Button(LanguageSettings.localizedString("common_cancel")) {
                 cancelChanges()
             }
@@ -471,11 +519,21 @@ struct SettingsView: View {
         _ title: String,
         @ViewBuilder trailing: () -> Content
     ) -> some View {
-        HStack(alignment: .center, spacing: PMLayout.sectionSpacing) {
-            Text(title)
-                .foregroundColor(PMTheme.textPrimary)
-            Spacer()
-            trailing()
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: PMLayout.sectionSpacing) {
+                Text(title)
+                    .foregroundColor(PMTheme.textPrimary)
+                    .pmMultilineText()
+                Spacer(minLength: PMLayout.compactSpacing)
+                trailing()
+            }
+
+            VStack(alignment: .leading, spacing: PMLayout.compactSpacing) {
+                Text(title)
+                    .foregroundColor(PMTheme.textPrimary)
+                    .pmMultilineText()
+                trailing()
+            }
         }
     }
 

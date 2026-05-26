@@ -86,7 +86,7 @@ struct LogsView: View {
 
     private var controlsCard: some View {
         VStack(alignment: .leading, spacing: PMLayout.controlSpacing) {
-            HStack(spacing: PMLayout.compactSpacing) {
+            PMAdaptiveActionRow(spacing: PMLayout.compactSpacing) {
                 logActionButton(LanguageSettings.localizedString("logs_now"), role: isFollowingLatest ? .primary : .secondary) {
                     isFollowingLatest = true
                     logStore.reload()
@@ -110,78 +110,113 @@ struct LogsView: View {
                 }
             }
 
-            HStack(spacing: PMLayout.compactSpacing) {
-                (Text(LanguageSettings.localizedString("logs_level_filter")) + Text(":"))
-                    .font(.caption)
-                    .foregroundColor(PMTheme.textSecondary)
-                    .frame(width: PMLayout.logsFilterLabelWidth, alignment: .leading)
-                Picker("", selection: $selectedLevel) {
-                    Text(LanguageSettings.localizedString("logs_level_all")).tag(Logger.Level?.none)
-                    Text(LanguageSettings.localizedString("logs_level_info")).tag(Logger.Level?.some(.info))
-                    Text(LanguageSettings.localizedString("logs_level_warning")).tag(Logger.Level?.some(.warning))
-                    Text(LanguageSettings.localizedString("logs_level_error")).tag(Logger.Level?.some(.error))
-                    Text(LanguageSettings.localizedString("logs_level_debug")).tag(Logger.Level?.some(.debug))
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: PMLayout.compactSpacing) {
+                    logsLevelLabel
+                        .frame(width: PMLayout.logsFilterLabelWidth, alignment: .leading)
+                    levelPicker
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: PMLayout.compactSpacing) {
+                    logsLevelLabel
+                    levelPicker
+                }
             }
 
-            HStack(spacing: PMLayout.compactSpacing) {
-                (Text(LanguageSettings.localizedString("logs_refresh_label")) + Text(":"))
-                    .font(.caption)
-                    .foregroundColor(PMTheme.textSecondary)
-                    .frame(width: PMLayout.logsFilterLabelWidth, alignment: .leading)
-                Picker("", selection: $logStore.refreshMode) {
-                    Text(LanguageSettings.localizedString("logs_refresh_immediate")).tag(LogStore.RefreshMode.immediate)
-                    Text(LanguageSettings.localizedString("logs_refresh_1m")).tag(LogStore.RefreshMode.oneMinute)
-                    Text(LanguageSettings.localizedString("logs_refresh_5m")).tag(LogStore.RefreshMode.fiveMinutes)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: PMLayout.compactSpacing) {
+                    logsRefreshLabel
+                        .frame(width: PMLayout.logsFilterLabelWidth, alignment: .leading)
+                    refreshPicker
+                        .frame(width: PMLayout.logsRefreshPickerWidth, alignment: .leading)
+
+                    Spacer(minLength: PMLayout.zeroMinLength)
+
+                    logsSearchControls
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: PMLayout.logsRefreshPickerWidth, alignment: .leading)
 
-                Spacer(minLength: PMLayout.zeroMinLength)
-
-                HStack(spacing: PMLayout.logsSearchButtonSpacing) {
-                    SearchField(
-                        text: $searchText,
-                        placeholder: LanguageSettings.localizedString("logs_search_placeholder"),
-                        isDark: themeManager.isDarkAppearance,
-                        isVisible: showSearchField,
-                        focusToken: $searchFocusToken
-                    )
-                    .frame(width: showSearchField ? PMLayout.logsCompactSearchFieldWidth : PMLayout.noSpacing)
-                    .opacity(showSearchField ? PMControlMetrics.visibleOpacity : PMControlMetrics.hiddenOpacity)
-                    .clipped()
-                    .animation(.easeInOut(duration: PMMotion.quickAnimationDuration), value: showSearchField)
-                    .allowsHitTesting(showSearchField)
-
-                    Button {
-                        withAnimation(.easeInOut(duration: PMMotion.quickAnimationDuration)) {
-                            showSearchField.toggle()
-                            if showSearchField {
-                                searchFocusToken = UUID()
-                            } else {
-                                searchText = ""
-                            }
-                        }
-                    } label: {
-                        Image(systemName: showSearchField ? "xmark" : "magnifyingglass")
-                    }
-                    .pmButton(role: .secondary, size: .compact)
-                    .help(showSearchField ? LanguageSettings.localizedString("logs_search_close") : LanguageSettings.localizedString("logs_search"))
+                VStack(alignment: .leading, spacing: PMLayout.compactSpacing) {
+                    logsRefreshLabel
+                    refreshPicker
+                    logsSearchControls
                 }
-                .frame(width: showSearchField ? PMLayout.logsCompactSearchColumnWidth : PMLayout.logsSearchButtonWidth, alignment: .trailing)
             }
 
             Text(LanguageSettings.localizedString("logs_privacy_notice"))
                 .font(.caption)
                 .foregroundColor(PMTheme.textSecondary)
                 .italic()
-                .lineLimit(1)
+                .pmMultilineText()
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var logsLevelLabel: some View {
+        (Text(LanguageSettings.localizedString("logs_level_filter")) + Text(":"))
+            .font(.caption)
+            .foregroundColor(PMTheme.textSecondary)
+    }
+
+    private var levelPicker: some View {
+        Picker("", selection: $selectedLevel) {
+            Text(LanguageSettings.localizedString("logs_level_all")).tag(Logger.Level?.none)
+            Text(LanguageSettings.localizedString("logs_level_info")).tag(Logger.Level?.some(.info))
+            Text(LanguageSettings.localizedString("logs_level_warning")).tag(Logger.Level?.some(.warning))
+            Text(LanguageSettings.localizedString("logs_level_error")).tag(Logger.Level?.some(.error))
+            Text(LanguageSettings.localizedString("logs_level_debug")).tag(Logger.Level?.some(.debug))
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+    }
+
+    private var logsRefreshLabel: some View {
+        (Text(LanguageSettings.localizedString("logs_refresh_label")) + Text(":"))
+            .font(.caption)
+            .foregroundColor(PMTheme.textSecondary)
+    }
+
+    private var refreshPicker: some View {
+        Picker("", selection: $logStore.refreshMode) {
+            Text(LanguageSettings.localizedString("logs_refresh_immediate")).tag(LogStore.RefreshMode.immediate)
+            Text(LanguageSettings.localizedString("logs_refresh_1m")).tag(LogStore.RefreshMode.oneMinute)
+            Text(LanguageSettings.localizedString("logs_refresh_5m")).tag(LogStore.RefreshMode.fiveMinutes)
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+    }
+
+    private var logsSearchControls: some View {
+        HStack(spacing: PMLayout.logsSearchButtonSpacing) {
+            SearchField(
+                text: $searchText,
+                placeholder: LanguageSettings.localizedString("logs_search_placeholder"),
+                isDark: themeManager.isDarkAppearance,
+                isVisible: showSearchField,
+                focusToken: $searchFocusToken
+            )
+            .frame(width: showSearchField ? PMLayout.logsCompactSearchFieldWidth : PMLayout.noSpacing)
+            .opacity(showSearchField ? PMControlMetrics.visibleOpacity : PMControlMetrics.hiddenOpacity)
+            .clipped()
+            .animation(.easeInOut(duration: PMMotion.quickAnimationDuration), value: showSearchField)
+            .allowsHitTesting(showSearchField)
+
+            Button {
+                withAnimation(.easeInOut(duration: PMMotion.quickAnimationDuration)) {
+                    showSearchField.toggle()
+                    if showSearchField {
+                        searchFocusToken = UUID()
+                    } else {
+                        searchText = ""
+                    }
+                }
+            } label: {
+                Image(systemName: showSearchField ? "xmark" : "magnifyingglass")
+            }
+            .pmButton(role: .secondary, size: .compact)
+            .help(showSearchField ? LanguageSettings.localizedString("logs_search_close") : LanguageSettings.localizedString("logs_search"))
+        }
+        .frame(width: showSearchField ? PMLayout.logsCompactSearchColumnWidth : PMLayout.logsSearchButtonWidth, alignment: .trailing)
     }
 
     private func logActionButton(
@@ -191,7 +226,7 @@ struct LogsView: View {
     ) -> some View {
         Button(action: action) {
             Text(title)
-                .lineLimit(1)
+                .pmMultilineText(alignment: .center)
                 .minimumScaleFactor(PMLayout.menuButtonMinimumScale)
                 .frame(maxWidth: .infinity)
         }

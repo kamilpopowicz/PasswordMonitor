@@ -87,7 +87,7 @@ final class LocalizationRetryManager {
         guard Date().timeIntervalSince1970 >= due else { return }
 
         Logger.shared.log("Starting one-hour localization retry: language=\(languageCode), pending=\(pending.count)")
-        await retryPendingKeys(for: languageCode, reason: "delayed_1h")
+        _ = await retryPendingKeys(for: languageCode, reason: "delayed_1h")
         defaults.set(true, forKey: delayedDoneKey(languageCode))
     }
 
@@ -102,7 +102,7 @@ final class LocalizationRetryManager {
 
         defaults.set(today, forKey: startupDayKey(languageCode))
         Logger.shared.log("Starting daily startup localization retry: language=\(languageCode), pending=\(pending.count)")
-        await retryPendingKeys(for: languageCode, reason: "startup_daily")
+        _ = await retryPendingKeys(for: languageCode, reason: "startup_daily")
     }
 
     private func retryPendingKeys(for languageCode: String, reason: String) async -> (fixed: Int, remaining: Int) {

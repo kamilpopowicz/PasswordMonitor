@@ -62,7 +62,7 @@ struct AIRequirementsView: View {
                     Text(LanguageSettings.localizedString("ai_requirements_notice"))
                         .font(.caption)
                         .foregroundColor(PMTheme.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .pmMultilineText()
                 }
                 .padding(PMLayout.aiRequirementsContentPadding)
             }
@@ -70,32 +70,19 @@ struct AIRequirementsView: View {
             Divider()
 
             PMWindowContentContainer {
-                HStack(spacing: PMLayout.compactSpacing) {
-                    Color.clear
-                        .frame(width: PMLayout.aiRequirementsStatusColumnWidth)
-
-                    Color.clear
-                        .frame(width: PMLayout.aiRequirementsOptionLeadingInset + PMLayout.aiRequirementsOptionColumnWidth)
-
-                    Color.clear
-                        .frame(width: PMLayout.aiRequirementsValueColumnWidth)
-
+                ViewThatFits(in: .horizontal) {
                     HStack(spacing: PMLayout.compactSpacing) {
-                        Button(LanguageSettings.localizedString("ai_requirements_refresh")) {
-                            Task { await model.refresh() }
-                        }
-                        .pmButton(role: .primary)
-
-                        Button(LanguageSettings.localizedString("common_close")) {
-                            dismiss()
-                        }
-                        .pmButton()
+                        Spacer(minLength: PMLayout.zeroMinLength)
+                        aiRequirementFooterActions
                     }
-                    .frame(width: PMLayout.aiRequirementsButtonColumnWidth, alignment: .leading)
+
+                    VStack(alignment: .trailing, spacing: PMLayout.compactSpacing) {
+                        aiRequirementFooterActions
+                    }
                 }
                 .padding(.horizontal, PMLayout.aiRequirementsFooterHorizontalPadding)
                 .padding(.top, PMLayout.microSpacing)
-                .frame(height: PMLayout.aiRequirementsFooterHeight)
+                .frame(minHeight: PMLayout.aiRequirementsFooterHeight)
             }
 
             Spacer(minLength: PMLayout.zeroMinLength)
@@ -108,6 +95,20 @@ struct AIRequirementsView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .appLanguageChanged)) { _ in
             refreshWindowTitle()
+        }
+    }
+
+    private var aiRequirementFooterActions: some View {
+        PMAdaptiveActionRow(verticalAlignment: .trailing, spacing: PMLayout.compactSpacing) {
+            Button(LanguageSettings.localizedString("ai_requirements_refresh")) {
+                Task { await model.refresh() }
+            }
+            .pmButton(role: .primary)
+
+            Button(LanguageSettings.localizedString("common_close")) {
+                dismiss()
+            }
+            .pmButton()
         }
     }
 
@@ -136,34 +137,61 @@ private struct RequirementRow: View {
     let action: () -> Void
 
     var body: some View {
-        HStack {
-            Circle()
-                .fill(status.color)
-                .frame(width: PMLayout.requirementStatusDotSize, height: PMLayout.requirementStatusDotSize)
-                .padding(.trailing, PMLayout.requirementStatusTrailingPadding)
-                .frame(width: statusWidth, alignment: .leading)
-            Text(LanguageSettings.localizedString(titleKey))
-                .foregroundColor(PMTheme.textSecondary)
-                .frame(width: optionWidth, alignment: .leading)
-                .padding(.leading, optionLeadingInset)
-            Group {
-                if let value {
-                    Text(value)
-                        .foregroundColor(PMTheme.textPrimary)
-                        .lineLimit(nil)
-                } else {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(PMTheme.textSecondary)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: PMLayout.compactSpacing) {
+                statusDot
+                    .frame(width: statusWidth, alignment: .leading)
+                Text(LanguageSettings.localizedString(titleKey))
+                    .foregroundColor(PMTheme.textSecondary)
+                    .pmMultilineText()
+                    .frame(width: optionWidth, alignment: .leading)
+                    .padding(.leading, optionLeadingInset)
+                valueView
+                    .frame(width: valueWidth, alignment: .center)
+                Button(LanguageSettings.localizedString(buttonKey)) {
+                    action()
                 }
+                .pmButton()
+                .frame(width: buttonWidth, alignment: .leading)
+                Spacer(minLength: PMLayout.zeroMinLength)
             }
-            .frame(width: valueWidth, alignment: .center)
-            Button(LanguageSettings.localizedString(buttonKey)) {
-                action()
+
+            VStack(alignment: .leading, spacing: PMLayout.compactSpacing) {
+                HStack(alignment: .top, spacing: PMLayout.compactSpacing) {
+                    statusDot
+                    VStack(alignment: .leading, spacing: PMLayout.microSpacing + PMLayout.microSpacing) {
+                        Text(LanguageSettings.localizedString(titleKey))
+                            .foregroundColor(PMTheme.textSecondary)
+                            .pmMultilineText()
+                        valueView
+                    }
+                }
+
+                Button(LanguageSettings.localizedString(buttonKey)) {
+                    action()
+                }
+                .pmButton()
             }
-            .pmButton()
-            .frame(width: buttonWidth, alignment: .leading)
-            Spacer(minLength: PMLayout.zeroMinLength)
+        }
+    }
+
+    private var statusDot: some View {
+        Circle()
+            .fill(status.color)
+            .frame(width: PMLayout.requirementStatusDotSize, height: PMLayout.requirementStatusDotSize)
+            .padding(.trailing, PMLayout.requirementStatusTrailingPadding)
+    }
+
+    @ViewBuilder
+    private var valueView: some View {
+        if let value {
+            Text(value)
+                .foregroundColor(PMTheme.textPrimary)
+                .pmMultilineText()
+        } else {
+            ProgressView()
+                .controlSize(.small)
+                .tint(PMTheme.textSecondary)
         }
     }
 }

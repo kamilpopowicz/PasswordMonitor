@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## PasswordMonitor 1.9.1
+- Fixed Dock activation so clicking the Dock icon no longer opens the menu bar panel as the main window.
+- Restored fixed visual margins while keeping Settings, Logs, About, and AI Requirements windows resizable.
+- Improved responsive wrapping for long localized UI text and adaptive action rows.
+- Cleaned up Release build warnings in localization retry and log refresh code.
+
 ## PasswordMonitor 1.9.0
 - Fixed the menu bar popover container so no extra background strip appears above it.
 - Fixed Logs rendering and scroll follow behavior.
