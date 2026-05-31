@@ -1,0 +1,76 @@
+name: Version Guard
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+jobs:
+  version-guard:
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate app version and build against latest tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PBXPROJ_PATH="PasswordMonitor.xcodeproj/project.pbxproj"
+          if [[ ! -f "${PBXPROJ_PATH}" ]]; then
+            echo "Missing ${PBXPROJ_PATH}"
+            exit 1
+          fi
+
+          current_marketing_version="$(awk -F ' = ' '/MARKETING_VERSION = / {gsub(/[ ;]/, "", $2); print $2; exit}' "${PBXPROJ_PATH}")"
+          current_build_version="$(awk -F ' = ' '/CURRENT_PROJECT_VERSION = / {gsub(/[ ;]/, "", $2); print $2; exit}' "${PBXPROJ_PATH}")"
+
+          if [[ -z "${current_marketing_version}" || -z "${current_build_version}" ]]; then
+            echo "Unable to resolve MARKETING_VERSION/CURRENT_PROJECT_VERSION from ${PBXPROJ_PATH}"
+            exit 1
+          fi
+
+          latest_tag="$(git tag -l 'v*' --sort=-v:refname | head -n 1)"
+          if [[ -z "${latest_tag}" ]]; then
+            echo "No release tags found (pattern v*). Guard cannot validate baseline."
+            exit 1
+          fi
+
+          latest_tag_marketing="${latest_tag#v}"
+          latest_tag_build="$(git show "${latest_tag}:${PBXPROJ_PATH}" | awk -F ' = ' '/CURRENT_PROJECT_VERSION = / {gsub(/[ ;]/, "", $2); print $2; exit}')"
+
+          if [[ -z "${latest_tag_build}" ]]; then
+            echo "Unable to resolve CURRENT_PROJECT_VERSION from ${latest_tag}:${PBXPROJ_PATH}"
+            exit 1
+          fi
+
+          if [[ ! "${current_build_version}" =~ ^[0-9]+$ || ! "${latest_tag_build}" =~ ^[0-9]+$ ]]; then
+            echo "CURRENT_PROJECT_VERSION must be numeric. Current=${current_build_version}, latest_tag=${latest_tag_build}"
+            exit 1
+          fi
+
+          highest_marketing="$(printf '%s\n%s\n' "${current_marketing_version}" "${latest_tag_marketing}" | sort -V | tail -n 1)"
+          if [[ "${highest_marketing}" != "${current_marketing_version}" || "${current_marketing_version}" == "${latest_tag_marketing}" ]]; then
+            echo "MARKETING_VERSION must be greater than latest tag version."
+            echo "Current MARKETING_VERSION=${current_marketing_version}, latest tag=${latest_tag} (${latest_tag_marketing})"
+            exit 1
+          fi
+
+          if (( current_build_version <= latest_tag_build )); then
+            echo "CURRENT_PROJECT_VERSION must be greater than latest tag build."
+            echo "Current CURRENT_PROJECT_VERSION=${current_build_version}, latest tag=${latest_tag} (${latest_tag_build})"
+            exit 1
+          fi
+
+          echo "Version guard passed."
+          echo "Current: MARKETING_VERSION=${current_marketing_version}, CURRENT_PROJECT_VERSION=${current_build_version}"
+          echo "Baseline: ${latest_tag} (MARKETING_VERSION=${latest_tag_marketing}, CURRENT_PROJECT_VERSION=${latest_tag_build})"
