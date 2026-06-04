@@ -85,6 +85,8 @@ See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
   - retries problematic keys (immediate multi-attempt + deferred self-heal retries)
 - Language Assist includes a manual **Retry problematic** action for failed keys
 - Manual Light/Dark/Auto theme switching with guarded shared UI tokens for spacing, opacity, and default window sizing
+- Dashboard UX contract for the 2.0 self-service direction, separating app destinations, service modules, dashboard bubbles, and motion rules; see [docs/dashboard-ux-implementation-contract.md](docs/dashboard-ux-implementation-contract.md)
+- Penpot UX boards are synchronized with the 2.0 semantic contract and canonical naming (`01 App Screens` + `02 Components`), with final canonical-board verification completed (see `docs/task8-penpot-verification-report.md`)
 - Safe custom updater architecture; see [SECURITY.md](SECURITY.md) for the updater threat model and hardening details.
 - Settings → Delete app unregisters the helper, unloads legacy LaunchAgents, terminates running helper processes, and removes app/helper preferences plus local app data
 

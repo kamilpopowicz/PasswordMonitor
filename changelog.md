@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased (version/2.0-dashboard)
+- Added a dashboard UX implementation contract for the 2.0 self-service direction, separating app destinations, service modules, dashboard tiles, and motion rules.
+- Added dedicated regression tests for severity thresholds, dashboard tile layout anchors/radii invariants, reduce-motion defaults, destination colors, tile colors, and tile-to-service-module mapping.
+- Added `docs/dashboard-ux-implementation-contract.md` to mirror the canonical Penpot structure, semantic model, and state/motion rules used for the dashboard planning.
+- Synchronized Penpot canonical boards/component naming with the final 2.0 semantic model and completed canonical-board verification (instance-only + naming policy pass), documented in `docs/task8-penpot-verification-report.md`.
+- Added formal Task 8 verification workflow states (`ready_for_verify`, `verified_complete`, `blocked_mcp`) and an operational verification report artifact (`docs/task8-penpot-verification-report.md`).
+
 ## PasswordMonitor 1.9.2
 - Added the in-app AD/mobile password change flow for issue #6 using OpenDirectory.
 - Added inline validation, password strength feedback, mapped domain policy errors, and a System Settings fallback.

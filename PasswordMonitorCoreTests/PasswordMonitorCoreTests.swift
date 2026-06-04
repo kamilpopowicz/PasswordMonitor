@@ -338,6 +338,80 @@ final class PasswordMonitorCoreTests: XCTestCase {
         )
     }
 
+    func testDashboardSpecMapsSeverityThresholdsDeterministically() {
+        XCTAssertEqual(PMDashboardSpec.severity(for: 40), .healthy)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 29), .warning)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 14), .warning)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 13), .urgent)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 2), .urgent)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 1), .critical)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 0), .critical)
+    }
+
+    func testDashboardSpecProvidesAllDashboardTileLayouts() {
+        XCTAssertEqual(PMDashboardSpec.dashboardLayout.count, 4)
+        XCTAssertNotNil(PMDashboardSpec.dashboardLayout[.password])
+        XCTAssertNotNil(PMDashboardSpec.dashboardLayout[.hrPortal])
+        XCTAssertNotNil(PMDashboardSpec.dashboardLayout[.networkDrives])
+        XCTAssertNotNil(PMDashboardSpec.dashboardLayout[.help])
+
+        for (_, spec) in PMDashboardSpec.dashboardLayout {
+            XCTAssertGreaterThan(spec.maxRadius, spec.minRadius)
+            XCTAssertGreaterThanOrEqual(spec.baseRadius, spec.minRadius)
+            XCTAssertLessThanOrEqual(spec.baseRadius, spec.maxRadius)
+            XCTAssertGreaterThanOrEqual(spec.anchor.x, 0)
+            XCTAssertLessThanOrEqual(spec.anchor.x, 1)
+            XCTAssertGreaterThanOrEqual(spec.anchor.y, 0)
+            XCTAssertLessThanOrEqual(spec.anchor.y, 1)
+        }
+    }
+
+    func testDashboardSpecEnablesReduceMotionCompatibilityByDefault() {
+        XCTAssertTrue(PMDashboardSpec.defaultMotionSpec.disabledByReduceMotion)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.maxOffsetX, 12, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.maxOffsetY, 10, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.cursorInfluence, 0.22, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.returnSpring.response, 0.36, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.returnSpring.dampingFraction, 0.82, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.returnSpring.blendDuration, 0.05, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.ctaSafeGap, 14, accuracy: 0.0001)
+    }
+
+    func testDashboardSpecRadiusScaleMatchesContractValues() {
+        XCTAssertEqual(PMDashboardSpec.radiusScale(for: .healthy), 0.72, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.radiusScale(for: .warning), 1.00, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.radiusScale(for: .urgent), 1.22, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.radiusScale(for: .critical), 1.54, accuracy: 0.0001)
+    }
+
+    func testDashboardSpecSeparatesNavigationDestinationsFromDashboardTiles() {
+        XCTAssertTrue(AppDestinationID.allCases.contains(.home))
+        XCTAssertTrue(AppDestinationID.allCases.contains(.settings))
+        XCTAssertFalse(DashboardTileID.allCases.map(\.rawValue).contains(AppDestinationID.home.rawValue))
+        XCTAssertFalse(DashboardTileID.allCases.map(\.rawValue).contains(AppDestinationID.settings.rawValue))
+    }
+
+    func testDashboardSpecKeepsDestinationAndDashboardTileColorMapsExplicit() {
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex.count, AppDestinationID.allCases.count)
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex[.home], "#72D8E1")
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex[.password], "#86E58C")
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex[.settings], "#5F8CFF")
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex[.help], "#F7C95D")
+
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex.count, DashboardTileID.allCases.count)
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex[.password], "#86E58C")
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex[.hrPortal], "#A682FF")
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex[.networkDrives], "#5F8CFF")
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex[.help], "#F7C95D")
+    }
+
+    func testDashboardSpecMapsDashboardTilesToServiceModules() {
+        XCTAssertEqual(PMDashboardSpec.tileServiceModule[.password] ?? nil, .password)
+        XCTAssertEqual(PMDashboardSpec.tileServiceModule[.hrPortal] ?? nil, .hrPortal)
+        XCTAssertEqual(PMDashboardSpec.tileServiceModule[.networkDrives] ?? nil, .networkDrives)
+        XCTAssertNil(PMDashboardSpec.tileServiceModule[.help] ?? nil)
+    }
+
     @MainActor
     func testResolvedWarningThresholdFallsBackToSevenDays() {
         XCTAssertEqual(NotificationManager.resolvedWarningThreshold(), 7)
