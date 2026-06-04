@@ -72,6 +72,8 @@ public enum AppUninstallCleanupPlan {
     ) -> [URL] {
         var paths = [
             homeDirectory.appendingPathComponent(".password_monitor.log"),
+            homeDirectory.appendingPathComponent(".password_monitor.log.1"),
+            homeDirectory.appendingPathComponent(".password_monitor.log.lock"),
             homeDirectory.appendingPathComponent("Library/Logs/popo.PasswordMonitor"),
             homeDirectory.appendingPathComponent("Library/Logs/PasswordMonitor"),
             homeDirectory.appendingPathComponent("Library/Caches/popo.PasswordMonitor"),

@@ -68,7 +68,7 @@ See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
 - Manual checks and the configured notification time can intentionally break through quiet hours
 - Menubar **Check now** performs a live refresh and, by design, bypasses `shownToday` and active `snooze` so a user-initiated manual verification always surfaces the latest state
 - Scheduled notification moment overrides an active snooze: if snooze is active and the scheduled hour arrives, the alert fires and a fresh snooze window starts from that moment
-- In-app AD/mobile password change flow through OpenDirectory, with inline validation, password strength feedback, mapped domain policy errors, and a Touch ID & Password fallback
+- In-app AD/mobile password change flow through OpenDirectory, with inline validation, password strength feedback, mapped domain policy errors, automatic login-keychain password synchronization, and a Touch ID & Password fallback
 - Password-change actions from scheduled helper alerts activate the main app before presenting the in-app password window
 - Settings for notification time, warning threshold, quiet hours, and read-only AD domain info pulled from the system configuration
 - Single in-app update flow centered on the About window, with Settings and the menu bar linking into the same panel
@@ -86,6 +86,8 @@ See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
 - Language Assist includes a manual **Retry problematic** action for failed keys
 - Manual Light/Dark/Auto theme switching with guarded shared UI tokens for spacing, opacity, and default window sizing
 - Dashboard UX contract for the 2.0 self-service direction, separating app destinations, service modules, dashboard bubbles, and motion rules; see [docs/dashboard-ux-implementation-contract.md](docs/dashboard-ux-implementation-contract.md)
+- Future dashboard modules (`hrPortal`, `networkDrives`) use a formal placeholder contract (state/actions/presentation mapping) until backend integrations are introduced
+- Dashboard module status messages use semantic keys in Core and localized copy in UI resources (no user-facing copy hardcoded in Core models)
 - Penpot UX boards are synchronized with the 2.0 semantic contract and canonical naming (`01 App Screens` + `02 Components`), with final canonical-board verification completed (see `docs/task8-penpot-verification-report.md`)
 - Safe custom updater architecture; see [SECURITY.md](SECURITY.md) for the updater threat model and hardening details.
 - Settings → Delete app unregisters the helper, unloads legacy LaunchAgents, terminates running helper processes, and removes app/helper preferences plus local app data
@@ -139,6 +141,8 @@ This approach avoids aggressive hourly background workloads while still self-hea
 ## Logging
 Logs are stored locally and can be viewed in the **Logs** window. You can copy or filter logs, reveal the log file in Finder, and export the current view.
 The Logs window supports auto refresh with three modes: immediate (default), 1 minute, or 5 minutes.
+The main app and background helper use one inter-process-safe writer, control characters are escaped to preserve log integrity, and active, rotated, lock, and exported log files are restricted to the current user (`0600`).
+Release builds do not mirror PasswordMonitor logger entries to stdout. The password-change flow does not write password values, keychain secrets, or raw `dscl` output to the app log; password-change and keychain-sync failures use stable `PM-PWD-*` and `PM-KCH-*` diagnostic codes.
 
 > Tip: For privacy, avoid sharing logs that may contain sensitive data.
 

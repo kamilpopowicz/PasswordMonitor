@@ -650,6 +650,8 @@ public enum PMLayout {
     public static let passwordChangeWindowMinWidth = defaultWindowMinWidth
     public static let passwordChangeWindowMinHeight = defaultWindowMinHeight
     public static let passwordChangeFieldMinWidth: CGFloat = 260
+    public static let passwordKeychainHelpMinWidth: CGFloat = 520
+    public static let passwordKeychainHelpMinHeight: CGFloat = 320
     public static let passwordStrengthMeterHeight: CGFloat = 8
     public static let passwordStrengthSegmentMinWidth: CGFloat = 34
     public static let windowFocusRetryCount = 12

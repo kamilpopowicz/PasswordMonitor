@@ -128,6 +128,94 @@ public struct DashboardState: Codable, Hashable, Sendable {
     }
 }
 
+public enum ServiceModuleRuntimeState: String, CaseIterable, Codable, Sendable {
+    case loading
+    case healthy
+    case warning
+    case error
+    case unavailable
+}
+
+public enum ServiceModuleAuthState: String, CaseIterable, Codable, Sendable {
+    case notRequired
+    case authenticated
+    case authenticationRequired
+    case sessionExpired
+}
+
+public enum ServiceModuleConnectivityState: String, CaseIterable, Codable, Sendable {
+    case online
+    case degraded
+    case offline
+}
+
+public enum ServiceModuleActionID: String, CaseIterable, Codable, Sendable {
+    case open
+    case refresh
+    case retry
+    case openExternal
+}
+
+public enum ServiceModuleLaunchMode: String, CaseIterable, Codable, Sendable {
+    case nativePanel
+    case inAppWebView
+}
+
+public enum ServiceModuleStatusKey: String, CaseIterable, Codable, Sendable {
+    case awaitingPortalConfiguration
+    case awaitingNetworkDrivesConfiguration
+}
+
+public struct ServiceModulePresentationSpec: Codable, Hashable, Sendable {
+    public let launchMode: ServiceModuleLaunchMode
+    public let requiresNetwork: Bool
+    public let requiresAuthenticatedSession: Bool
+    public let allowedActions: [ServiceModuleActionID]
+
+    public init(
+        launchMode: ServiceModuleLaunchMode,
+        requiresNetwork: Bool,
+        requiresAuthenticatedSession: Bool,
+        allowedActions: [ServiceModuleActionID]
+    ) {
+        self.launchMode = launchMode
+        self.requiresNetwork = requiresNetwork
+        self.requiresAuthenticatedSession = requiresAuthenticatedSession
+        self.allowedActions = allowedActions
+    }
+}
+
+public struct ServiceModuleSnapshot: Codable, Hashable, Sendable {
+    public let moduleID: ServiceModuleID
+    public let runtimeState: ServiceModuleRuntimeState
+    public let connectivity: ServiceModuleConnectivityState
+    public let authState: ServiceModuleAuthState
+    public let statusKey: ServiceModuleStatusKey?
+    public let lastRefreshAt: Date?
+    public let primaryAction: ServiceModuleActionID
+    public let secondaryActions: [ServiceModuleActionID]
+
+    public init(
+        moduleID: ServiceModuleID,
+        runtimeState: ServiceModuleRuntimeState,
+        connectivity: ServiceModuleConnectivityState,
+        authState: ServiceModuleAuthState,
+        statusKey: ServiceModuleStatusKey?,
+        lastRefreshAt: Date?,
+        primaryAction: ServiceModuleActionID,
+        secondaryActions: [ServiceModuleActionID]
+    ) {
+        self.moduleID = moduleID
+        self.runtimeState = runtimeState
+        self.connectivity = connectivity
+        self.authState = authState
+        self.statusKey = statusKey
+        self.lastRefreshAt = lastRefreshAt
+        self.primaryAction = primaryAction
+        self.secondaryActions = secondaryActions
+    }
+}
+
 public enum PMDashboardSpec {
     /// Canonical state thresholds from UX boards:
     /// 30+ days healthy, 14-29 warning, 2-13 urgent, <=24h critical.
@@ -155,6 +243,22 @@ public enum PMDashboardSpec {
             return 1.22
         case .critical:
             return 1.54
+        }
+    }
+
+    /// Non-password service tiles use this deterministic state mapping.
+    public static func tileSeverity(for runtimeState: ServiceModuleRuntimeState) -> BubbleSeverity {
+        switch runtimeState {
+        case .healthy:
+            return .healthy
+        case .warning:
+            return .warning
+        case .loading:
+            return .healthy
+        case .error:
+            return .urgent
+        case .unavailable:
+            return .critical
         }
     }
 
@@ -224,4 +328,126 @@ public enum PMDashboardSpec {
         .networkDrives: .networkDrives,
         .help: nil
     ]
+
+    /// In v2.0 all service modules are launched from Home dashboard context.
+    public static let moduleDestination: [ServiceModuleID: AppDestinationID] = [
+        .password: .password,
+        .hrPortal: .home,
+        .networkDrives: .home
+    ]
+
+    public static let serviceModulePresentation: [ServiceModuleID: ServiceModulePresentationSpec] = [
+        .password: ServiceModulePresentationSpec(
+            launchMode: .nativePanel,
+            requiresNetwork: true,
+            requiresAuthenticatedSession: true,
+            allowedActions: [.open, .refresh, .retry]
+        ),
+        .hrPortal: ServiceModulePresentationSpec(
+            launchMode: .inAppWebView,
+            requiresNetwork: true,
+            requiresAuthenticatedSession: true,
+            allowedActions: [.open, .refresh, .retry, .openExternal]
+        ),
+        .networkDrives: ServiceModulePresentationSpec(
+            launchMode: .nativePanel,
+            requiresNetwork: true,
+            requiresAuthenticatedSession: true,
+            allowedActions: [.open, .refresh, .retry]
+        )
+    ]
+
+    /// Placeholder snapshots define consistent UI before module backends are implemented.
+    public static let initialServiceModuleSnapshot: [ServiceModuleID: ServiceModuleSnapshot] = [
+        .password: ServiceModuleSnapshot(
+            moduleID: .password,
+            runtimeState: .healthy,
+            connectivity: .online,
+            authState: .authenticated,
+            statusKey: nil,
+            lastRefreshAt: nil,
+            primaryAction: .open,
+            secondaryActions: [.refresh]
+        ),
+        .hrPortal: ServiceModuleSnapshot(
+            moduleID: .hrPortal,
+            runtimeState: .loading,
+            connectivity: .degraded,
+            authState: .authenticationRequired,
+            statusKey: .awaitingPortalConfiguration,
+            lastRefreshAt: nil,
+            primaryAction: .open,
+            secondaryActions: [.refresh, .openExternal]
+        ),
+        .networkDrives: ServiceModuleSnapshot(
+            moduleID: .networkDrives,
+            runtimeState: .loading,
+            connectivity: .degraded,
+            authState: .authenticationRequired,
+            statusKey: .awaitingNetworkDrivesConfiguration,
+            lastRefreshAt: nil,
+            primaryAction: .open,
+            secondaryActions: [.refresh]
+        )
+    ]
+
+    /// Stable localization keys consumed by UI layer adapters.
+    public static func statusLocalizationKey(for statusKey: ServiceModuleStatusKey) -> String {
+        switch statusKey {
+        case .awaitingPortalConfiguration:
+            return "dashboard_status_awaiting_portal_configuration"
+        case .awaitingNetworkDrivesConfiguration:
+            return "dashboard_status_awaiting_network_drives_configuration"
+        }
+    }
+
+    /// Contract integrity checks for future service modules formalization.
+    public static func serviceModuleContractValidationErrors() -> [String] {
+        var errors: [String] = []
+
+        for module in ServiceModuleID.allCases {
+            guard let presentation = serviceModulePresentation[module] else {
+                errors.append("Missing serviceModulePresentation for \(module.rawValue)")
+                continue
+            }
+            guard let snapshot = initialServiceModuleSnapshot[module] else {
+                errors.append("Missing initialServiceModuleSnapshot for \(module.rawValue)")
+                continue
+            }
+            if moduleDestination[module] == nil {
+                errors.append("Missing moduleDestination for \(module.rawValue)")
+            }
+            if snapshot.moduleID != module {
+                errors.append("Snapshot moduleID mismatch for \(module.rawValue)")
+            }
+            if !presentation.allowedActions.contains(snapshot.primaryAction) {
+                errors.append("Primary action \(snapshot.primaryAction.rawValue) is not allowed for \(module.rawValue)")
+            }
+
+            let uniqueSecondary = Set(snapshot.secondaryActions)
+            if uniqueSecondary.count != snapshot.secondaryActions.count {
+                errors.append("Duplicate secondary actions for \(module.rawValue)")
+            }
+            let illegalSecondary = uniqueSecondary.filter { !presentation.allowedActions.contains($0) }
+            if !illegalSecondary.isEmpty {
+                let illegalValues = illegalSecondary.map(\.rawValue).sorted().joined(separator: ", ")
+                errors.append("Illegal secondary actions for \(module.rawValue): \(illegalValues)")
+            }
+            if uniqueSecondary.contains(snapshot.primaryAction) {
+                errors.append("Primary action duplicated in secondary actions for \(module.rawValue)")
+            }
+        }
+
+        for key in moduleDestination.keys where !ServiceModuleID.allCases.contains(key) {
+            errors.append("moduleDestination contains unknown module key \(key.rawValue)")
+        }
+        for key in serviceModulePresentation.keys where !ServiceModuleID.allCases.contains(key) {
+            errors.append("serviceModulePresentation contains unknown module key \(key.rawValue)")
+        }
+        for key in initialServiceModuleSnapshot.keys where !ServiceModuleID.allCases.contains(key) {
+            errors.append("initialServiceModuleSnapshot contains unknown module key \(key.rawValue)")
+        }
+
+        return errors
+    }
 }

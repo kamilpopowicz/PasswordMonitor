@@ -252,9 +252,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let content = PasswordChangeView(
             onCancel: { [weak self] in
                 self?.closePasswordChangeWindow()
-            },
-            onSuccess: { [weak self] in
-                self?.closePasswordChangeWindow()
             }
         )
         .pmWindowBackground()

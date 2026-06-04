@@ -55,6 +55,86 @@ Defined in `PasswordMonitorCore/DashboardUXContract.swift`:
 - `AppDestinationID.settings` -> destination-only in v2.0 (no service-module mapping).
 - `AppDestinationID.help` -> destination and tile shortcut (`DashboardTileID.help`), but no service-module mapping.
 
+## Future modules contract (Task 9)
+
+Task 9 extends the contract beyond placeholders for `hrPortal` and `networkDrives`.
+The goal is deterministic UI behavior before backend-specific implementations are introduced.
+
+### Formal scope in v2.0
+
+- `hrPortal` and `networkDrives` are formalized at contract level (state + actions + presentation mode).
+- No backend/API execution contract is introduced in this task.
+- All module cards still live in Home dashboard context.
+
+### Destination and module routing
+
+- `ServiceModuleID.password` -> `AppDestinationID.password`
+- `ServiceModuleID.hrPortal` -> `AppDestinationID.home`
+- `ServiceModuleID.networkDrives` -> `AppDestinationID.home`
+
+Rationale: `hrPortal` and `networkDrives` are dashboard-driven modules in v2.0, not standalone navigation destinations.
+
+### Runtime state model
+
+`ServiceModuleSnapshot` fields:
+
+- `moduleID`
+- `runtimeState`: `loading | healthy | warning | error | unavailable`
+- `connectivity`: `online | degraded | offline`
+- `authState`: `notRequired | authenticated | authenticationRequired | sessionExpired`
+- `statusKey` (optional semantic key, no user-facing copy in Core)
+- `lastRefreshAt` (optional)
+- `primaryAction`
+- `secondaryActions`
+
+### Deterministic state -> severity mapping
+
+- `healthy` -> `BubbleSeverity.healthy`
+- `warning` -> `BubbleSeverity.warning`
+- `loading` -> `BubbleSeverity.healthy` (neutral state, should use progress indicator instead of warning color)
+- `error` -> `BubbleSeverity.urgent`
+- `unavailable` -> `BubbleSeverity.critical`
+
+### Presentation and actions contract
+
+- `password`
+  - launch mode: `nativePanel`
+  - actions: `open`, `refresh`, `retry`
+  - requires network/session: yes/yes
+- `hrPortal`
+  - launch mode: `inAppWebView`
+  - actions: `open`, `refresh`, `retry`, `openExternal`
+  - requires network/session: yes/yes
+- `networkDrives`
+  - launch mode: `nativePanel`
+  - actions: `open`, `refresh`, `retry`
+  - requires network/session: yes/yes
+
+### Initial placeholder snapshots (UI bootstrap)
+
+- `password`: `healthy`, `online`, `authenticated`
+- `hrPortal`: `loading`, `degraded`, `authenticationRequired`
+- `networkDrives`: `loading`, `degraded`, `authenticationRequired`
+
+These defaults are intentional. They allow canonical Home tiles to render consistently in E2E and design sync runs even when module backends are missing.
+
+### Contract integrity rules
+
+`PMDashboardSpec.serviceModuleContractValidationErrors()` must return empty list:
+
+- each `ServiceModuleID` has entries in `moduleDestination`, `serviceModulePresentation`, `initialServiceModuleSnapshot`
+- `snapshot.primaryAction` is allowed by module presentation contract
+- `snapshot.secondaryActions` are unique and allowed
+- `primaryAction` is not duplicated in `secondaryActions`
+
+This validation is covered by core tests and protects against partial map drift.
+
+### UI localization adapter rule
+
+- Core provides only semantic status keys.
+- UI resolves keys through `DashboardStatusCopy` using `PMDashboardSpec.statusLocalizationKey(for:)`.
+- User-facing copy must stay in localization resources (`Localizable.xcstrings`), not in Core runtime models.
+
 ## State and scaling rules
 
 - Severity thresholds:

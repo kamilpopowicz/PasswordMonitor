@@ -7,9 +7,10 @@
 
 
 import Foundation
+import Darwin
 
 /// Shared logger dla obu targets
-public class Logger {
+public final class Logger: @unchecked Sendable {
     public enum Level: String {
         case debug = "DEBUG"
         case info = "INFO"
@@ -18,22 +19,38 @@ public class Logger {
     }
 
     private let logFileURL: URL
+    private let rotatedLogFileURL: URL
+    private let lockFileURL: URL
+    private let maxBytes: Int
+    private let emitToStdout: Bool
+    private static let fileAccessLock = NSLock()
     private static let cacheLock = NSLock()
     private static var cachedBundle: (code: String, bundle: Bundle)?
     private static let formatTokenRegex = try! NSRegularExpression(
         pattern: "%(?:#@[^@]+@|(?:\\d+\\$)?[-+ #0']*(?:\\d+|\\*)?(?:\\.(?:\\d+|\\*))?(?:hh|h|ll|l|L|z|j|t)?[@diuoxXfFeEgGaAcCsSp%])"
     )
-    private let maxBytes: Int = 1_000_000
-    
     public static let shared = Logger()
 
     public var fileURL: URL {
         logFileURL
     }
 
-    public init() {
+    public convenience init() {
         let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        logFileURL = homeDir.appendingPathComponent(".password_monitor.log")
+        self.init(
+            fileURL: homeDir.appendingPathComponent(".password_monitor.log"),
+            maxBytes: 1_000_000,
+            emitToStdout: true
+        )
+    }
+
+    init(fileURL: URL, maxBytes: Int, emitToStdout: Bool = false) {
+        logFileURL = fileURL
+        rotatedLogFileURL = fileURL.deletingPathExtension().appendingPathExtension("log.1")
+        lockFileURL = fileURL.appendingPathExtension("lock")
+        self.maxBytes = maxBytes
+        self.emitToStdout = emitToStdout
+        prepareLogFile()
     }
     
     public func log(_ message: String, level: Level = .info) {
@@ -44,24 +61,24 @@ public class Logger {
             dateStyle: .short,
             timeStyle: .medium
         )
-        let maskedMessage = Self.maskSensitive(message)
-        let logMessage = "[\(timestamp)] [\(level.rawValue)] \(maskedMessage)\n"
+        let sanitizedMessage = Self.sanitizeForSingleLineLog(Self.maskSensitive(message))
+        let logMessage = "[\(timestamp)] [\(level.rawValue)] \(sanitizedMessage)\n"
         
         if let data = logMessage.data(using: .utf8) {
-            if FileManager.default.fileExists(atPath: logFileURL.path) {
-                rotateIfNeeded(appendBytes: data.count)
-                if let fileHandle = try? FileHandle(forWritingTo: logFileURL) {
-                    fileHandle.seekToEndOfFile()
-                    fileHandle.write(data)
-                    fileHandle.closeFile()
+            _ = withExclusiveFileLock(fallback: false) {
+                guard secureExistingLogFiles(),
+                      rotateIfNeeded(appendBytes: data.count) else {
+                    return false
                 }
-            } else {
-                try? data.write(to: logFileURL)
+                return append(data)
             }
         }
         
-        // Też print do stdout dla debugging
-        print(logMessage, terminator: "")
+        #if DEBUG
+        if emitToStdout {
+            print(logMessage, terminator: "")
+        }
+        #endif
     }
 
     public func logLocalized(_ key: String, _ arguments: CVarArg...) {
@@ -78,16 +95,114 @@ public class Logger {
         localizedString(key, arguments)
     }
 
-    private func rotateIfNeeded(appendBytes: Int) {
+    public func prepareLogFile() {
+        _ = withExclusiveFileLock(fallback: false) {
+            secureExistingLogFiles()
+        }
+    }
+
+    public func readContents() -> String {
+        withExclusiveFileLock(fallback: "") {
+            guard secureExistingLogFiles() else { return "" }
+            guard let data = try? Data(contentsOf: logFileURL) else { return "" }
+            return String(data: data, encoding: .utf8) ?? ""
+        }
+    }
+
+    @discardableResult
+    public func clear() -> Bool {
+        withExclusiveFileLock(fallback: false) {
+            if FileManager.default.fileExists(atPath: rotatedLogFileURL.path) {
+                do {
+                    try FileManager.default.removeItem(at: rotatedLogFileURL)
+                } catch {
+                    return false
+                }
+            }
+            let descriptor = open(logFileURL.path, O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR)
+            guard descriptor >= 0 else { return false }
+            defer { close(descriptor) }
+            return fchmod(descriptor, S_IRUSR | S_IWUSR) == 0
+        }
+    }
+
+    private func rotateIfNeeded(appendBytes: Int) -> Bool {
         guard let attrs = try? FileManager.default.attributesOfItem(atPath: logFileURL.path),
-              let size = attrs[.size] as? NSNumber else { return }
+              let size = attrs[.size] as? NSNumber else { return true }
 
-        if size.intValue + appendBytes <= maxBytes { return }
+        if size.intValue + appendBytes <= maxBytes { return true }
 
-        let rotatedURL = logFileURL.deletingPathExtension().appendingPathExtension("log.1")
-        try? FileManager.default.removeItem(at: rotatedURL)
-        try? FileManager.default.moveItem(at: logFileURL, to: rotatedURL)
-        try? "".write(to: logFileURL, atomically: true, encoding: .utf8)
+        try? FileManager.default.removeItem(at: rotatedLogFileURL)
+        do {
+            try FileManager.default.moveItem(at: logFileURL, to: rotatedLogFileURL)
+        } catch {
+            return false
+        }
+        return secureFileIfPresent(at: rotatedLogFileURL) && ensureSecureFile(at: logFileURL)
+    }
+
+    private func append(_ data: Data) -> Bool {
+        let descriptor = open(logFileURL.path, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else { return false }
+        defer { close(descriptor) }
+
+        guard fchmod(descriptor, S_IRUSR | S_IWUSR) == 0 else { return false }
+        return data.withUnsafeBytes { rawBuffer in
+            guard let baseAddress = rawBuffer.baseAddress else { return true }
+            var offset = 0
+            while offset < rawBuffer.count {
+                let written = Darwin.write(
+                    descriptor,
+                    baseAddress.advanced(by: offset),
+                    rawBuffer.count - offset
+                )
+                if written < 0, errno == EINTR {
+                    continue
+                }
+                guard written > 0 else { return false }
+                offset += written
+            }
+            return true
+        }
+    }
+
+    private func secureExistingLogFiles() -> Bool {
+        ensureSecureFile(at: logFileURL)
+            && secureFileIfPresent(at: rotatedLogFileURL)
+            && secureFileIfPresent(at: lockFileURL)
+    }
+
+    private func secureFileIfPresent(at url: URL) -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path) else { return true }
+        return chmod(url.path, S_IRUSR | S_IWUSR) == 0
+    }
+
+    private func ensureSecureFile(at url: URL) -> Bool {
+        let descriptor = open(url.path, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else { return false }
+        defer { close(descriptor) }
+        return fchmod(descriptor, S_IRUSR | S_IWUSR) == 0
+    }
+
+    private func withExclusiveFileLock<T>(fallback: T, _ body: () -> T) -> T {
+        Self.fileAccessLock.lock()
+        defer { Self.fileAccessLock.unlock() }
+
+        let descriptor = open(lockFileURL.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else { return fallback }
+        defer {
+            _ = flock(descriptor, LOCK_UN)
+            close(descriptor)
+        }
+
+        guard fchmod(descriptor, S_IRUSR | S_IWUSR) == 0 else { return fallback }
+        while flock(descriptor, LOCK_EX) != 0 {
+            if errno == EINTR {
+                continue
+            }
+            return fallback
+        }
+        return body()
     }
 
     private static func localizedString(_ key: String, _ arguments: [CVarArg]) -> String {
@@ -307,6 +422,23 @@ public class Logger {
         )
 
         return result
+    }
+
+    private static func sanitizeForSingleLineLog(_ input: String) -> String {
+        input.unicodeScalars.reduce(into: "") { result, scalar in
+            switch scalar {
+            case "\n":
+                result.append("\\n")
+            case "\r":
+                result.append("\\r")
+            case "\t":
+                result.append("\\t")
+            case _ where CharacterSet.controlCharacters.contains(scalar):
+                result.append("\\u{\(String(scalar.value, radix: 16, uppercase: true))}")
+            default:
+                result.unicodeScalars.append(scalar)
+            }
+        }
     }
 
     private static func replaceRegex(
