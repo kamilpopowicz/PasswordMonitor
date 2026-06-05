@@ -57,6 +57,7 @@ See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
 
 ## Features
 - Menu bar UI with at‑a‑glance password status
+- Menu bar actions that open standalone windows close the popover first, while **Check now** stays inline and keeps the menu visible during refresh
 - Background helper checks on login, wake, hourly cadence, and the configured notification time
 - App startup cleans up stale helper processes from older app bundles so only the current embedded helper can own scheduled alerts
 - Background helper is launched immediately after registration (no logout/restart required) and receives setting changes in real time via a shared preference suite
@@ -144,7 +145,7 @@ The Logs window supports auto refresh with three modes: immediate (default), 1 m
 The main app and background helper use one inter-process-safe writer, control characters are escaped to preserve log integrity, and active, rotated, lock, and exported log files are restricted to the current user (`0600`).
 Release builds do not mirror PasswordMonitor logger entries to stdout. The password-change flow does not write password values, keychain secrets, or raw `dscl` output to the app log; password-change and keychain-sync failures use stable `PM-PWD-*` and `PM-KCH-*` diagnostic codes.
 
-> Tip: For privacy, avoid sharing logs that may contain sensitive data.
+> Tip: Logs are masked and restricted locally, but they can still contain diagnostic metadata about the environment. Review exported logs before sharing them.
 
 ---
 

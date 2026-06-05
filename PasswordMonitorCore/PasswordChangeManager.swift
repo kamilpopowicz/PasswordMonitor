@@ -150,8 +150,13 @@ public final class PasswordChangeManager: @unchecked Sendable {
             return .accountLocked
         case odCode(kODErrorCredentialsNotAuthorized):
             return .notAuthorized
-        case odCode(kODErrorCredentialsMethodNotSupported),
-             odCode(kODErrorPluginOperationNotSupported):
+        case odCode(kODErrorCredentialsMethodNotSupported):
+            // Some AD mobile-account nodes report this credential-layer error
+            // when the current password is rejected during password change.
+            // In this flow the actionable user-facing cause is the same:
+            // re-enter the current password before trying domain policy fixes.
+            return .currentPasswordInvalid
+        case odCode(kODErrorPluginOperationNotSupported):
             return .methodNotSupported
         case odCode(kODErrorCredentialsOperationFailed),
              odCode(kODErrorCredentialsServerError),
@@ -479,8 +484,16 @@ public extension PasswordChangeError {
             return "PM-PWD-010"
         case .currentPasswordInvalid:
             return "PM-PWD-001"
-        case .passwordPolicyFailed, .passwordTooShort, .passwordTooLong, .passwordNeedsLetter, .passwordNeedsDigit:
+        case .passwordPolicyFailed:
             return "PM-PWD-002"
+        case .passwordTooShort:
+            return "PM-PWD-012"
+        case .passwordTooLong:
+            return "PM-PWD-013"
+        case .passwordNeedsLetter:
+            return "PM-PWD-014"
+        case .passwordNeedsDigit:
+            return "PM-PWD-015"
         case .passwordChangeTooSoon:
             return "PM-PWD-004"
         case .domainUnavailable:

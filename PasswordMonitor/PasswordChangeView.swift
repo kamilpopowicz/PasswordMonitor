@@ -195,6 +195,7 @@ final class PasswordChangeViewModel: ObservableObject {
     private let manager = PasswordChangeManager()
     private let keychainSyncManager = KeychainPasswordSyncManager()
     private var pendingKeychainRetryCredentials: (currentPassword: String, newPassword: String)?
+    private static let recentPasswordChangeWindow: TimeInterval = 24 * 60 * 60
 
     var hasSuccessfulResult: Bool {
         if case .success = resultState {
@@ -339,7 +340,12 @@ final class PasswordChangeViewModel: ObservableObject {
             } catch {
                 let mappedError = PasswordChangeManager.map(error)
                 clearPendingKeychainRetryCredentials()
-                resultState = .failure(presentation: PasswordChangeCopy.presentation(for: mappedError))
+                resultState = .failure(
+                    presentation: PasswordChangeCopy.presentation(
+                        for: mappedError,
+                        likelyRecentChangePolicy: likelyRecentChangePolicy()
+                    )
+                )
             }
 
             isSubmitting = false
@@ -351,6 +357,16 @@ final class PasswordChangeViewModel: ObservableObject {
         newPassword = ""
         confirmPassword = ""
         isPasswordRevealed = false
+    }
+
+    private func likelyRecentChangePolicy() -> Bool {
+        guard let info = NotificationManager.shared.latestPasswordInfo,
+              !info.isFromCache else {
+            return false
+        }
+
+        let age = Date().timeIntervalSince(info.lastSetDate)
+        return age >= 0 && age <= Self.recentPasswordChangeWindow
     }
 
     private func updatePendingKeychainRetryCredentials(
@@ -706,18 +722,25 @@ struct MessageBanner: View {
     let kind: Kind
 
     var body: some View {
-        Text(message)
-            .font(.caption.weight(.semibold))
-            .foregroundColor(color)
-            .pmMultilineText()
-            .padding(PMLayout.compactSpacing)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(color.opacity(PMControlMetrics.disabledSecondaryFillOpacity))
-            .clipShape(RoundedRectangle(cornerRadius: PMLayout.compactSpacing, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: PMLayout.compactSpacing, style: .continuous)
-                    .stroke(color.opacity(PMControlMetrics.disabledStrokeOpacity), lineWidth: PMLayout.hairlineWidth)
-            )
+        HStack(alignment: .top, spacing: PMLayout.compactSpacing) {
+            Image(systemName: iconName)
+                .font(.callout.weight(.semibold))
+                .foregroundColor(color)
+                .accessibilityHidden(true)
+
+            Text(message)
+                .font(.callout.weight(.semibold))
+                .foregroundColor(PMTheme.textPrimary)
+                .pmMultilineText()
+        }
+        .padding(PMLayout.compactSpacing)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(PMControlMetrics.disabledSecondaryFillOpacity))
+        .clipShape(RoundedRectangle(cornerRadius: PMLayout.compactSpacing, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: PMLayout.compactSpacing, style: .continuous)
+                .stroke(color.opacity(PMControlMetrics.disabledStrokeOpacity), lineWidth: PMLayout.hairlineWidth)
+        )
     }
 
     private var color: Color {
@@ -730,6 +753,19 @@ struct MessageBanner: View {
             return PMTheme.danger
         case .success:
             return PMTheme.success
+        }
+    }
+
+    private var iconName: String {
+        switch kind {
+        case .info:
+            return "info.circle.fill"
+        case .warning:
+            return "exclamationmark.triangle.fill"
+        case .error:
+            return "xmark.octagon.fill"
+        case .success:
+            return "checkmark.circle.fill"
         }
     }
 }
@@ -865,7 +901,10 @@ enum PasswordChangeCopy {
         }
     }
 
-    fileprivate static func presentation(for error: PasswordChangeError) -> PasswordChangeErrorPresentation {
+    fileprivate static func presentation(
+        for error: PasswordChangeError,
+        likelyRecentChangePolicy: Bool = false
+    ) -> PasswordChangeErrorPresentation {
         let diagnosticCode = error.diagnosticCode
         switch error {
         case .activeDirectoryRequired:
@@ -878,10 +917,54 @@ enum PasswordChangeCopy {
                 code: diagnosticCode,
                 message: localized(pl: "Stare hasło jest nieprawidłowe.", en: "Current password is incorrect.")
             )
-        case .passwordPolicyFailed, .passwordTooShort, .passwordTooLong, .passwordNeedsLetter, .passwordNeedsDigit:
+        case .passwordPolicyFailed:
+            if likelyRecentChangePolicy {
+                return PasswordChangeErrorPresentation(
+                    code: diagnosticCode,
+                    message: localized(
+                        pl: "Domena odrzuciła zmianę hasła. Hasło było zmienione niedawno, więc prawdopodobnie obowiązuje minimalny czas między zmianami.",
+                        en: "The domain rejected the password change. The password was changed recently, so a minimum time between password changes is likely enforced."
+                    )
+                )
+            }
             return PasswordChangeErrorPresentation(
                 code: diagnosticCode,
-                message: localized(pl: "Nowe hasło nie spełnia polityki domeny.", en: "New password does not meet the domain policy.")
+                message: localized(
+                    pl: "Domena odrzuciła nowe hasło, ale nie wskazała dokładnej reguły. Hasło może naruszać historię haseł, wymagania złożoności lub inną zasadę firmową.",
+                    en: "The domain rejected the new password without identifying the exact rule. It might violate password history, complexity requirements, or another company policy."
+                )
+            )
+        case .passwordTooShort:
+            return PasswordChangeErrorPresentation(
+                code: diagnosticCode,
+                message: localized(
+                    pl: "Nowe hasło jest zbyt krótkie według polityki domeny.",
+                    en: "The new password is too short according to the domain policy."
+                )
+            )
+        case .passwordTooLong:
+            return PasswordChangeErrorPresentation(
+                code: diagnosticCode,
+                message: localized(
+                    pl: "Nowe hasło jest zbyt długie według polityki domeny.",
+                    en: "The new password is too long according to the domain policy."
+                )
+            )
+        case .passwordNeedsLetter:
+            return PasswordChangeErrorPresentation(
+                code: diagnosticCode,
+                message: localized(
+                    pl: "Polityka domeny wymaga, aby nowe hasło zawierało co najmniej jedną literę.",
+                    en: "The domain policy requires the new password to contain at least one letter."
+                )
+            )
+        case .passwordNeedsDigit:
+            return PasswordChangeErrorPresentation(
+                code: diagnosticCode,
+                message: localized(
+                    pl: "Polityka domeny wymaga, aby nowe hasło zawierało co najmniej jedną cyfrę.",
+                    en: "The domain policy requires the new password to contain at least one digit."
+                )
             )
         case .passwordChangeTooSoon:
             return PasswordChangeErrorPresentation(

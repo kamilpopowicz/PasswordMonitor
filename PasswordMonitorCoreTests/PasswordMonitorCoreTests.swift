@@ -116,16 +116,49 @@ final class PasswordMonitorCoreTests: XCTestCase {
         XCTAssertEqual(PasswordChangeManager.map(error), .currentPasswordInvalid)
     }
 
+    func testPasswordChangeErrorMappingTreatsCredentialMethodNotSupportedAsCurrentPasswordRejected() {
+        let error = NSError(domain: ODFrameworkErrorDomain, code: Int(kODErrorCredentialsMethodNotSupported.rawValue))
+
+        XCTAssertEqual(PasswordChangeManager.map(error), .currentPasswordInvalid)
+    }
+
+    func testPasswordChangeErrorMappingKeepsPluginOperationNotSupportedSeparate() {
+        let error = NSError(domain: ODFrameworkErrorDomain, code: Int(kODErrorPluginOperationNotSupported.rawValue))
+
+        XCTAssertEqual(PasswordChangeManager.map(error), .methodNotSupported)
+    }
+
     func testPasswordChangeErrorMappingHandlesDomainConnectivity() {
         let error = NSError(domain: ODFrameworkErrorDomain, code: Int(kODErrorCredentialsServerUnreachable.rawValue))
 
         XCTAssertEqual(PasswordChangeManager.map(error), .domainUnavailable)
     }
 
+    func testPasswordChangeErrorMappingDistinguishesDomainPolicyFailures() {
+        let mappings: [(ODFrameworkErrors, PasswordChangeError)] = [
+            (kODErrorCredentialsPasswordQualityFailed, .passwordPolicyFailed),
+            (kODErrorCredentialsPasswordTooShort, .passwordTooShort),
+            (kODErrorCredentialsPasswordTooLong, .passwordTooLong),
+            (kODErrorCredentialsPasswordNeedsLetter, .passwordNeedsLetter),
+            (kODErrorCredentialsPasswordNeedsDigit, .passwordNeedsDigit),
+            (kODErrorCredentialsPasswordChangeTooSoon, .passwordChangeTooSoon)
+        ]
+
+        for (odError, expected) in mappings {
+            let error = NSError(domain: ODFrameworkErrorDomain, code: Int(odError.rawValue))
+            XCTAssertEqual(PasswordChangeManager.map(error), expected)
+        }
+    }
+
     func testPasswordChangeErrorsProvideStableDiagnosticCodes() {
         XCTAssertEqual(PasswordChangeError.currentPasswordInvalid.diagnosticCode, "PM-PWD-001")
         XCTAssertEqual(PasswordChangeError.passwordPolicyFailed.diagnosticCode, "PM-PWD-002")
+        XCTAssertEqual(PasswordChangeError.passwordTooShort.diagnosticCode, "PM-PWD-012")
+        XCTAssertEqual(PasswordChangeError.passwordTooLong.diagnosticCode, "PM-PWD-013")
+        XCTAssertEqual(PasswordChangeError.passwordNeedsLetter.diagnosticCode, "PM-PWD-014")
+        XCTAssertEqual(PasswordChangeError.passwordNeedsDigit.diagnosticCode, "PM-PWD-015")
         XCTAssertEqual(PasswordChangeError.domainUnavailable.diagnosticCode, "PM-PWD-003")
+        XCTAssertEqual(PasswordChangeError.methodNotSupported.diagnosticCode, "PM-PWD-008")
         XCTAssertEqual(PasswordChangeError.unknown(code: 42, message: "details").diagnosticCode, "PM-PWD-011")
     }
 

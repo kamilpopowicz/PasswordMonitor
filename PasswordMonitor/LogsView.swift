@@ -10,7 +10,6 @@ import AppKit
 import PasswordMonitorCore
 
 struct LogsView: View {
-    @EnvironmentObject var appState: AppState
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var logStore = LogStore()
     @State private var searchText = ""
@@ -59,11 +58,9 @@ struct LogsView: View {
         .onAppear {
             logStore.start()
             logStore.reload()
-            appState.windowOpened()
             isFollowingLatest = true
             scrollToBottomToken = UUID()
             DispatchQueue.main.async {
-                appState.activateApp()
                 refreshWindowTitle()
             }
         }
@@ -72,7 +69,6 @@ struct LogsView: View {
         }
         .onDisappear {
             logStore.stop()
-            appState.windowClosed()
         }
         .onChange(of: logStore.content) { _, _ in
             if isFollowingLatest {
@@ -285,7 +281,7 @@ struct LogsView: View {
             keyWindow.title = title
             return
         }
-        if let logsWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == "logs-window" }) {
+        if let logsWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == AppWindowID.logs }) {
             logsWindow.title = title
         }
     }

@@ -44,10 +44,16 @@ All notable changes to this project will be documented in this file.
 ## PasswordMonitor 1.9.2
 - Added the in-app AD/mobile password change flow for issue #6 using OpenDirectory.
 - Added inline validation, password strength feedback, stable `PM-PWD-*` diagnostic codes, mapped domain policy errors, and a System Settings fallback.
+- Domain policy failures now distinguish too-short, too-long, missing-letter, missing-digit, change-too-soon, and unspecified policy rejection outcomes with dedicated user messages and diagnostic codes.
 - Added automatic login-keychain password synchronization after a successful AD password change, with safe retry, partial-success states, and stable `PM-KCH-*` diagnostics.
 - Added persistent success/error result panels so the password-change window reports AD, keychain-sync, and refresh outcomes without closing automatically.
 - Wired password-change requests from the menu bar, live alerts, test notifications, and the login item helper.
 - Fixed the password change window size and Dock/Cmd+Tab activation behavior.
+- Standardized window activation so Settings, Logs, About, and AI Requirements open in front and remain available through Dock/Cmd+Tab while open or minimized.
+- Fixed the menu bar **Change password** action so it is available whenever the domain is reachable, regardless of remaining password lifetime.
+- Standardized menu bar window-opening actions so the popover closes before Settings, Logs, About, or the password-change flow opens.
+- Improved password-change failure UX with more readable result banners and better current-password rejection mapping for AD/OpenDirectory responses.
+- Added recent-change context for generic domain policy failures so likely minimum-age rejections are explained clearly.
 - Fixed scheduled/helper alert handoff so **Change password** activates the main app before showing the in-app password window.
 - Hardened local logging:
   - app/helper writes, reads, clearing, and rotation now share an inter-process file lock,
