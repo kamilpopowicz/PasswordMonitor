@@ -645,6 +645,15 @@ public enum PMLayout {
     public static let defaultWindowMinHeight = defaultWindowHeight
     public static let windowMinWidth = defaultWindowMinWidth
     public static let windowMinHeight = defaultWindowMinHeight
+    public static let passwordChangeWindowWidth = defaultWindowWidth
+    public static let passwordChangeWindowHeight = defaultWindowHeight
+    public static let passwordChangeWindowMinWidth = defaultWindowMinWidth
+    public static let passwordChangeWindowMinHeight = defaultWindowMinHeight
+    public static let passwordChangeFieldMinWidth: CGFloat = 260
+    public static let passwordKeychainHelpMinWidth: CGFloat = 520
+    public static let passwordKeychainHelpMinHeight: CGFloat = 320
+    public static let passwordStrengthMeterHeight: CGFloat = 8
+    public static let passwordStrengthSegmentMinWidth: CGFloat = 34
     public static let windowFocusRetryCount = 12
     public static let windowContentWidth: CGFloat = defaultWindowWidth - (contentPadding * 2)
     public static let windowContentMinWidth: CGFloat = windowContentWidth
@@ -781,6 +790,7 @@ public enum PMMotion {
     public static let relaunchDelay: Double = 0.25
     public static let languagePromptDelay: Double = 0.3
     public static let windowFocusRetryDelay: Double = 0.05
+    public static let mainAppActivationDelay: Double = 0.15
 }
 
 public struct PMWindowFooter: View {

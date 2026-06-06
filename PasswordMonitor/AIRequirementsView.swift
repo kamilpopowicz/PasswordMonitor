@@ -118,7 +118,7 @@ struct AIRequirementsView: View {
             keyWindow.title = title
             return
         }
-        if let aiWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == "ai-check-window" }) {
+        if let aiWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == AppWindowID.aiRequirements }) {
             aiWindow.title = title
         }
     }

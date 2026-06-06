@@ -103,9 +103,8 @@ public struct SystemADDomainResolver {
         }
 
         guard task.terminationStatus == 0 else {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorMessage = String(data: errorData, encoding: .utf8) ?? "unknown"
-            Logger.shared.logLocalized("log_ad_nodes_list_error %@ %d", errorMessage, task.terminationStatus)
+            _ = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            Logger.shared.log("AD node list command failed (exitCode=\(task.terminationStatus))", level: .warning)
             return nil
         }
 

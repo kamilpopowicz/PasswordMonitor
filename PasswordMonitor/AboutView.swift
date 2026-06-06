@@ -61,17 +61,10 @@ struct AboutView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear {
-            appState.windowOpened()
             handlePendingCheckRequestIfNeeded()
-            DispatchQueue.main.async {
-                appState.activateApp()
-            }
         }
         .onChange(of: updateRequestCenter.checkRequestID) { _, _ in
             handlePendingCheckRequestIfNeeded()
-        }
-        .onDisappear {
-            appState.windowClosed()
         }
     }
 
@@ -215,7 +208,7 @@ struct AboutView: View {
                 .disabled(updateCheckInProgress)
 
                 Button {
-                    openWindow(id: "settings-window")
+                    presentWindow(id: AppWindowID.settings)
                     dismiss()
                 } label: {
                     Text(LanguageSettings.localizedString("about_open_settings"))
@@ -225,6 +218,11 @@ struct AboutView: View {
             }
         }
         .pmContentCard()
+    }
+
+    private func presentWindow(id: String) {
+        openWindow(id: id)
+        appState.presentWindow(id: id)
     }
 
     private func updateCandidateText(_ candidate: PMUpdateCandidate) -> some View {

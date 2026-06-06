@@ -11,6 +11,23 @@ import ServiceManagement
 import PasswordMonitorCore
 import Combine
 
+enum AppWindowID {
+    static let settings = "settings-window"
+    static let about = "about-window"
+    static let logs = "logs-window"
+    static let aiRequirements = "ai-check-window"
+    static let passwordChange = "password-change-window"
+
+    static let standard: Set<String> = [
+        settings,
+        about,
+        logs,
+        aiRequirements
+    ]
+
+    static let managed = standard.union([passwordChange])
+}
+
 enum AppIconImageProvider {
     static func image(size: CGFloat) -> NSImage {
         let candidates = [
@@ -70,7 +87,7 @@ struct PasswordMonitorApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window(LanguageSettings.localizedString("settings_window_title", languageCode: languageSettings.selectedLanguageCode), id: "settings-window") {
+        Window(LanguageSettings.localizedString("settings_window_title", languageCode: languageSettings.selectedLanguageCode), id: AppWindowID.settings) {
             SettingsView()
                 .environmentObject(appState)
                 .environmentObject(themeManager)
@@ -81,10 +98,11 @@ struct PasswordMonitorApp: App {
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
+                .background(AppWindowLifecycleBridge(id: AppWindowID.settings, appState: appState))
         }
         .windowResizability(.automatic)
 
-        Window(LanguageSettings.localizedString("about_window_title", languageCode: languageSettings.selectedLanguageCode), id: "about-window") {
+        Window(LanguageSettings.localizedString("about_window_title", languageCode: languageSettings.selectedLanguageCode), id: AppWindowID.about) {
             AboutView()
                 .environmentObject(appState)
                 .environmentObject(themeManager)
@@ -95,10 +113,11 @@ struct PasswordMonitorApp: App {
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
+                .background(AppWindowLifecycleBridge(id: AppWindowID.about, appState: appState))
         }
         .windowResizability(.automatic)
 
-        Window(LanguageSettings.localizedString("logs_window_title", languageCode: languageSettings.selectedLanguageCode), id: "logs-window") {
+        Window(LanguageSettings.localizedString("logs_window_title", languageCode: languageSettings.selectedLanguageCode), id: AppWindowID.logs) {
             LogsView()
                 .environmentObject(appState)
                 .environmentObject(themeManager)
@@ -108,10 +127,11 @@ struct PasswordMonitorApp: App {
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
+                .background(AppWindowLifecycleBridge(id: AppWindowID.logs, appState: appState))
         }
         .windowResizability(.automatic)
 
-        Window(LanguageSettings.localizedString("ai_requirements_window_title", languageCode: languageSettings.selectedLanguageCode), id: "ai-check-window") {
+        Window(LanguageSettings.localizedString("ai_requirements_window_title", languageCode: languageSettings.selectedLanguageCode), id: AppWindowID.aiRequirements) {
             AIRequirementsView()
                 .environmentObject(themeManager)
                 .environmentObject(updateRequestCenter)
@@ -120,53 +140,155 @@ struct PasswordMonitorApp: App {
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
+                .background(AppWindowLifecycleBridge(id: AppWindowID.aiRequirements, appState: appState))
         }
         .windowResizability(.automatic)
         
         // Skróty i menu
         .commands {
-            AppCommands()
+            AppCommands(
+                appState: appState,
+                updateRequestCenter: updateRequestCenter
+            )
         }
     }
 }
 
 struct AppCommands: Commands {
     @Environment(\.openWindow) private var openWindow
-    @EnvironmentObject private var updateRequestCenter: UpdateRequestCenter
+    let appState: AppState
+    let updateRequestCenter: UpdateRequestCenter
     
     var body: some Commands {
         CommandGroup(replacing: .appSettings) {
             Button(LanguageSettings.localizedString("settings_menu_title")) {
-                openWindow(id: "settings-window")
+                presentWindow(id: AppWindowID.settings)
             }
             .keyboardShortcut(",", modifiers: .command)
 
             Button(LanguageSettings.localizedString("menu_logs")) {
-                openWindow(id: "logs-window")
+                presentWindow(id: AppWindowID.logs)
             }
             .keyboardShortcut("l", modifiers: .command)
         }
 
         CommandGroup(replacing: .appInfo) {
             Button(LanguageSettings.localizedString("menu_about")) {
-                openWindow(id: "about-window")
+                presentWindow(id: AppWindowID.about)
             }
 
             Button(LanguageSettings.localizedString("settings_check_for_updates")) {
                 updateRequestCenter.requestCheck()
-                openWindow(id: "about-window")
+                presentWindow(id: AppWindowID.about)
             }
+        }
+    }
+
+    private func presentWindow(id: String) {
+        openWindow(id: id)
+        appState.presentWindow(id: id)
+    }
+}
+
+private struct AppWindowLifecycleBridge: NSViewRepresentable {
+    let id: String
+    let appState: AppState
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(id: id, appState: appState)
+    }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        attach(view, coordinator: context.coordinator)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        attach(nsView, coordinator: context.coordinator)
+    }
+
+    private func attach(_ view: NSView, coordinator: Coordinator) {
+        DispatchQueue.main.async {
+            guard let window = view.window else { return }
+            coordinator.attach(to: window)
+        }
+    }
+
+    @MainActor
+    final class Coordinator {
+        private let id: String
+        private weak var appState: AppState?
+        private weak var window: NSWindow?
+        private var observers: [NSObjectProtocol] = []
+
+        init(id: String, appState: AppState) {
+            self.id = id
+            self.appState = appState
+        }
+
+        deinit {
+            observers.forEach(NotificationCenter.default.removeObserver)
+        }
+
+        func attach(to window: NSWindow) {
+            guard self.window !== window else { return }
+            observers.forEach(NotificationCenter.default.removeObserver)
+            observers.removeAll()
+            self.window = window
+
+            window.identifier = NSUserInterfaceItemIdentifier(id)
+            window.collectionBehavior.formUnion([.moveToActiveSpace, .fullScreenAuxiliary])
+
+            observe(NSWindow.didDeminiaturizeNotification, for: window) { [weak self, weak window] in
+                guard let self, let window else { return }
+                self.appState?.windowBecameVisible(window, id: self.id)
+            }
+            observe(NSWindow.didBecomeKeyNotification, for: window) { [weak self] in
+                self?.appState?.windowStateChanged()
+            }
+            observe(NSWindow.didMiniaturizeNotification, for: window) { [weak self] in
+                self?.appState?.windowStateChanged()
+            }
+            observe(NSWindow.willCloseNotification, for: window) { [weak self] in
+                guard let self else { return }
+                self.appState?.windowWillClose(window, id: self.id)
+            }
+
+            appState?.registerWindow(window, id: id)
+        }
+
+        private func observe(
+            _ name: Notification.Name,
+            for window: NSWindow,
+            handler: @escaping @MainActor () -> Void
+        ) {
+            let observer = NotificationCenter.default.addObserver(
+                forName: name,
+                object: window,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    handler()
+                }
+            }
+            observers.append(observer)
         }
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    private let passwordChangeWindowIdentifier = NSUserInterfaceItemIdentifier(AppWindowID.passwordChange)
+    private var passwordChangeWindow: NSWindow?
+    private var passwordChangeLocalObserver: NSObjectProtocol?
+    private var passwordChangeDistributedObserver: NSObjectProtocol?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger.shared.logLocalized("log_app_launched")
         logLoadedSettingsSnapshot()
 
         LocalizationRetryManager.shared.handleAppLaunch()
+        registerPasswordChangeRequestObservers()
 
         // Rejestracja helpera
         registerHelperService()
@@ -177,6 +299,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        if let passwordChangeLocalObserver {
+            NotificationCenter.default.removeObserver(passwordChangeLocalObserver)
+        }
+        if let passwordChangeDistributedObserver {
+            DistributedNotificationCenter.default().removeObserver(passwordChangeDistributedObserver)
+        }
+    }
+
     func applicationDidBecomeActive(_ notification: Notification) {
         DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.windowFocusRetryDelay) {
             self.hideDockWhenNoAppWindowIsOpen()
@@ -184,7 +315,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if hasVisibleAppWindow {
+        if hasOpenAppWindow {
             return true
         }
 
@@ -192,18 +323,134 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
-    private var hasVisibleAppWindow: Bool {
+    private var hasOpenAppWindow: Bool {
         NSApp.windows.contains { window in
-            guard window.isVisible else { return false }
-            guard window.identifier?.rawValue != nil else { return false }
-            return !window.isMiniaturized
+            guard let id = window.identifier?.rawValue,
+                  AppWindowID.managed.contains(id) else {
+                return false
+            }
+            return window.isVisible || window.isMiniaturized
         }
     }
 
     private func hideDockWhenNoAppWindowIsOpen() {
         guard NSApp.modalWindow == nil else { return }
-        guard !hasVisibleAppWindow else { return }
+        guard !hasOpenAppWindow else { return }
         NSApp.setActivationPolicy(.accessory)
+    }
+
+    private func registerPasswordChangeRequestObservers() {
+        passwordChangeLocalObserver = NotificationCenter.default.addObserver(
+            forName: HelperMessaging.passwordChangeRequestedNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor [weak self] in
+                self?.presentPasswordChangeWindow()
+            }
+        }
+
+        passwordChangeDistributedObserver = DistributedNotificationCenter.default().addObserver(
+            forName: HelperMessaging.passwordChangeRequestedNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor [weak self] in
+                self?.presentPasswordChangeWindow()
+            }
+        }
+    }
+
+    @MainActor
+    private func presentPasswordChangeWindow() {
+        if let passwordChangeWindow {
+            focusPasswordChangeWindow(passwordChangeWindow, remainingAttempts: PMLayout.windowFocusRetryCount)
+            return
+        }
+
+        let content = PasswordChangeView(
+            onCancel: { [weak self] in
+                self?.closePasswordChangeWindow()
+            }
+        )
+        .pmWindowBackground()
+        .preferredColorScheme(PMTheme.preferredColorSchemeFromDefaults)
+        .frame(
+            width: PMLayout.passwordChangeWindowWidth,
+            height: PMLayout.passwordChangeWindowHeight
+        )
+
+        let hostingController = NSHostingController(rootView: content)
+        let window = NSWindow(
+            contentRect: NSRect(
+                origin: .zero,
+                size: NSSize(
+                    width: PMLayout.passwordChangeWindowWidth,
+                    height: PMLayout.passwordChangeWindowHeight
+                )
+            ),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = PasswordChangeCopy.windowTitle
+        window.identifier = passwordChangeWindowIdentifier
+        window.titlebarAppearsTransparent = true
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        window.level = .floating
+        window.contentViewController = hostingController
+        window.minSize = NSSize(
+            width: PMLayout.passwordChangeWindowMinWidth,
+            height: PMLayout.passwordChangeWindowMinHeight
+        )
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+        window.center()
+
+        passwordChangeWindow = window
+        focusPasswordChangeWindow(window, remainingAttempts: PMLayout.windowFocusRetryCount)
+    }
+
+    @MainActor
+    private func focusPasswordChangeWindow(_ window: NSWindow, remainingAttempts: Int) {
+        guard remainingAttempts > 0 else { return }
+
+        NSApp.setActivationPolicy(.regular)
+        window.level = .floating
+        NSRunningApplication.current.activate(options: [.activateAllWindows])
+        NSApp.activate(ignoringOtherApps: true)
+        if window.isMiniaturized {
+            window.deminiaturize(nil)
+        }
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+
+        guard !NSApp.isActive || !window.isKeyWindow else { return }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.windowFocusRetryDelay) { [weak self, weak window] in
+            guard let self, let window else { return }
+            Task { @MainActor in
+                self.focusPasswordChangeWindow(window, remainingAttempts: remainingAttempts - 1)
+            }
+        }
+    }
+
+    @MainActor
+    private func closePasswordChangeWindow() {
+        passwordChangeWindow?.close()
+        passwordChangeWindow = nil
+        hideDockWhenNoAppWindowIsOpen()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard notification.object as? NSWindow === passwordChangeWindow else { return }
+        passwordChangeWindow = nil
+        hideDockWhenNoAppWindowIsOpen()
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        guard notification.object as? NSWindow === passwordChangeWindow else { return }
+        passwordChangeWindow?.level = .normal
     }
 
     private func promptForSystemLanguageIfNeeded() {

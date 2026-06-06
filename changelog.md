@@ -2,6 +2,67 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+- Dashboard UX implementation contract for the 2.0 self-service direction, separating app destinations, service modules, dashboard tiles, and motion rules.
+- Formal future-module runtime contract for `hrPortal` and `networkDrives`:
+  - runtime/auth/connectivity states,
+  - presentation modes and allowed actions,
+  - deterministic state-to-severity mapping,
+  - placeholder snapshots for stable UI bootstrap before backend integration.
+- Contract integrity validator for service modules to catch mapping/action drift early.
+- Stable localization keys for dashboard module status messages (`statusKey`) consumed by UI adapters.
+- `docs/dashboard-ux-implementation-contract.md` as the canonical implementation-facing UX contract.
+- `docs/task8-penpot-verification-report.md` as an operational proof artifact for Penpot canonical-board verification.
+
+### Changed
+- Neutralized `loading` module severity (`loading -> healthy`) to avoid warning-color semantics for non-error states.
+- Moved dashboard module status copy out of Core runtime models into UI localization resources (`Localizable.xcstrings`) via adapter mapping.
+- Synchronized Penpot canonical boards/component naming with the final 2.0 semantic model and completed canonical-board verification (instance-only + naming policy pass).
+- Added formal Task 8 verification workflow states (`ready_for_verify`, `verified_complete`, `blocked_mcp`) in contract documentation.
+
+### Tests
+- Added dedicated regression tests for:
+  - severity thresholds,
+  - dashboard tile layout anchors/radii invariants,
+  - reduce-motion defaults,
+  - destination and tile color maps,
+  - tile-to-service-module mapping,
+  - service-module destination mapping,
+  - presentation contract coverage,
+  - placeholder snapshot coverage,
+  - stable status localization key mapping,
+  - service-module contract integrity validation.
+
+### Deferred / Rejected (2.0 scope boundaries)
+- Rejected for this cycle: full free-form bubble physics as a hard runtime requirement; 2.0 keeps deterministic anchors, scales, and motion bounds.
+- Deferred: production backend/API integration for `hrPortal` and `networkDrives` (current state is formal placeholder contract only).
+- Deferred: separate top-level navigation destinations for `hrPortal` and `networkDrives`; in 2.0 they remain Home-dashboard modules.
+- Rejected for this cycle: localization/user-facing copy stored in Core contract models (moved to UI localization layer by design).
+
+## PasswordMonitor 1.9.2
+- Added the in-app AD/mobile password change flow for issue #6 using OpenDirectory.
+- Added inline validation, password strength feedback, stable `PM-PWD-*` diagnostic codes, mapped domain policy errors, and a System Settings fallback.
+- Domain policy failures now distinguish too-short, too-long, missing-letter, missing-digit, change-too-soon, and unspecified policy rejection outcomes with dedicated user messages and diagnostic codes.
+- Added automatic login-keychain password synchronization after a successful AD password change, with safe retry, partial-success states, and stable `PM-KCH-*` diagnostics.
+- Added persistent success/error result panels so the password-change window reports AD, keychain-sync, and refresh outcomes without closing automatically.
+- Wired password-change requests from the menu bar, live alerts, test notifications, and the login item helper.
+- Fixed the password change window size and Dock/Cmd+Tab activation behavior.
+- Standardized window activation so Settings, Logs, About, and AI Requirements open in front and remain available through Dock/Cmd+Tab while open or minimized.
+- Fixed the menu bar **Change password** action so it is available whenever the domain is reachable, regardless of remaining password lifetime.
+- Standardized menu bar window-opening actions so the popover closes before Settings, Logs, About, or the password-change flow opens.
+- Improved password-change failure UX with more readable result banners and better current-password rejection mapping for AD/OpenDirectory responses.
+- Added recent-change context for generic domain policy failures so likely minimum-age rejections are explained clearly.
+- Fixed scheduled/helper alert handoff so **Change password** activates the main app before showing the in-app password window.
+- Hardened local logging:
+  - app/helper writes, reads, clearing, and rotation now share an inter-process file lock,
+  - active, rotated, lock, and exported logs use owner-only `0600` permissions,
+  - Release builds no longer mirror app logger entries to stdout,
+  - control characters are escaped to prevent NUL corruption and log-line injection,
+  - raw `dscl` output, raw `dscl` stderr, exact AD paths, password values, and keychain secrets are not logged,
+  - uninstall cleanup now removes active, rotated, and lock log files.
+
 ## PasswordMonitor 1.9.1
 - Fixed Dock activation so clicking the Dock icon no longer opens the menu bar panel as the main window.
 - Restored fixed visual margins while keeping Settings, Logs, About, and AI Requirements windows resizable.

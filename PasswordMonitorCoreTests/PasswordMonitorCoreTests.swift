@@ -7,6 +7,8 @@
 
 import XCTest
 import CryptoKit
+import OpenDirectory
+import Security
 @testable import PasswordMonitorCore
 
 final class PasswordMonitorCoreTests: XCTestCase {
@@ -46,6 +48,11 @@ final class PasswordMonitorCoreTests: XCTestCase {
         return "passwordLastSetTime: \(date.timeIntervalSince1970)\n"
     }
 
+    private func posixPermissions(at url: URL) -> Int? {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+        return (attributes?[.posixPermissions] as? NSNumber)?.intValue
+    }
+
     func testPasswordCacheSaveLoadMarksFromCache() {
         let expiryDate = Date().addingTimeInterval(10 * 24 * 3600 + 3600)
         let info = PasswordInfo(
@@ -79,6 +86,366 @@ final class PasswordMonitorCoreTests: XCTestCase {
         UserDefaults.standard.set(Data([0x00, 0x01, 0x02]), forKey: cacheKey)
         let loaded = PasswordCache.shared.load()
         XCTAssertNil(loaded)
+    }
+
+    func testPasswordStrengthAnalyzerRejectsCommonPassword() {
+        let result = PasswordStrengthAnalyzer.analyze("password123")
+
+        XCTAssertEqual(result.level, .veryWeak)
+        XCTAssertTrue(result.feedback.contains("Avoid common passwords."))
+    }
+
+    func testPasswordStrengthAnalyzerRewardsLongPassphrase() {
+        let result = PasswordStrengthAnalyzer.analyze("correct river battery sunrise")
+
+        XCTAssertGreaterThanOrEqual(result.score, PasswordStrengthLevel.strong.rawValue)
+    }
+
+    func testPasswordStrengthAnalyzerPenalizesUserContext() {
+        let result = PasswordStrengthAnalyzer.analyze(
+            "KamilPassword2026!",
+            userInputs: ["kamil"]
+        )
+
+        XCTAssertTrue(result.feedback.contains("Avoid using your name, domain, or app name."))
+    }
+
+    func testPasswordChangeErrorMappingHandlesInvalidCredentials() {
+        let error = NSError(domain: ODFrameworkErrorDomain, code: Int(kODErrorCredentialsInvalid.rawValue))
+
+        XCTAssertEqual(PasswordChangeManager.map(error), .currentPasswordInvalid)
+    }
+
+    func testPasswordChangeErrorMappingTreatsCredentialMethodNotSupportedAsCurrentPasswordRejected() {
+        let error = NSError(domain: ODFrameworkErrorDomain, code: Int(kODErrorCredentialsMethodNotSupported.rawValue))
+
+        XCTAssertEqual(PasswordChangeManager.map(error), .currentPasswordInvalid)
+    }
+
+    func testPasswordChangeErrorMappingKeepsPluginOperationNotSupportedSeparate() {
+        let error = NSError(domain: ODFrameworkErrorDomain, code: Int(kODErrorPluginOperationNotSupported.rawValue))
+
+        XCTAssertEqual(PasswordChangeManager.map(error), .methodNotSupported)
+    }
+
+    func testPasswordChangeErrorMappingHandlesDomainConnectivity() {
+        let error = NSError(domain: ODFrameworkErrorDomain, code: Int(kODErrorCredentialsServerUnreachable.rawValue))
+
+        XCTAssertEqual(PasswordChangeManager.map(error), .domainUnavailable)
+    }
+
+    func testPasswordChangeErrorMappingDistinguishesDomainPolicyFailures() {
+        let mappings: [(ODFrameworkErrors, PasswordChangeError)] = [
+            (kODErrorCredentialsPasswordQualityFailed, .passwordPolicyFailed),
+            (kODErrorCredentialsPasswordTooShort, .passwordTooShort),
+            (kODErrorCredentialsPasswordTooLong, .passwordTooLong),
+            (kODErrorCredentialsPasswordNeedsLetter, .passwordNeedsLetter),
+            (kODErrorCredentialsPasswordNeedsDigit, .passwordNeedsDigit),
+            (kODErrorCredentialsPasswordChangeTooSoon, .passwordChangeTooSoon)
+        ]
+
+        for (odError, expected) in mappings {
+            let error = NSError(domain: ODFrameworkErrorDomain, code: Int(odError.rawValue))
+            XCTAssertEqual(PasswordChangeManager.map(error), expected)
+        }
+    }
+
+    func testPasswordChangeErrorsProvideStableDiagnosticCodes() {
+        XCTAssertEqual(PasswordChangeError.currentPasswordInvalid.diagnosticCode, "PM-PWD-001")
+        XCTAssertEqual(PasswordChangeError.passwordPolicyFailed.diagnosticCode, "PM-PWD-002")
+        XCTAssertEqual(PasswordChangeError.passwordTooShort.diagnosticCode, "PM-PWD-012")
+        XCTAssertEqual(PasswordChangeError.passwordTooLong.diagnosticCode, "PM-PWD-013")
+        XCTAssertEqual(PasswordChangeError.passwordNeedsLetter.diagnosticCode, "PM-PWD-014")
+        XCTAssertEqual(PasswordChangeError.passwordNeedsDigit.diagnosticCode, "PM-PWD-015")
+        XCTAssertEqual(PasswordChangeError.domainUnavailable.diagnosticCode, "PM-PWD-003")
+        XCTAssertEqual(PasswordChangeError.methodNotSupported.diagnosticCode, "PM-PWD-008")
+        XCTAssertEqual(PasswordChangeError.unknown(code: 42, message: "details").diagnosticCode, "PM-PWD-011")
+    }
+
+    func testKeychainPasswordSyncErrorMappingHandlesInvalidCredentials() {
+        XCTAssertEqual(
+            KeychainPasswordSyncManager.map(status: errSecAuthFailed),
+            .currentPasswordInvalid
+        )
+    }
+
+    func testKeychainPasswordSyncErrorMappingHandlesMissingDefaultKeychain() {
+        XCTAssertEqual(
+            KeychainPasswordSyncManager.map(status: errSecNoDefaultKeychain),
+            .defaultKeychainUnavailable
+        )
+    }
+
+    func testKeychainPasswordSyncErrorMappingHandlesTimeout() {
+        XCTAssertEqual(
+            KeychainPasswordSyncManager.map(status: -9_900_008),
+            .timeout
+        )
+    }
+
+    func testKeychainPasswordSyncErrorsProvideStableDiagnosticCodes() {
+        XCTAssertEqual(KeychainPasswordSyncError.defaultKeychainUnavailable.diagnosticCode, "PM-KCH-001")
+        XCTAssertEqual(KeychainPasswordSyncError.currentPasswordInvalid.diagnosticCode, "PM-KCH-002")
+        XCTAssertEqual(KeychainPasswordSyncError.timeout.diagnosticCode, "PM-KCH-008")
+        XCTAssertEqual(KeychainPasswordSyncError.unknown(status: -1, message: "details").diagnosticCode, "PM-KCH-007")
+    }
+
+    func testLoggerCreatesAndRepairsPrivateLogPermissions() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorLoggerPermissions-\(UUID().uuidString)", isDirectory: true)
+        let logURL = root.appendingPathComponent("test.log")
+        let rotatedURL = root.appendingPathComponent("test.log.1")
+        let lockURL = root.appendingPathComponent("test.log.lock")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try Data("legacy".utf8).write(to: logURL)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: logURL.path)
+
+        let logger = Logger(fileURL: logURL, maxBytes: 80)
+        logger.log(String(repeating: "x", count: 100))
+
+        XCTAssertEqual(posixPermissions(at: logURL), 0o600)
+        XCTAssertEqual(posixPermissions(at: rotatedURL), 0o600)
+        XCTAssertEqual(posixPermissions(at: lockURL), 0o600)
+    }
+
+    func testLoggerConcurrentWritersProduceCompleteUTF8WithoutNULBytes() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorLoggerConcurrent-\(UUID().uuidString)", isDirectory: true)
+        let logURL = root.appendingPathComponent("test.log")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let firstLogger = Logger(fileURL: logURL, maxBytes: 1_000_000)
+        let secondLogger = Logger(fileURL: logURL, maxBytes: 1_000_000)
+
+        DispatchQueue.concurrentPerform(iterations: 100) { index in
+            let logger = index.isMultiple(of: 2) ? firstLogger : secondLogger
+            logger.log("concurrent-entry-\(index)")
+        }
+
+        let data = try Data(contentsOf: logURL)
+        let content = try XCTUnwrap(String(data: data, encoding: .utf8))
+        XCTAssertFalse(data.contains(0))
+        XCTAssertEqual(content.split(separator: "\n").count, 100)
+        for index in 0..<100 {
+            XCTAssertTrue(content.contains("concurrent-entry-\(index)"))
+        }
+    }
+
+    func testLoggerSanitizesControlCharactersAndPreventsLineInjection() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorLoggerControlCharacters-\(UUID().uuidString)", isDirectory: true)
+        let logURL = root.appendingPathComponent("test.log")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let logger = Logger(fileURL: logURL, maxBytes: 1_000_000)
+
+        logger.log("before\u{0}middle\nafter\rfinal")
+
+        let data = try Data(contentsOf: logURL)
+        let content = try XCTUnwrap(String(data: data, encoding: .utf8))
+        XCTAssertFalse(data.contains(0))
+        XCTAssertEqual(content.split(separator: "\n").count, 1)
+        XCTAssertTrue(content.contains("before\\u{0}middle\\nafter\\rfinal"))
+    }
+
+    func testLoggerClearUsesSharedSafeWriter() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorLoggerClear-\(UUID().uuidString)", isDirectory: true)
+        let logURL = root.appendingPathComponent("test.log")
+        let rotatedURL = root.appendingPathComponent("test.log.1")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let logger = Logger(fileURL: logURL, maxBytes: 1_000_000)
+        logger.log("before-clear")
+        try Data("old-rotated-data".utf8).write(to: rotatedURL)
+
+        XCTAssertTrue(logger.clear())
+        XCTAssertEqual(logger.readContents(), "")
+        XCTAssertEqual(posixPermissions(at: logURL), 0o600)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: rotatedURL.path))
+    }
+
+    func testLoggerFailsClosedWhenInterprocessLockCannotBeCreated() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorLoggerMissingParent-\(UUID().uuidString)", isDirectory: true)
+        let logURL = root.appendingPathComponent("missing/test.log")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let logger = Logger(fileURL: logURL, maxBytes: 1_000_000)
+
+        logger.log("must-not-be-written-without-lock")
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: logURL.path))
+        XCTAssertEqual(logger.readContents(), "")
+        XCTAssertFalse(logger.clear())
+    }
+
+    func testPasswordAndKeychainFlowsNeverLogProvidedSecrets() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PasswordMonitorLoggerSecrets-\(UUID().uuidString)", isDirectory: true)
+        let logURL = root.appendingPathComponent("test.log")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let logger = Logger(fileURL: logURL, maxBytes: 1_000_000)
+        let currentSecret = "UniqueCurrentSecret!2026"
+        let newSecret = "UniqueNewSecret!2026"
+
+        let passwordManager = PasswordChangeManager(
+            currentDomain: { "example.test" },
+            passwordChanger: { _, _, _ in },
+            logger: logger
+        )
+        _ = try await passwordManager.changePassword(
+            username: "tester",
+            currentPassword: currentSecret,
+            newPassword: newSecret
+        )
+
+        let keychainManager = KeychainPasswordSyncManager(
+            defaultKeychainProvider: { (keychain: nil, status: errSecSuccess) },
+            keychainUnlocker: { _, _ in errSecSuccess },
+            passwordChanger: { _, _, _ in errSecSuccess },
+            logger: logger
+        )
+        _ = try await keychainManager.syncLoginKeychainPassword(
+            currentPassword: currentSecret,
+            newPassword: newSecret
+        )
+
+        let content = logger.readContents()
+        XCTAssertFalse(content.contains(currentSecret))
+        XCTAssertFalse(content.contains(newSecret))
+        XCTAssertTrue(content.contains("event=password_change result=success"))
+        XCTAssertTrue(content.contains("event=keychain_sync result=success"))
+    }
+
+    func testKeychainPasswordSyncRejectsLineBreakInputBeforeAnySideEffects() async {
+        var didCallProvider = false
+        var didCallPasswordChanger = false
+
+        let manager = KeychainPasswordSyncManager(
+            defaultKeychainProvider: {
+                didCallProvider = true
+                return (keychain: nil, status: errSecSuccess)
+            },
+            keychainUnlocker: { _, _ in
+                errSecSuccess
+            },
+            passwordChanger: { _, _, _ in
+                didCallPasswordChanger = true
+                return errSecSuccess
+            }
+        )
+
+        do {
+            _ = try await manager.syncLoginKeychainPassword(
+                currentPassword: "old\npass",
+                newPassword: "new-pass"
+            )
+            XCTFail("Expected invalidInputFormat error")
+        } catch let error as KeychainPasswordSyncError {
+            XCTAssertEqual(error, .invalidInputFormat)
+            XCTAssertFalse(didCallProvider)
+            XCTAssertFalse(didCallPasswordChanger)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testKeychainPasswordSyncAllowsOnlySetPasswordSecurityArguments() {
+        XCTAssertTrue(
+            KeychainPasswordSyncManager.isAllowedSecurityToolArguments(
+                ["set-keychain-password", "/Users/test/Library/Keychains/login.keychain-db"]
+            )
+        )
+        XCTAssertFalse(
+            KeychainPasswordSyncManager.isAllowedSecurityToolArguments(
+                ["delete-keychain", "/Users/test/Library/Keychains/login.keychain-db"]
+            )
+        )
+    }
+
+    func testKeychainPasswordSyncManagerReturnsSuccessForMockedAdapter() async throws {
+        let manager = KeychainPasswordSyncManager(
+            defaultKeychainProvider: {
+                (keychain: nil, status: errSecSuccess)
+            },
+            keychainUnlocker: { _, _ in
+                errSecSuccess
+            },
+            passwordChanger: { _, _, _ in
+                errSecSuccess
+            }
+        )
+
+        let outcome = try await manager.syncLoginKeychainPassword(
+            currentPassword: "old-pass",
+            newPassword: "new-pass"
+        )
+
+        XCTAssertEqual(outcome.keychainLabel, "login")
+    }
+
+    func testKeychainPasswordSyncManagerMapsChangerFailure() async {
+        let manager = KeychainPasswordSyncManager(
+            defaultKeychainProvider: {
+                (keychain: nil, status: errSecSuccess)
+            },
+            keychainUnlocker: { _, _ in
+                errSecSuccess
+            },
+            passwordChanger: { _, _, _ in
+                errSecInteractionNotAllowed
+            }
+        )
+
+        do {
+            _ = try await manager.syncLoginKeychainPassword(
+                currentPassword: "old-pass",
+                newPassword: "new-pass"
+            )
+            XCTFail("Expected interactionNotAllowed error")
+        } catch let error as KeychainPasswordSyncError {
+            XCTAssertEqual(error, .interactionNotAllowed)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testKeychainPasswordSyncManagerMapsPreflightUnlockFailureAndSkipsChange() async {
+        var didRunPasswordChange = false
+        let manager = KeychainPasswordSyncManager(
+            defaultKeychainProvider: {
+                (keychain: nil, status: errSecSuccess)
+            },
+            keychainUnlocker: { _, _ in
+                errSecAuthFailed
+            },
+            passwordChanger: { _, _, _ in
+                didRunPasswordChange = true
+                return errSecSuccess
+            }
+        )
+
+        do {
+            _ = try await manager.syncLoginKeychainPassword(
+                currentPassword: "old-pass",
+                newPassword: "new-pass"
+            )
+            XCTFail("Expected currentPasswordInvalid error")
+        } catch let error as KeychainPasswordSyncError {
+            XCTAssertEqual(error, .currentPasswordInvalid)
+            XCTAssertFalse(didRunPasswordChange)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
     }
 
     func testParseSMBPasswordLastSetEpoch() throws {
@@ -301,6 +668,153 @@ final class PasswordMonitorCoreTests: XCTestCase {
                 calendar: calendar
             )
         )
+    }
+
+    func testDashboardSpecMapsSeverityThresholdsDeterministically() {
+        XCTAssertEqual(PMDashboardSpec.severity(for: 40), .healthy)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 29), .warning)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 14), .warning)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 13), .urgent)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 2), .urgent)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 1), .critical)
+        XCTAssertEqual(PMDashboardSpec.severity(for: 0), .critical)
+    }
+
+    func testDashboardSpecProvidesAllDashboardTileLayouts() {
+        XCTAssertEqual(PMDashboardSpec.dashboardLayout.count, 4)
+        XCTAssertNotNil(PMDashboardSpec.dashboardLayout[.password])
+        XCTAssertNotNil(PMDashboardSpec.dashboardLayout[.hrPortal])
+        XCTAssertNotNil(PMDashboardSpec.dashboardLayout[.networkDrives])
+        XCTAssertNotNil(PMDashboardSpec.dashboardLayout[.help])
+
+        for (_, spec) in PMDashboardSpec.dashboardLayout {
+            XCTAssertGreaterThan(spec.maxRadius, spec.minRadius)
+            XCTAssertGreaterThanOrEqual(spec.baseRadius, spec.minRadius)
+            XCTAssertLessThanOrEqual(spec.baseRadius, spec.maxRadius)
+            XCTAssertGreaterThanOrEqual(spec.anchor.x, 0)
+            XCTAssertLessThanOrEqual(spec.anchor.x, 1)
+            XCTAssertGreaterThanOrEqual(spec.anchor.y, 0)
+            XCTAssertLessThanOrEqual(spec.anchor.y, 1)
+        }
+    }
+
+    func testDashboardSpecEnablesReduceMotionCompatibilityByDefault() {
+        XCTAssertTrue(PMDashboardSpec.defaultMotionSpec.disabledByReduceMotion)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.maxOffsetX, 12, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.maxOffsetY, 10, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.cursorInfluence, 0.22, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.returnSpring.response, 0.36, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.returnSpring.dampingFraction, 0.82, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.defaultMotionSpec.returnSpring.blendDuration, 0.05, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.ctaSafeGap, 14, accuracy: 0.0001)
+    }
+
+    func testDashboardSpecRadiusScaleMatchesContractValues() {
+        XCTAssertEqual(PMDashboardSpec.radiusScale(for: .healthy), 0.72, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.radiusScale(for: .warning), 1.00, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.radiusScale(for: .urgent), 1.22, accuracy: 0.0001)
+        XCTAssertEqual(PMDashboardSpec.radiusScale(for: .critical), 1.54, accuracy: 0.0001)
+    }
+
+    func testDashboardSpecSeparatesNavigationDestinationsFromDashboardTiles() {
+        XCTAssertTrue(AppDestinationID.allCases.contains(.home))
+        XCTAssertTrue(AppDestinationID.allCases.contains(.settings))
+        XCTAssertFalse(DashboardTileID.allCases.map(\.rawValue).contains(AppDestinationID.home.rawValue))
+        XCTAssertFalse(DashboardTileID.allCases.map(\.rawValue).contains(AppDestinationID.settings.rawValue))
+    }
+
+    func testDashboardSpecKeepsDestinationAndDashboardTileColorMapsExplicit() {
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex.count, AppDestinationID.allCases.count)
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex[.home], "#72D8E1")
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex[.password], "#86E58C")
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex[.settings], "#5F8CFF")
+        XCTAssertEqual(PMDashboardSpec.destinationColorHex[.help], "#F7C95D")
+
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex.count, DashboardTileID.allCases.count)
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex[.password], "#86E58C")
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex[.hrPortal], "#A682FF")
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex[.networkDrives], "#5F8CFF")
+        XCTAssertEqual(PMDashboardSpec.dashboardTileColorHex[.help], "#F7C95D")
+    }
+
+    func testDashboardSpecMapsDashboardTilesToServiceModules() {
+        XCTAssertEqual(PMDashboardSpec.tileServiceModule[.password] ?? nil, .password)
+        XCTAssertEqual(PMDashboardSpec.tileServiceModule[.hrPortal] ?? nil, .hrPortal)
+        XCTAssertEqual(PMDashboardSpec.tileServiceModule[.networkDrives] ?? nil, .networkDrives)
+        XCTAssertNil(PMDashboardSpec.tileServiceModule[.help] ?? nil)
+    }
+
+    func testDashboardSpecMapsServiceModuleRuntimeStateToTileSeverity() {
+        XCTAssertEqual(PMDashboardSpec.tileSeverity(for: .healthy), .healthy)
+        XCTAssertEqual(PMDashboardSpec.tileSeverity(for: .warning), .warning)
+        XCTAssertEqual(PMDashboardSpec.tileSeverity(for: .loading), .healthy)
+        XCTAssertEqual(PMDashboardSpec.tileSeverity(for: .error), .urgent)
+        XCTAssertEqual(PMDashboardSpec.tileSeverity(for: .unavailable), .critical)
+    }
+
+    func testDashboardSpecProvidesServiceModuleDestinationMapping() {
+        XCTAssertEqual(PMDashboardSpec.moduleDestination.count, ServiceModuleID.allCases.count)
+        XCTAssertEqual(PMDashboardSpec.moduleDestination[.password], .password)
+        XCTAssertEqual(PMDashboardSpec.moduleDestination[.hrPortal], .home)
+        XCTAssertEqual(PMDashboardSpec.moduleDestination[.networkDrives], .home)
+    }
+
+    func testDashboardSpecDefinesPresentationContractForFutureServiceModules() {
+        XCTAssertEqual(PMDashboardSpec.serviceModulePresentation.count, ServiceModuleID.allCases.count)
+
+        let hr = PMDashboardSpec.serviceModulePresentation[.hrPortal]
+        XCTAssertEqual(hr?.launchMode, .inAppWebView)
+        XCTAssertEqual(hr?.requiresNetwork, true)
+        XCTAssertEqual(hr?.requiresAuthenticatedSession, true)
+        XCTAssertEqual(hr?.allowedActions, [.open, .refresh, .retry, .openExternal])
+
+        let drives = PMDashboardSpec.serviceModulePresentation[.networkDrives]
+        XCTAssertEqual(drives?.launchMode, .nativePanel)
+        XCTAssertEqual(drives?.requiresNetwork, true)
+        XCTAssertEqual(drives?.requiresAuthenticatedSession, true)
+        XCTAssertEqual(drives?.allowedActions, [.open, .refresh, .retry])
+    }
+
+    func testDashboardSpecDefinesInitialSnapshotsForServiceModules() {
+        XCTAssertEqual(PMDashboardSpec.initialServiceModuleSnapshot.count, ServiceModuleID.allCases.count)
+
+        let password = PMDashboardSpec.initialServiceModuleSnapshot[.password]
+        XCTAssertEqual(password?.runtimeState, .healthy)
+        XCTAssertEqual(password?.connectivity, .online)
+        XCTAssertEqual(password?.authState, .authenticated)
+        XCTAssertEqual(password?.primaryAction, .open)
+        XCTAssertEqual(password?.secondaryActions, [.refresh])
+
+        let hr = PMDashboardSpec.initialServiceModuleSnapshot[.hrPortal]
+        XCTAssertEqual(hr?.runtimeState, .loading)
+        XCTAssertEqual(hr?.connectivity, .degraded)
+        XCTAssertEqual(hr?.authState, .authenticationRequired)
+        XCTAssertEqual(hr?.statusKey, .awaitingPortalConfiguration)
+        XCTAssertEqual(hr?.primaryAction, .open)
+        XCTAssertEqual(hr?.secondaryActions, [.refresh, .openExternal])
+
+        let drives = PMDashboardSpec.initialServiceModuleSnapshot[.networkDrives]
+        XCTAssertEqual(drives?.runtimeState, .loading)
+        XCTAssertEqual(drives?.connectivity, .degraded)
+        XCTAssertEqual(drives?.authState, .authenticationRequired)
+        XCTAssertEqual(drives?.statusKey, .awaitingNetworkDrivesConfiguration)
+        XCTAssertEqual(drives?.primaryAction, .open)
+        XCTAssertEqual(drives?.secondaryActions, [.refresh])
+    }
+
+    func testDashboardSpecProvidesStableStatusLocalizationKeys() {
+        XCTAssertEqual(
+            PMDashboardSpec.statusLocalizationKey(for: .awaitingPortalConfiguration),
+            "dashboard_status_awaiting_portal_configuration"
+        )
+        XCTAssertEqual(
+            PMDashboardSpec.statusLocalizationKey(for: .awaitingNetworkDrivesConfiguration),
+            "dashboard_status_awaiting_network_drives_configuration"
+        )
+    }
+
+    func testDashboardSpecServiceModuleContractValidationHasNoErrors() {
+        XCTAssertEqual(PMDashboardSpec.serviceModuleContractValidationErrors(), [])
     }
 
     @MainActor
@@ -834,6 +1348,9 @@ final class PasswordMonitorCoreTests: XCTestCase {
         XCTAssertTrue(paths.contains("/Users/Shared/password-monitor.sh"))
         XCTAssertTrue(paths.contains("/tmp/password-monitor.out"))
         XCTAssertTrue(paths.contains("/tmp/password-monitor.err"))
+        XCTAssertTrue(paths.contains("/Users/test/.password_monitor.log"))
+        XCTAssertTrue(paths.contains("/Users/test/.password_monitor.log.1"))
+        XCTAssertTrue(paths.contains("/Users/test/.password_monitor.log.lock"))
         XCTAssertTrue(paths.contains("/Applications/PasswordMonitor.app"))
         XCTAssertTrue(paths.contains("/Users/test/Applications/PasswordMonitor.app"))
         XCTAssertTrue(paths.contains("/Users/test/Desktop/PasswordMonitor/PasswordMonitor.app"))
