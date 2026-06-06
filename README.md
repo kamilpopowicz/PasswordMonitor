@@ -19,7 +19,7 @@ This project is open source under the MIT License. You can use, modify, and redi
 
 Author: Kamil Popowicz
 
-Current version: **1.9.2**
+Current version: **1.9.3**
 
 ---
 
@@ -47,10 +47,10 @@ If you want automatic checks:
 `System Settings → General → Login Items → Allow in Background`
 
 ### 4) Updates
-Open **About PasswordMonitor...** or use **Settings → Check for updates** to go to the single update panel.
-The About window is the only place where update status, verification, and installation are handled.
-Updates are verified with both SHA256 and a signed manifest before the app bundle is replaced.
-PasswordMonitor does not auto-check on launch; update checks only start when you open the shared update panel or click a check button.
+PasswordMonitor checks for app updates automatically in the background on launch, activation, menu open, wake, and helper startup. Regular updates show a macOS notification plus a subtle in-app badge in each window; critical updates pause password-expiration notifications and block regular app views until the update is installed.
+Open **About PasswordMonitor...** or use **Settings → Check for updates** to go to the shared update panel.
+The About window remains the detailed place for update status, verification, and installation, while update badges and notifications start installation directly.
+Updates are verified with both SHA256 and a signed manifest before the app bundle is replaced. Release manifests can mark updates as `normal` or `critical`.
 See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
 
 ---
@@ -72,7 +72,10 @@ See [RELEASE.md](RELEASE.md) for the maintainer-facing release pipeline.
 - In-app AD/mobile password change flow through OpenDirectory, with inline validation, password strength feedback, mapped domain policy errors, automatic login-keychain password synchronization, and a Touch ID & Password fallback
 - Password-change actions from scheduled helper alerts activate the main app before presenting the in-app password window
 - Settings for notification time, warning threshold, quiet hours, and read-only AD domain info pulled from the system configuration
-- Single in-app update flow centered on the About window, with Settings and the menu bar linking into the same panel
+- Automatic GitHub Release update checks with a shared in-flight guard, weekly success cooldown, hourly retry after background failures, and fresh manifest reuse for user-triggered installs
+- Regular update notifications appear both as macOS notifications and subtle in-app badges across windows; clicking either starts the verified update flow
+- Critical app updates block regular app views, keep the About/update path available, and pause password-expiration notifications until installation completes
+- Single verified in-app update flow centered on the About window, with Settings, menu bar, badges, and notifications feeding the same installer path
 - Menu open performs a live AD check (with a 30s timeout) before showing alerts
 - Alert countdown format is fixed to 2 lines: line 1 is day count, line 2 is `HH:mm:SS`
 - Password-change action from menu is blocked until domain/VPN availability is confirmed

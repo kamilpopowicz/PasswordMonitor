@@ -484,6 +484,13 @@ public final class NotificationManager: ObservableObject {
     ) {
         let now = Date()
 
+        if UpdateNotificationStateStore.shared.state.isCriticalBlocking {
+            if shouldLog(key: "notification_skip_critical_update", interval: 5 * 60) {
+                Logger.shared.log("Skipping password notification because a critical app update is pending (reason=\(reason.rawValue))")
+            }
+            return
+        }
+
         if let requestID {
             let triggerKey = "decision:\(reason.rawValue):\(requestID)"
             guard NotificationStateStore.shared.claimHelperTrigger(triggerKey: triggerKey) else {

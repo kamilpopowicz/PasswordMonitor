@@ -21,11 +21,16 @@ struct AboutView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var updateRequestCenter: UpdateRequestCenter
 
+    @ObservedObject private var updateMonitor = PMUpdateMonitor.shared
+
     @State private var updateStatusText: String?
     @State private var updateStatusKind: AboutUpdateStatusKind = .info
     @State private var updateCheckInProgress = false
     @State private var pendingUpdateCandidate: PMUpdateCandidate?
     @State private var lastHandledCheckRequestID: UUID?
+    @State private var lastHandledUpdateRequestID: UUID?
+    @State private var deferredCheckRequestID: UUID?
+    @State private var deferredUpdateRequest: UpdateRequestCenter.Request?
 
     private let updater = PMUpdateService(configuration: .passwordMonitor)
 
@@ -62,9 +67,13 @@ struct AboutView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear {
             handlePendingCheckRequestIfNeeded()
+            handlePendingUpdateRequestIfNeeded()
         }
         .onChange(of: updateRequestCenter.checkRequestID) { _, _ in
             handlePendingCheckRequestIfNeeded()
+        }
+        .onChange(of: updateRequestCenter.request?.id) { _, _ in
+            handlePendingUpdateRequestIfNeeded()
         }
     }
 
@@ -169,6 +178,32 @@ struct AboutView: View {
                     .font(.callout)
                     .foregroundColor(PMTheme.textSecondary)
                     .pmMultilineText()
+            }
+
+            if updateMonitor.state.isCriticalBlocking {
+                HStack(alignment: .top, spacing: PMLayout.compactSpacing) {
+                    Image(systemName: "bell.slash.fill")
+                        .foregroundColor(PMTheme.danger)
+                        .font(.caption.weight(.semibold))
+                        .padding(.top, PMLayout.microSpacing)
+                    Text(LanguageSettings.localizedString("update_critical_notifications_paused"))
+                        .font(.caption)
+                        .foregroundColor(PMTheme.danger)
+                        .pmMultilineText()
+                }
+            }
+
+            if let backgroundUpdateErrorText {
+                HStack(alignment: .top, spacing: PMLayout.compactSpacing) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(PMTheme.danger)
+                        .font(.caption.weight(.semibold))
+                        .padding(.top, PMLayout.microSpacing)
+                    Text(backgroundUpdateErrorText)
+                        .font(.caption)
+                        .foregroundColor(PMTheme.danger)
+                        .pmMultilineText()
+                }
             }
 
             if let pendingUpdateCandidate {
@@ -284,9 +319,12 @@ struct AboutView: View {
     }
 
     @MainActor
-    private func checkForUpdates() async {
+    private func checkForUpdates(autoInstall: Bool = false) async {
         updateCheckInProgress = true
-        defer { updateCheckInProgress = false }
+        defer {
+            updateCheckInProgress = false
+            handleDeferredRequestsIfNeeded()
+        }
         updateStatusText = nil
         pendingUpdateCandidate = nil
 
@@ -294,6 +332,7 @@ struct AboutView: View {
             let result = try await updater.checkForUpdate(currentVersion: currentAppVersion)
             switch result {
             case let .upToDate(localVersion, remoteVersion):
+                updateMonitor.clearDetectedUpdate()
                 let remoteText = remoteVersion?.description ?? "?"
                 updateStatusKind = .info
                 updateStatusText = LanguageSettings.localizedString(
@@ -308,6 +347,16 @@ struct AboutView: View {
                     "settings_update_available %@",
                     candidate.version.description
                 )
+                PMUpdateMonitor.shared.clearDetectedUpdate()
+                UpdateNotificationStateStore.shared.recordAvailableUpdate(
+                    version: candidate.version.description,
+                    releaseTag: candidate.releaseTag,
+                    urgency: candidate.urgency
+                )
+                updateMonitor.reload()
+                if autoInstall {
+                    await installUpdate(candidate)
+                }
             @unknown default:
                 updateStatusKind = .error
                 updateStatusText = LanguageSettings.localizedString("settings_update_error %@", "Unknown update result")
@@ -324,9 +373,26 @@ struct AboutView: View {
     @MainActor
     private func installPendingUpdate() async {
         guard let candidate = pendingUpdateCandidate else { return }
+        guard candidate.isFresh() else {
+            await checkForUpdates(autoInstall: true)
+            return
+        }
+        await installUpdate(candidate)
+    }
+
+    @MainActor
+    private func installUpdate(_ candidate: PMUpdateCandidate) async {
+        guard candidate.isFresh() else {
+            await checkForUpdates(autoInstall: true)
+            return
+        }
+
         let currentAppURL = Bundle.main.bundleURL
         updateCheckInProgress = true
-        defer { updateCheckInProgress = false }
+        defer {
+            updateCheckInProgress = false
+            handleDeferredRequestsIfNeeded()
+        }
         updateStatusKind = .info
         updateStatusText = LanguageSettings.localizedString(
             "settings_update_installing %@",
@@ -346,6 +412,7 @@ struct AboutView: View {
             updateStatusKind = .success
             updateStatusText = LanguageSettings.localizedString("settings_update_installed_restart")
             pendingUpdateCandidate = nil
+            updateMonitor.clearDetectedUpdate()
         } catch {
             updateStatusKind = .error
             updateStatusText = LanguageSettings.localizedString(
@@ -384,9 +451,52 @@ struct AboutView: View {
     private func handlePendingCheckRequestIfNeeded() {
         guard let requestID = updateRequestCenter.checkRequestID else { return }
         guard requestID != lastHandledCheckRequestID else { return }
-        guard !updateCheckInProgress else { return }
+        handleCheckRequest(requestID)
+    }
+
+    private func handlePendingUpdateRequestIfNeeded() {
+        guard let request = updateRequestCenter.request else { return }
+        guard request.id != lastHandledUpdateRequestID else { return }
+        handleUpdateRequest(request)
+    }
+
+    private func handleCheckRequest(_ requestID: UUID) {
+        guard !updateCheckInProgress else {
+            deferredCheckRequestID = requestID
+            return
+        }
         lastHandledCheckRequestID = requestID
         Task { await checkForUpdates() }
+    }
+
+    private func handleUpdateRequest(_ request: UpdateRequestCenter.Request) {
+        guard !updateCheckInProgress else {
+            deferredUpdateRequest = request
+            return
+        }
+        lastHandledUpdateRequestID = request.id
+
+        switch request.kind {
+        case .checkOnly:
+            Task { await checkForUpdates() }
+        case .startDetectedUpdate, .criticalUpdate:
+            Task { await checkForUpdates(autoInstall: true) }
+        }
+    }
+
+    private func handleDeferredRequestsIfNeeded() {
+        if let request = deferredUpdateRequest,
+           request.id != lastHandledUpdateRequestID {
+            deferredUpdateRequest = nil
+            handleUpdateRequest(request)
+            return
+        }
+
+        if let requestID = deferredCheckRequestID,
+           requestID != lastHandledCheckRequestID {
+            deferredCheckRequestID = nil
+            handleCheckRequest(requestID)
+        }
     }
 
     private var updateStatusIcon: String {
@@ -395,5 +505,15 @@ struct AboutView: View {
         case .success: return "checkmark.circle.fill"
         case .error: return "exclamationmark.triangle.fill"
         }
+    }
+
+    private var backgroundUpdateErrorText: String? {
+        let state = updateMonitor.state
+        guard let error = state.lastBackgroundError else { return nil }
+        if let date = state.lastBackgroundErrorAt {
+            let dateText = DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .short)
+            return LanguageSettings.localizedString("update_last_error_with_date %@ %@", dateText, error)
+        }
+        return LanguageSettings.localizedString("update_last_error %@", error)
     }
 }

@@ -19,6 +19,7 @@ public enum HelperMessaging {
     public static let forceRefreshNotification = Notification.Name("PasswordMonitor.HelperForceRefresh")
     public static let settingsDidChangeNotification = Notification.Name("PasswordMonitor.HelperSettingsDidChange")
     public static let passwordChangeRequestedNotification = Notification.Name("PasswordMonitor.PasswordChangeRequested")
+    public static let updateInstallRequestedNotification = Notification.Name("PasswordMonitor.UpdateInstallRequested")
 }
 
 public enum HelperSchedule {

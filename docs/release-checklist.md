@@ -18,10 +18,12 @@ Use this checklist for the first real release and for later release runs.
    - manifest signing
    - GitHub Release publication
 10. Test the released build from an older installed version:
+    - confirm the automatic update check can detect the release
     - open `About PasswordMonitor...`
     - click `Check for updates`
 11. Verify the updater:
     - detects the newer release
+    - shows the expected `normal` or `critical` update treatment
     - downloads the expected asset only
     - verifies SHA256
     - verifies the signed manifest

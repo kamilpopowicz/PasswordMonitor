@@ -9,8 +9,9 @@ import AppKit
 import Foundation
 import Darwin
 import PasswordMonitorCore
+import UserNotifications
 
-final class HelperAppDelegate: NSObject, NSApplicationDelegate {
+final class HelperAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var scheduledCheckTimer: Timer?
     private var wakeObserver: Any?
     private var manualRefreshObserver: NSObjectProtocol?
@@ -33,9 +34,12 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
 
         terminateDuplicateHelperProcesses()
         registerObserversIfNeeded()
+        PMUpdateSystemNotifier.shared.configureCategories()
+        UNUserNotificationCenter.current().delegate = self
 
         Task { @MainActor in
             handleWakeOrLaunchCheck()
+            await checkForUpdatesIfNeeded(trigger: .launch)
         }
     }
 
@@ -161,6 +165,7 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
             Logger.shared.log("Helper wake detected; refreshing notification state")
             Task { @MainActor in
                 helper.handleWakeOrLaunchCheck()
+                await helper.checkForUpdatesIfNeeded(trigger: .wake)
             }
         }
 
@@ -321,7 +326,8 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
             "quiet_hours_end",
             "minimal_logging",
             "appLanguage",
-            "theme_mode"
+            "theme_mode",
+            UpdateNotificationStateStore.automaticChecksEnabledKey
         ]
 
         var copiedKeys = [String]()
@@ -346,9 +352,66 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
             "quiet_hours_start=\(standard.string(forKey: "quiet_hours_start") ?? "(default)")",
             "quiet_hours_end=\(standard.string(forKey: "quiet_hours_end") ?? "(default)")",
             "minimal_logging=\(standard.object(forKey: "minimal_logging") as? Bool ?? true)",
+            "update_automatic_checks_enabled=\(standard.object(forKey: UpdateNotificationStateStore.automaticChecksEnabledKey) as? Bool ?? true)",
             "appLanguage=\(standard.string(forKey: "appLanguage") ?? "(default)")"
         ]
         Logger.shared.log("Helper settings snapshot after sync: \(snapshot.joined(separator: ", "))")
+    }
+
+    @MainActor
+    private func checkForUpdatesIfNeeded(trigger: PMUpdateMonitorTrigger) async {
+        syncSharedSettings()
+        await PMUpdateMonitor.shared.checkIfNeeded(currentVersion: currentAppVersion(), trigger: trigger)
+    }
+
+    private func currentAppVersion() -> String {
+        if let mainAppURL = containingMainAppURL(),
+           let mainBundle = Bundle(url: mainAppURL),
+           let version = mainBundle.infoDictionary?["CFBundleShortVersionString"] as? String,
+           !version.isEmpty {
+            return version
+        }
+        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    private func containingMainAppURL() -> URL? {
+        var url = Bundle.main.bundleURL
+        for _ in 0..<4 {
+            url.deleteLastPathComponent()
+        }
+        return url.pathExtension == "app" ? url : nil
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        guard response.notification.request.content.categoryIdentifier == PMUpdateSystemNotifier.categoryIdentifier else {
+            return
+        }
+        await MainActor.run {
+            PMUpdateMonitor.shared.setPendingInstallRequest()
+            DistributedNotificationCenter.default().post(
+                name: HelperMessaging.updateInstallRequestedNotification,
+                object: nil,
+                userInfo: nil
+            )
+            if let mainAppURL = containingMainAppURL() {
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.activates = true
+                NSWorkspace.shared.openApplication(at: mainAppURL, configuration: configuration)
+            }
+        }
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        guard notification.request.content.categoryIdentifier == PMUpdateSystemNotifier.categoryIdentifier else {
+            return []
+        }
+        return [.banner, .sound, .list]
     }
 
     @MainActor

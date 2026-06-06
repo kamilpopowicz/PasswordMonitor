@@ -9,6 +9,7 @@ struct PMUpdateManifest: Codable {
     let assetSHA256: String
     let bundleIdentifier: String
     let signingKeyID: String
+    let urgency: String
 }
 
 struct PMSignedUpdateManifest: Codable {
@@ -22,6 +23,7 @@ struct Arguments {
     let bundleIdentifier: String
     let assetSHA256: String
     let signingKeyID: String
+    let urgency: String
     let outputURL: URL
 }
 
@@ -48,6 +50,7 @@ func parseArguments() throws -> Arguments {
     var bundleIdentifier: String?
     var assetSHA256: String?
     var signingKeyID: String?
+    var urgency = "normal"
     var outputPath: String?
 
     var iterator = Array(CommandLine.arguments.dropFirst()).makeIterator()
@@ -63,12 +66,14 @@ func parseArguments() throws -> Arguments {
             assetSHA256 = iterator.next()
         case "--key-id":
             signingKeyID = iterator.next()
+        case "--urgency":
+            urgency = iterator.next() ?? "normal"
         case "--output":
             outputPath = iterator.next()
         case "--help", "-h":
             print("""
             Usage:
-              generate_update_manifest.swift --version <version> --asset-name <name> --bundle-id <bundle-id> --sha256 <sha256> --key-id <key-id> --output <path>
+              generate_update_manifest.swift --version <version> --asset-name <name> --bundle-id <bundle-id> --sha256 <sha256> --key-id <key-id> [--urgency normal|critical] --output <path>
             """)
             exit(0)
         default:
@@ -92,6 +97,7 @@ func parseArguments() throws -> Arguments {
         bundleIdentifier: bundleIdentifier,
         assetSHA256: assetSHA256,
         signingKeyID: signingKeyID,
+        urgency: urgency == "critical" ? "critical" : "normal",
         outputURL: outputURL
     )
 }
@@ -118,7 +124,8 @@ do {
         assetName: arguments.assetName,
         assetSHA256: arguments.assetSHA256,
         bundleIdentifier: arguments.bundleIdentifier,
-        signingKeyID: arguments.signingKeyID
+        signingKeyID: arguments.signingKeyID,
+        urgency: arguments.urgency
     )
     let payload = try manifestSigningPayload(for: manifest)
     let signature = try privateKey.signature(for: payload).base64EncodedString()
