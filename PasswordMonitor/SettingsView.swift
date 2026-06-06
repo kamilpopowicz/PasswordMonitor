@@ -125,9 +125,7 @@ struct SettingsView: View {
         // Window panel and min size are applied at the Window level.
         .onAppear {
             loadSettings()
-            appState.windowOpened()
             DispatchQueue.main.async {
-                appState.activateApp()
                 refreshWindowTitle()
             }
         }
@@ -137,9 +135,6 @@ struct SettingsView: View {
         }
         .onChange(of: selectedLanguageCode) { _, _ in
             refreshPendingRetryCount()
-        }
-        .onDisappear {
-            appState.windowClosed()
         }
         .alert(LanguageSettings.localizedString("settings_reset_confirm_title"), isPresented: $showResetConfirm) {
             Button(LanguageSettings.localizedString("settings_reset_confirm_action"), role: .destructive) {
@@ -362,7 +357,7 @@ struct SettingsView: View {
                 .disabled(aiDetectInProgress)
 
                 Button(LanguageSettings.localizedString("language_assist_permissions")) {
-                    openWindow(id: "ai-check-window")
+                    presentWindow(id: AppWindowID.aiRequirements)
                 }
                 .pmButton()
 
@@ -570,7 +565,7 @@ struct SettingsView: View {
             keyWindow.title = title
             return
         }
-        if let settingsWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == "settings-window" }) {
+        if let settingsWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == AppWindowID.settings }) {
             settingsWindow.title = title
         }
     }
@@ -744,7 +739,7 @@ struct SettingsView: View {
         let aiAvailable = await isAppleIntelligenceAvailable()
         guard aiAvailable else {
             setDetectStatus(LanguageSettings.localizedString("language_assist_ai_unavailable"), kind: .error)
-            openWindow(id: "ai-check-window")
+            presentWindow(id: AppWindowID.aiRequirements)
             Logger.shared.log("Language detection blocked: Apple Intelligence unavailable")
             return
         }
@@ -834,7 +829,7 @@ struct SettingsView: View {
 
         guard await isAppleIntelligenceAvailable() else {
             setDetectStatus(LanguageSettings.localizedString("language_assist_ai_unavailable"), kind: .error)
-            openWindow(id: "ai-check-window")
+            presentWindow(id: AppWindowID.aiRequirements)
             Logger.shared.log("Translation blocked: Apple Intelligence unavailable")
             return
         }
@@ -901,7 +896,12 @@ struct SettingsView: View {
 
     private func handleOpenAboutAndCheckUpdatesTap() {
         updateRequestCenter.requestCheck()
-        openWindow(id: "about-window")
+        presentWindow(id: AppWindowID.about)
+    }
+
+    private func presentWindow(id: String) {
+        openWindow(id: id)
+        appState.presentWindow(id: id)
     }
 
     private func isAppleIntelligenceAvailable() async -> Bool {

@@ -63,12 +63,15 @@ public class ActiveDirectoryManager {
                 for path in candidatePaths {
                     do {
                         let info = try getPasswordInfoFromAD(username: username, nodePath: path)
-                        Logger.shared.log("AD password source accepted: \(path)")
+                        Logger.shared.log("AD password source accepted: \(sourceKind(for: path))")
                         PasswordCache.shared.markLastFetchWasCache(false)
                         PasswordCache.shared.save(info)
                         return info
                     } catch {
-                        Logger.shared.log("AD password source rejected: \(path) (\(String(describing: error)))")
+                        Logger.shared.log(
+                            "AD password source rejected: \(sourceKind(for: path)) (\(safeADErrorDescription(error)))",
+                            level: .warning
+                        )
                         lastError = error
                     }
                 }
@@ -76,7 +79,10 @@ public class ActiveDirectoryManager {
                     throw lastError
                 }
             } catch {
-                Logger.shared.logLocalized("log_ad_read_error %@", String(describing: error))
+                Logger.shared.log(
+                    "AD password read failed (\(safeADErrorDescription(error)))",
+                    level: .warning
+                )
             }
         } else {
             Logger.shared.logLocalized("log_ad_no_domain_configured")
@@ -88,7 +94,10 @@ public class ActiveDirectoryManager {
                 PasswordCache.shared.save(info)
                 return info
             } catch {
-                Logger.shared.logLocalized("log_ad_local_read_error %@", String(describing: error))
+                Logger.shared.log(
+                    "Local password status read failed (\(safeADErrorDescription(error)))",
+                    level: .warning
+                )
             }
         }
 
@@ -115,15 +124,38 @@ public class ActiveDirectoryManager {
 
     /// Pobiera SMBPasswordLastSet z AD
     private func getPasswordInfoFromAD(username: String, nodePath: String) throws -> PasswordInfo {
-        Logger.shared.log("dscl query path: \(nodePath)")
         let output = try adOutputReader(username, nodePath)
-        Logger.shared.logLocalized("log_dscl_local_output %@", output)
-
-        // DEBUG stdout
-        Logger.shared.logLocalized("log_dscl_output %@", output)
-
         let lastSetDate = try Self.parseSMBPasswordLastSet(from: output)
         return try calculateExpirationInfo(from: lastSetDate)
+    }
+
+    private func sourceKind(for path: String) -> String {
+        if path == "/Search" {
+            return "search"
+        }
+        if path == "/Active Directory/All Domains" {
+            return "allDomains"
+        }
+        if path.hasPrefix("/Active Directory/") {
+            return "activeDirectoryNode"
+        }
+        return "unknown"
+    }
+
+    private func safeADErrorDescription(_ error: Error) -> String {
+        guard let adError = error as? ADError else {
+            return "unexpectedError"
+        }
+        switch adError {
+        case .notConnected:
+            return "notConnected"
+        case .userNotFound:
+            return "userNotFound"
+        case .invalidData:
+            return "invalidData"
+        case .commandFailed:
+            return "commandFailed"
+        }
     }
 
     private func buildADNodePaths(configuredDomain: String, resolvedNode: String?) -> [String] {
@@ -190,10 +222,7 @@ public class ActiveDirectoryManager {
         try task.run()
         task.waitUntilExit()
 
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        if let errorOutput = String(data: errorData, encoding: .utf8), !errorOutput.isEmpty {
-            Logger.shared.logLocalized("log_dscl_stderr %@", errorOutput)
-        }
+        _ = errorPipe.fileHandleForReading.readDataToEndOfFile()
 
         guard task.terminationStatus == 0 else {
             Logger.shared.logLocalized("log_dscl_exit_code %d", task.terminationStatus)
@@ -251,7 +280,6 @@ public class ActiveDirectoryManager {
         }
 
         var latestTimestamp: Int64?
-        var latestLine: String?
 
         for line in matchingLines {
             let components = line.components(separatedBy: ":")
@@ -265,23 +293,18 @@ public class ActiveDirectoryManager {
 
             if latestTimestamp == nil || lastSetInt > (latestTimestamp ?? 0) {
                 latestTimestamp = lastSetInt
-                latestLine = line
             }
         }
 
-        guard let lastSetInt = latestTimestamp, let lastSetLine = latestLine else {
-            Logger.shared.logLocalized("log_dscl_parse_failed %@", matchingLines.first ?? "unknown")
+        guard let lastSetInt = latestTimestamp else {
+            Logger.shared.log("SMBPasswordLastSet parse failed", level: .warning)
             throw ADError.invalidData
         }
-
-        Logger.shared.logLocalized("log_dscl_found_line %@", lastSetLine)
-        Logger.shared.logLocalized("log_dscl_parsed_timestamp %lld", lastSetInt)
 
         // Konwersja Windows FILETIME → UNIX timestamp
         let unixTimestamp = (lastSetInt / 10_000_000) - 11_644_473_600
         let lastSetDate = Date(timeIntervalSince1970: TimeInterval(unixTimestamp))
 
-        Logger.shared.logLocalized("log_dscl_converted_date %@", String(describing: lastSetDate))
         return lastSetDate
     }
 
@@ -353,7 +376,7 @@ public class ActiveDirectoryManager {
         let now = Date()
         let futureLimit = now.addingTimeInterval(24 * 3600)
         if lastSetDate > futureLimit {
-            Logger.shared.log("Invalid lastSetDate: in the future (\(lastSetDate))")
+            Logger.shared.log("Invalid lastSetDate: in the future", level: .warning)
             throw ADError.invalidData
         }
     }

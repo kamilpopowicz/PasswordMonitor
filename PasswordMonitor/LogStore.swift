@@ -35,13 +35,15 @@ final class LogStore: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var refreshMode: RefreshMode = .immediate
 
+    private let logger: Logger
     private let fileURL: URL
     private var source: DispatchSourceFileSystemObject?
     private var fileDescriptor: Int32 = -1
     private var refreshTimer: Timer?
 
-    init(fileURL: URL = Logger.shared.fileURL) {
-        self.fileURL = fileURL
+    init(logger: Logger = .shared) {
+        self.logger = logger
+        self.fileURL = logger.fileURL
         ensureFileExists()
         load()
         applyRefreshMode()
@@ -61,11 +63,10 @@ final class LogStore: ObservableObject {
     }
 
     func clear() {
-        do {
-            try "".write(to: fileURL, atomically: true, encoding: .utf8)
+        if logger.clear() {
             load()
-        } catch {
-            Logger.shared.logLocalized("log_logstore_clear_failed %@", String(describing: error))
+        } else {
+            Logger.shared.logLocalized("log_logstore_clear_failed %@", "secure truncate failed")
         }
     }
 
@@ -87,7 +88,7 @@ final class LogStore: ObservableObject {
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
             do {
-                try content.write(to: url, atomically: true, encoding: .utf8)
+                try self.writePrivateExport(content: content, to: url)
             } catch {
                 Logger.shared.logLocalized("log_logstore_export_failed %@", String(describing: error))
             }
@@ -104,16 +105,14 @@ final class LogStore: ObservableObject {
     }
 
     private func ensureFileExists() {
-        if !FileManager.default.fileExists(atPath: fileURL.path) {
-            try? "".write(to: fileURL, atomically: true, encoding: .utf8)
-        }
+        logger.prepareLogFile()
     }
 
     private func load() {
         isLoading = true
-        let url = fileURL
+        let logger = logger
         Task { [weak self] in
-            let text = await LogStore.readFile(url: url)
+            let text = await LogStore.readFile(logger: logger)
             guard let self else { return }
             self.content = text
             self.isLoading = false
@@ -152,9 +151,9 @@ final class LogStore: ObservableObject {
         refreshTimer = nil
     }
 
-    private static func readFile(url: URL) async -> String {
+    private static func readFile(logger: Logger) async -> String {
         await Task.detached {
-            (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+            logger.readContents()
         }.value
     }
 
@@ -196,5 +195,29 @@ final class LogStore: ObservableObject {
             return
         }
         load()
+    }
+
+    private func writePrivateExport(content: String, to url: URL) throws {
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: url.path) {
+            try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        } else {
+            guard fileManager.createFile(
+                atPath: url.path,
+                contents: nil,
+                attributes: [.posixPermissions: 0o600]
+            ) else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+        }
+
+        let handle = try FileHandle(forWritingTo: url)
+        defer { handle.closeFile() }
+        handle.truncateFile(atOffset: 0)
+        if let data = content.data(using: .utf8) {
+            handle.write(data)
+        }
+        handle.synchronizeFile()
+        try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 }

@@ -34,7 +34,8 @@ struct MenuBarView: View {
 
                 menuButton(LanguageSettings.localizedString("menu_change_password")) {
                     Logger.shared.logLocalized("log_menu_change_password_selected")
-                    PasswordChangeHelper.openSystemPasswordSettings()
+                    dismiss()
+                    PasswordChangeHelper.requestPasswordChange()
                 }
                 .disabled(!canChangePasswordNow)
             }
@@ -44,11 +45,11 @@ struct MenuBarView: View {
 
                 HStack(spacing: PMLayout.compactSpacing) {
                     menuButton(LanguageSettings.localizedString("menu_settings")) {
-                        presentWindow(id: "settings-window")
+                        presentWindow(id: AppWindowID.settings)
                     }
 
                     menuButton(LanguageSettings.localizedString("menu_logs")) {
-                        presentWindow(id: "logs-window")
+                        presentWindow(id: AppWindowID.logs)
                     }
                 }
             }
@@ -57,7 +58,7 @@ struct MenuBarView: View {
 
             VStack(spacing: PMLayout.compactSpacing) {
                 menuButton(LanguageSettings.localizedString("menu_about_menubar"), role: .ghost) {
-                    presentWindow(id: "about-window")
+                    presentWindow(id: AppWindowID.about)
                 }
 
                 menuButton(LanguageSettings.localizedString("menu_quit"), role: .destructive) {
@@ -224,19 +225,15 @@ struct MenuBarView: View {
     
     /// Czy przycisk „Zmień hasło” ma być aktywny
     private var canChangePasswordNow: Bool {
-        guard let info = notificationManager.latestPasswordInfo else { return false }
-        // Zachowujemy dotychczasową logikę: aktywuj od 28 dni przed deadlinem
-        let withinThreshold = info.currentDaysUntilExpiration <= 28
-        let domainAvailable = notificationManager.isDomainAvailable
-        return withinThreshold && domainAvailable
+        notificationManager.hasPerformedRefresh && notificationManager.isDomainAvailable
     }
 }
 
 class AppState: ObservableObject {
     @Published var launchAtLogin = false
-    private var windowCount = 0
     private var alertVisible = false
     private var alertObserver: Any?
+    private var registeredWindows: [String: ObjectIdentifier] = [:]
 
     init() {
         NSApp.setActivationPolicy(.accessory)
@@ -258,31 +255,57 @@ class AppState: ObservableObject {
         }
     }
 
-    func windowOpened() {
-        windowCount += 1
+    func registerWindow(_ window: NSWindow, id: String) {
+        window.identifier = NSUserInterfaceItemIdentifier(id)
+        let identifier = ObjectIdentifier(window)
+        let isNewWindow = registeredWindows[id] != identifier
+        registeredWindows[id] = identifier
         updateActivationPolicy()
-    }
 
-    func activateApp() {
-        NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.keyWindow ?? NSApp.mainWindow {
-            window.makeKeyAndOrderFront(nil)
+        if isNewWindow {
+            presentWindow(id: id)
         }
     }
 
     func presentWindow(id: String) {
         NSApp.setActivationPolicy(.regular)
+        NSRunningApplication.current.activate(options: [.activateAllWindows])
         NSApp.activate(ignoringOtherApps: true)
         focusWindow(id: id, remainingAttempts: PMLayout.windowFocusRetryCount)
     }
 
-    func windowClosed() {
-        windowCount = max(0, windowCount - 1)
+    func windowBecameVisible(_ window: NSWindow, id: String) {
+        window.identifier = NSUserInterfaceItemIdentifier(id)
+        presentWindow(id: id)
+    }
+
+    func windowStateChanged() {
         updateActivationPolicy()
     }
 
+    func windowWillClose(_ window: NSWindow, id: String) {
+        if registeredWindows[id] == ObjectIdentifier(window) {
+            registeredWindows.removeValue(forKey: id)
+        }
+        DispatchQueue.main.async { [weak self] in
+            self?.updateActivationPolicy()
+        }
+    }
+
     private func updateActivationPolicy() {
-        let shouldShowDock = (windowCount > 0) || alertVisible
+        let hasOpenStandardWindow = NSApp.windows.contains { window in
+            guard let id = window.identifier?.rawValue,
+                  AppWindowID.standard.contains(id),
+                  registeredWindows[id] == ObjectIdentifier(window) else {
+                return false
+            }
+            return window.isVisible || window.isMiniaturized
+        }
+        let hasOpenPasswordChangeWindow = NSApp.windows.contains { window in
+            window.identifier?.rawValue == AppWindowID.passwordChange
+                && (window.isVisible || window.isMiniaturized)
+        }
+        let shouldShowDock = hasOpenStandardWindow || hasOpenPasswordChangeWindow || alertVisible
         NSApp.setActivationPolicy(shouldShowDock ? .regular : .accessory)
     }
 
