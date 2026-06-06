@@ -1,51 +1,51 @@
-# E2E: Update Notification Flow
+# E2E: Flow powiadomień o aktualizacji
 
-Use this checklist when the implementation is ready for final manual E2E validation.
+Użyj tej checklisty, gdy implementacja będzie gotowa do finalnej ręcznej walidacji E2E.
 
-## Preparation
+## Przygotowanie
 
-- Build or install an older PasswordMonitor version than the release under test.
-- Confirm notification permission is either freshly unset or intentionally allowed for PasswordMonitor.
-- Confirm the login item helper is enabled in System Settings.
-- Reset or record the shared update defaults before each scenario when checking cooldown behavior.
-- Prepare two signed release manifests: one with `urgency: "normal"` and one with `urgency: "critical"`.
+- Zbuduj lub zainstaluj starszą wersję PasswordMonitor niż release używany w teście.
+- Potwierdź, że uprawnienie do powiadomień jest świeżo niewybrane albo celowo włączone dla PasswordMonitor.
+- Potwierdź, że helper login item jest włączony w Ustawieniach systemowych.
+- Przed każdym scenariuszem z cooldownami zresetuj albo zapisz stan współdzielonych ustawień aktualizacji.
+- Przygotuj dwa podpisane manifesty release: jeden z `urgency: "normal"` i jeden z `urgency: "critical"`.
 
-## Normal Update
+## Zwykła Aktualizacja
 
-- Launch the older app and confirm the automatic check detects the newer GitHub Release.
-- Verify a regular macOS notification appears for the available update.
-- Verify each visible app window shows a subtle update badge without layout overlap: menu bar popover, Settings, Logs, About, and password-change window.
-- Click the badge and confirm it starts the verified update flow directly.
-- Click the macOS notification action/body and confirm it starts the verified update flow directly.
-- Confirm repeated badge or notification clicks do not start duplicate downloads or duplicate install flows.
-- Use `Remind later` and verify regular update prompts are suppressed for 7 days.
-- Confirm the About window still supports manual check, download, verification, install, and relaunch.
+- Uruchom starszą aplikację i potwierdź, że automatyczny check wykrywa nowszy GitHub Release.
+- Sprawdź, czy dla dostępnej aktualizacji pojawia się zwykłe powiadomienie macOS.
+- Sprawdź, czy każde widoczne okno aplikacji pokazuje subtelny badge aktualizacji bez nachodzenia elementów UI: popover menu bar, Ustawienia, Logi, O aplikacji i okno zmiany hasła.
+- Kliknij badge i potwierdź, że bezpośrednio startuje zweryfikowany flow aktualizacji.
+- Kliknij akcję albo treść powiadomienia macOS i potwierdź, że bezpośrednio startuje zweryfikowany flow aktualizacji.
+- Potwierdź, że powtarzane kliknięcia badge'a albo powiadomienia nie uruchamiają duplikatów pobierania ani duplikatów flow instalacji.
+- Użyj `Przypomnij później` i sprawdź, czy zwykłe przypomnienia o aktualizacji są wyciszone na 7 dni.
+- Potwierdź, że okno O aplikacji nadal obsługuje ręczny check, pobranie, weryfikację, instalację i ponowne uruchomienie.
 
-## Critical Update
+## Krytyczna Aktualizacja
 
-- Publish or point the app at a signed manifest with `urgency: "critical"`.
-- Launch the older app and confirm a time-sensitive macOS notification appears.
-- Verify regular app views are blocked with stable critical-update copy until installation starts or completes.
-- Verify the About/update path remains available.
-- Verify password-expiration notifications are paused while the critical update is pending.
-- Confirm `Remind later` does not hide or downgrade the critical blocker.
-- Click the blocker action and confirm it starts the verified update flow directly.
-- Simulate a failed update and confirm the critical blocker remains, the error is visible, and retry is available.
-- Complete installation and relaunch, then confirm the critical state clears and password-expiration notifications resume.
+- Opublikuj albo skieruj aplikację na podpisany manifest z `urgency: "critical"`.
+- Uruchom starszą aplikację i potwierdź, że pojawia się time-sensitive notification macOS.
+- Sprawdź, czy zwykłe widoki aplikacji są zablokowane stałą treścią o krytycznej aktualizacji do czasu rozpoczęcia albo zakończenia instalacji.
+- Sprawdź, czy ścieżka O aplikacji / aktualizacja pozostaje dostępna.
+- Sprawdź, czy powiadomienia o wygasaniu hasła są wstrzymane, gdy krytyczna aktualizacja czeka na instalację.
+- Potwierdź, że `Przypomnij później` nie ukrywa ani nie degraduje krytycznego blockera.
+- Kliknij akcję blockera i potwierdź, że bezpośrednio startuje zweryfikowany flow aktualizacji.
+- Zasymuluj nieudaną aktualizację i potwierdź, że krytyczny blocker zostaje, błąd jest widoczny, a ponowienie jest dostępne.
+- Dokończ instalację i ponowne uruchomienie, a potem potwierdź, że stan krytyczny znika i powiadomienia o wygasaniu hasła wracają.
 
-## Helper, Cooldowns, And Failures
+## Helper, Cooldowny I Błędy
 
-- Launch main app and helper close together and confirm only one automatic GitHub check is claimed within the in-flight TTL.
-- Trigger app activation, menu open, wake, and helper startup; confirm successful checks respect the weekly success cooldown.
-- Force a background network or GitHub failure and confirm the error is visible in Settings/About.
-- Confirm automatic retries after failure respect the hourly failure cooldown.
-- Confirm a fresh signed manifest candidate is reused for immediate install.
-- Confirm a stale candidate older than 30 minutes is refreshed before install.
+- Uruchom aplikację główną i helper w krótkim odstępie czasu, a potem potwierdź, że w ramach in-flight TTL tylko jeden proces przejmuje automatyczny check GitHub.
+- Wywołaj aktywację aplikacji, otwarcie menu, wake i start helpera; potwierdź, że udane checki respektują tygodniowy success cooldown.
+- Wymuś błąd sieci albo GitHub w tle i potwierdź, że błąd jest widoczny w Ustawieniach / O aplikacji.
+- Potwierdź, że automatyczne ponowienia po błędzie respektują godzinny failure cooldown.
+- Potwierdź, że świeży podpisany kandydat manifestu jest używany ponownie przy natychmiastowej instalacji.
+- Potwierdź, że przestarzały kandydat starszy niż 30 minut jest odświeżany przed instalacją.
 
-## Regression
+## Regresja
 
-- Confirm password-expiration alerts, snooze, quiet hours, and manual password checks behave as before when no critical app update is pending.
-- Confirm update notification denial does not hide the in-app badge path.
-- Verify Polish and English copy for normal update, critical update, paused notifications, errors, and update actions.
-- Check light, dark, and auto theme rendering for badges and blocker views.
-- Verify VoiceOver labels and keyboard focus reach the update actions.
+- Potwierdź, że alerty wygasania hasła, drzemka, quiet hours i ręczne checki hasła działają jak wcześniej, gdy nie ma oczekującej krytycznej aktualizacji aplikacji.
+- Potwierdź, że odmowa uprawnienia do powiadomień aktualizacji nie ukrywa ścieżki przez in-app badge.
+- Sprawdź polskie i angielskie teksty dla zwykłej aktualizacji, krytycznej aktualizacji, wstrzymanych powiadomień, błędów i akcji aktualizacji.
+- Sprawdź renderowanie badge'y i blockerów w motywie jasnym, ciemnym i auto.
+- Sprawdź, czy etykiety VoiceOver i fokus klawiatury docierają do akcji aktualizacji.
