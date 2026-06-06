@@ -18,6 +18,7 @@ struct MenuBarView: View {
     @Environment(\.dismiss) private var dismiss
 
     @ObservedObject private var notificationManager = NotificationManager.shared
+    @ObservedObject private var updateMonitor = PMUpdateMonitor.shared
 
     @State private var isChecking = false
     @State private var lastMenuRefreshAt: Date = .distantPast
@@ -73,6 +74,9 @@ struct MenuBarView: View {
         .background(PMMenuBarWindowConfigurator())
         .onAppear {
             refreshPasswordStatus(reason: .menuOpen, shouldCheckNotification: true)
+            Task {
+                await updateMonitor.checkIfNeeded(currentVersion: currentAppVersion, trigger: .menuOpen)
+            }
         }
     }
 
@@ -196,6 +200,10 @@ struct MenuBarView: View {
         return service.status == .enabled ? PMTheme.success : PMTheme.danger
     }
 
+    private var currentAppVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
     private func checkPasswordNow() {
         refreshPasswordStatus(reason: .checkNow, shouldCheckNotification: true)
     }
@@ -225,7 +233,9 @@ struct MenuBarView: View {
     
     /// Czy przycisk „Zmień hasło” ma być aktywny
     private var canChangePasswordNow: Bool {
-        notificationManager.hasPerformedRefresh && notificationManager.isDomainAvailable
+        !updateMonitor.state.isCriticalBlocking
+            && notificationManager.hasPerformedRefresh
+            && notificationManager.isDomainAvailable
     }
 }
 

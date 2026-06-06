@@ -222,6 +222,47 @@ public struct PMUpdateManifest: Codable, Hashable, Sendable {
     public let assetSHA256: String
     public let bundleIdentifier: String
     public let signingKeyID: String
+    public let urgency: PMUpdateUrgency
+
+    enum CodingKeys: String, CodingKey {
+        case version
+        case assetName
+        case assetSHA256
+        case bundleIdentifier
+        case signingKeyID
+        case urgency
+    }
+
+    public init(
+        version: String,
+        assetName: String,
+        assetSHA256: String,
+        bundleIdentifier: String,
+        signingKeyID: String,
+        urgency: PMUpdateUrgency = .normal
+    ) {
+        self.version = version
+        self.assetName = assetName
+        self.assetSHA256 = assetSHA256
+        self.bundleIdentifier = bundleIdentifier
+        self.signingKeyID = signingKeyID
+        self.urgency = urgency
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.version = try container.decode(String.self, forKey: .version)
+        self.assetName = try container.decode(String.self, forKey: .assetName)
+        self.assetSHA256 = try container.decode(String.self, forKey: .assetSHA256)
+        self.bundleIdentifier = try container.decode(String.self, forKey: .bundleIdentifier)
+        self.signingKeyID = try container.decode(String.self, forKey: .signingKeyID)
+        self.urgency = try container.decodeIfPresent(PMUpdateUrgency.self, forKey: .urgency) ?? .normal
+    }
+}
+
+public enum PMUpdateUrgency: String, Codable, Hashable, Sendable {
+    case normal
+    case critical
 }
 
 public struct PMSignedUpdateManifest: Codable, Hashable, Sendable {
@@ -236,8 +277,11 @@ public struct PMUpdateCandidate: Hashable, Sendable {
     public let assetURL: URL
     public let manifestURL: URL
     public let manifestName: String
+    public let signedManifest: PMSignedUpdateManifest
+    public let createdAt: Date
     public let bundleIdentifier: String
     public let appBundleName: String
+    public let urgency: PMUpdateUrgency
 
     public init(
         version: PMSemanticVersion,
@@ -246,8 +290,11 @@ public struct PMUpdateCandidate: Hashable, Sendable {
         assetURL: URL,
         manifestURL: URL,
         manifestName: String,
+        signedManifest: PMSignedUpdateManifest,
+        createdAt: Date = Date(),
         bundleIdentifier: String,
-        appBundleName: String
+        appBundleName: String,
+        urgency: PMUpdateUrgency = .normal
     ) {
         self.version = version
         self.releaseTag = releaseTag
@@ -255,8 +302,15 @@ public struct PMUpdateCandidate: Hashable, Sendable {
         self.assetURL = assetURL
         self.manifestURL = manifestURL
         self.manifestName = manifestName
+        self.signedManifest = signedManifest
+        self.createdAt = createdAt
         self.bundleIdentifier = bundleIdentifier
         self.appBundleName = appBundleName
+        self.urgency = urgency
+    }
+
+    public func isFresh(now: Date = Date(), ttl: TimeInterval = PMUpdateMonitorPolicy.candidateManifestTTL) -> Bool {
+        now.timeIntervalSince(createdAt) <= ttl
     }
 }
 
@@ -555,7 +609,7 @@ public final class PMUpdateService {
             return .upToDate(localVersion: localVersion, remoteVersion: remoteVersion)
         }
 
-        let candidate = try makeCandidate(from: release, version: remoteVersion)
+        let candidate = try await makeCandidate(from: release, version: remoteVersion)
         return .updateAvailable(candidate: candidate)
     }
 
@@ -564,11 +618,8 @@ public final class PMUpdateService {
         currentAppURL: URL = Bundle.main.bundleURL,
         restartHandler: @escaping @Sendable () -> Void = {}
     ) async throws {
-        let manifestData = try await downloadData(from: candidate.manifestURL)
-        let signedManifest = try JSONDecoder().decode(PMSignedUpdateManifest.self, from: manifestData)
-        try validateSignedManifest(signedManifest)
-
-        let manifest = signedManifest.manifest
+        let manifest = candidate.signedManifest.manifest
+        try validateSignedManifest(candidate.signedManifest)
         let manifestVersion = try PMSemanticVersion(manifest.version)
         guard manifestVersion == candidate.version else {
             throw PMUpdateError.invalidManifestVersion
@@ -645,7 +696,7 @@ public final class PMUpdateService {
         return try PMSemanticVersion(cleanedTag)
     }
 
-    private func makeCandidate(from release: GitHubRelease, version: PMSemanticVersion) throws -> PMUpdateCandidate {
+    private func makeCandidate(from release: GitHubRelease, version: PMSemanticVersion) async throws -> PMUpdateCandidate {
         guard let asset = release.assets.first(where: { $0.name == configuration.appZipAssetName }) else {
             throw PMUpdateError.missingExpectedAsset(configuration.appZipAssetName)
         }
@@ -656,6 +707,21 @@ public final class PMUpdateService {
               manifest.apiURL.scheme?.lowercased() == "https" else {
             throw PMUpdateError.invalidGitHubResponse
         }
+        let signedManifest = try JSONDecoder().decode(PMSignedUpdateManifest.self, from: try await downloadData(from: manifest.apiURL))
+        try validateSignedManifest(signedManifest)
+        let manifestVersion = try PMSemanticVersion(signedManifest.manifest.version)
+        guard manifestVersion == version else {
+            throw PMUpdateError.invalidManifestVersion
+        }
+        guard signedManifest.manifest.assetName == asset.name else {
+            throw PMUpdateError.missingExpectedAsset(asset.name)
+        }
+        guard signedManifest.manifest.bundleIdentifier == configuration.appBundleIdentifier else {
+            throw PMUpdateError.manifestBundleMismatch(
+                expected: configuration.appBundleIdentifier,
+                actual: signedManifest.manifest.bundleIdentifier
+            )
+        }
 
         return PMUpdateCandidate(
             version: version,
@@ -664,8 +730,10 @@ public final class PMUpdateService {
             assetURL: asset.apiURL,
             manifestURL: manifest.apiURL,
             manifestName: manifest.name,
+            signedManifest: signedManifest,
             bundleIdentifier: configuration.appBundleIdentifier,
-            appBundleName: configuration.appBundleName
+            appBundleName: configuration.appBundleName,
+            urgency: signedManifest.manifest.urgency
         )
     }
 

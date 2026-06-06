@@ -3603,6 +3603,38 @@
         }
       }
     },
+    "settings_auto_update_checks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for updates automatically"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprawdzaj aktualizacje automatycznie"
+          }
+        }
+      }
+    },
+    "settings_auto_update_checks_footnote": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PasswordMonitor checks at most once every 7 days and shows a notification when an update is available."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PasswordMonitor sprawdza aktualizacje najwyżej raz na 7 dni i pokazuje powiadomienie, gdy nowa wersja jest dostępna."
+          }
+        }
+      }
+    },
     "settings_update_available %@": {
       "localizations": {
         "en": {
@@ -3615,6 +3647,182 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktualizacja %@ jest dostępna"
+          }
+        }
+      }
+    },
+    "update_available_short": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update available"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dostępna aktualizacja"
+          }
+        }
+      }
+    },
+    "update_available_short %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update %@ available"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dostępna aktualizacja %@"
+          }
+        }
+      }
+    },
+    "update_critical_short %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Critical update %@ required"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymagana krytyczna aktualizacja %@"
+          }
+        }
+      }
+    },
+    "update_critical_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Critical update required"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymagana krytyczna aktualizacja"
+          }
+        }
+      }
+    },
+    "update_critical_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PasswordMonitor must be updated before normal app features can continue."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PasswordMonitor musi zostać zaktualizowany, zanim normalne funkcje aplikacji będą dostępne."
+          }
+        }
+      }
+    },
+    "update_install_now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update now"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualizuj teraz"
+          }
+        }
+      }
+    },
+    "update_retry_update": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry update"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ponów aktualizację"
+          }
+        }
+      }
+    },
+    "update_critical_notifications_paused": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password expiration notifications are paused until this critical update is installed."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powiadomienia o wygasaniu hasła są wstrzymane do czasu zainstalowania tej krytycznej aktualizacji."
+          }
+        }
+      }
+    },
+    "update_remind_later": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remind me later"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przypomnij później"
+          }
+        }
+      }
+    },
+    "update_last_error %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last update check failed: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnie sprawdzenie aktualizacji nie powiodło się: %@"
+          }
+        }
+      }
+    },
+    "update_last_error_with_date %@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last update check failed at %@: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnie sprawdzenie aktualizacji nie powiodło się o %@: %@"
           }
         }
       }

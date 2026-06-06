@@ -10,6 +10,7 @@ import AppKit
 import ServiceManagement
 import PasswordMonitorCore
 import Combine
+import UserNotifications
 
 enum AppWindowID {
     static let settings = "settings-window"
@@ -81,9 +82,18 @@ struct PasswordMonitorApp: App {
                 .environment(\.locale, languageSettings.locale)
                 .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
+                .updateStatusOverlay()
         } label: {
             Image(nsImage: AppIconImageProvider.image(size: PMLayout.menuBarIconSize))
                 .renderingMode(.original)
+                .onAppear {
+                    appDelegate.configure(
+                        appState: appState,
+                        languageSettings: languageSettings,
+                        themeManager: themeManager,
+                        updateRequestCenter: updateRequestCenter
+                    )
+                }
         }
         .menuBarExtraStyle(.window)
 
@@ -99,6 +109,7 @@ struct PasswordMonitorApp: App {
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
                 .background(AppWindowLifecycleBridge(id: AppWindowID.settings, appState: appState))
+                .updateStatusOverlay()
         }
         .windowResizability(.automatic)
 
@@ -114,6 +125,7 @@ struct PasswordMonitorApp: App {
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
                 .background(AppWindowLifecycleBridge(id: AppWindowID.about, appState: appState))
+                .updateStatusOverlay(allowsCriticalInteraction: true)
         }
         .windowResizability(.automatic)
 
@@ -128,6 +140,7 @@ struct PasswordMonitorApp: App {
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
                 .background(AppWindowLifecycleBridge(id: AppWindowID.logs, appState: appState))
+                .updateStatusOverlay()
         }
         .windowResizability(.automatic)
 
@@ -141,6 +154,7 @@ struct PasswordMonitorApp: App {
                 .pmWindowBackground(reduced: themeManager.isApplyingTheme)
                 .pmThemeApplying(themeManager.isApplyingTheme)
                 .background(AppWindowLifecycleBridge(id: AppWindowID.aiRequirements, appState: appState))
+                .updateStatusOverlay()
         }
         .windowResizability(.automatic)
         
@@ -280,12 +294,34 @@ private struct AppWindowLifecycleBridge: NSViewRepresentable {
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let passwordChangeWindowIdentifier = NSUserInterfaceItemIdentifier(AppWindowID.passwordChange)
     private var passwordChangeWindow: NSWindow?
+    private var manualAboutWindow: NSWindow?
     private var passwordChangeLocalObserver: NSObjectProtocol?
     private var passwordChangeDistributedObserver: NSObjectProtocol?
+    private var appState: AppState?
+    private var languageSettings: LanguageSettings?
+    private var themeManager: ThemeManager?
+    private var updateRequestCenter: UpdateRequestCenter?
+
+    @MainActor
+    func configure(
+        appState: AppState,
+        languageSettings: LanguageSettings,
+        themeManager: ThemeManager,
+        updateRequestCenter: UpdateRequestCenter
+    ) {
+        self.appState = appState
+        self.languageSettings = languageSettings
+        self.themeManager = themeManager
+        self.updateRequestCenter = updateRequestCenter
+        consumePendingUpdateInstallRequestIfPossible()
+    }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger.shared.logLocalized("log_app_launched")
         logLoadedSettingsSnapshot()
+
+        PMUpdateSystemNotifier.shared.configureCategories()
+        UNUserNotificationCenter.current().delegate = self
 
         LocalizationRetryManager.shared.handleAppLaunch()
         registerPasswordChangeRequestObservers()
@@ -295,6 +331,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.languagePromptDelay) {
             self.promptForSystemLanguageIfNeeded()
+        }
+
+        Task { @MainActor in
+            await PMUpdateMonitor.shared.checkIfNeeded(
+                currentVersion: self.currentAppVersion,
+                trigger: .launch
+            )
         }
         
     }
@@ -311,6 +354,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidBecomeActive(_ notification: Notification) {
         DispatchQueue.main.asyncAfter(deadline: .now() + PMMotion.windowFocusRetryDelay) {
             self.hideDockWhenNoAppWindowIsOpen()
+        }
+        Task { @MainActor in
+            await PMUpdateMonitor.shared.checkIfNeeded(
+                currentVersion: self.currentAppVersion,
+                trigger: .activation
+            )
         }
     }
 
@@ -331,6 +380,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
             return window.isVisible || window.isMiniaturized
         }
+    }
+
+    private var currentAppVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
 
     private func hideDockWhenNoAppWindowIsOpen() {
@@ -363,6 +416,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @MainActor
     private func presentPasswordChangeWindow() {
+        guard !PMUpdateMonitor.shared.state.isCriticalBlocking else {
+            presentAboutWindowForUpdate()
+            return
+        }
+
         if let passwordChangeWindow {
             focusPasswordChangeWindow(passwordChangeWindow, remainingAttempts: PMLayout.windowFocusRetryCount)
             return
@@ -371,6 +429,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let content = PasswordChangeView(
             onCancel: { [weak self] in
                 self?.closePasswordChangeWindow()
+            }
+        )
+        .updateStatusOverlay(
+            startUpdateFlow: { [weak self] in
+                self?.presentAboutWindowForUpdate()
             }
         )
         .pmWindowBackground()
@@ -443,14 +506,91 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
-        guard notification.object as? NSWindow === passwordChangeWindow else { return }
-        passwordChangeWindow = nil
+        if notification.object as? NSWindow === passwordChangeWindow {
+            passwordChangeWindow = nil
+        }
+        if notification.object as? NSWindow === manualAboutWindow {
+            manualAboutWindow = nil
+        }
         hideDockWhenNoAppWindowIsOpen()
     }
 
     func windowDidBecomeKey(_ notification: Notification) {
         guard notification.object as? NSWindow === passwordChangeWindow else { return }
         passwordChangeWindow?.level = .normal
+    }
+
+    @MainActor
+    private func consumePendingUpdateInstallRequestIfPossible() {
+        guard PMUpdateMonitor.shared.consumePendingInstallRequest() else { return }
+        presentAboutWindowForUpdate()
+    }
+
+    @MainActor
+    private func presentAboutWindowForUpdate() {
+        if PMUpdateMonitor.shared.state.urgency == .critical {
+            updateRequestCenter?.requestCriticalUpdate()
+        } else {
+            updateRequestCenter?.requestStartDetectedUpdate()
+        }
+        presentAboutWindow()
+    }
+
+    @MainActor
+    private func presentAboutWindow() {
+        if let window = existingWindow(id: AppWindowID.about) {
+            appState?.presentWindow(id: AppWindowID.about)
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+        guard let appState, let languageSettings, let themeManager, let updateRequestCenter else {
+            PMUpdateMonitor.shared.setPendingInstallRequest()
+            return
+        }
+
+        let content = AboutView()
+            .environmentObject(appState)
+            .environmentObject(themeManager)
+            .environmentObject(languageSettings)
+            .environmentObject(updateRequestCenter)
+            .environment(\.locale, languageSettings.locale)
+            .pmWindowMinSize()
+            .pmThemeTransitionOverlay(isActive: themeManager.isApplyingTheme)
+            .pmWindowBackground(reduced: themeManager.isApplyingTheme)
+            .pmThemeApplying(themeManager.isApplyingTheme)
+            .updateStatusOverlay(
+                allowsCriticalInteraction: true,
+                startUpdateFlow: { [weak self] in
+                    self?.presentAboutWindowForUpdate()
+                }
+            )
+            .background(AppWindowLifecycleBridge(id: AppWindowID.about, appState: appState))
+
+        let window = NSWindow(
+            contentRect: NSRect(
+                origin: .zero,
+                size: NSSize(width: PMLayout.windowMinWidth, height: PMLayout.windowMinHeight)
+            ),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = LanguageSettings.localizedString("about_window_title")
+        window.identifier = NSUserInterfaceItemIdentifier(AppWindowID.about)
+        window.titlebarAppearsTransparent = true
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        window.contentViewController = NSHostingController(rootView: content)
+        window.minSize = NSSize(width: PMLayout.windowMinWidth, height: PMLayout.windowMinHeight)
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+        window.center()
+        manualAboutWindow = window
+        appState.registerWindow(window, id: AppWindowID.about)
+        appState.presentWindow(id: AppWindowID.about)
+    }
+
+    private func existingWindow(id: String) -> NSWindow? {
+        NSApp.windows.first { $0.identifier?.rawValue == id }
     }
 
     private func promptForSystemLanguageIfNeeded() {
@@ -634,5 +774,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
         }
     }
-    
+}
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        guard response.notification.request.content.categoryIdentifier == PMUpdateSystemNotifier.categoryIdentifier else {
+            return
+        }
+        await MainActor.run {
+            PMUpdateMonitor.shared.setPendingInstallRequest()
+            NotificationCenter.default.post(name: HelperMessaging.updateInstallRequestedNotification, object: nil)
+            self.consumePendingUpdateInstallRequestIfPossible()
+        }
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        guard notification.request.content.categoryIdentifier == PMUpdateSystemNotifier.categoryIdentifier else {
+            return []
+        }
+        return [.banner, .sound, .list]
+    }
 }

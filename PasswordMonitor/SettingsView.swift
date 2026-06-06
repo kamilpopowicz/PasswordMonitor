@@ -20,6 +20,7 @@ private enum SettingsKeys {
     static let quietHoursStart = "quiet_hours_start" // Format: "18:01"
     static let quietHoursEnd = "quiet_hours_end"     // Format: "05:59"
     static let minimalLogging = "minimal_logging"
+    static let automaticUpdateChecks = UpdateNotificationStateStore.automaticChecksEnabledKey
 }
 
 private enum LanguageAssistStatusKind {
@@ -40,6 +41,7 @@ struct SettingsView: View {
     @EnvironmentObject var languageSettings: LanguageSettings
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var updateRequestCenter: UpdateRequestCenter
+    @ObservedObject private var updateMonitor = PMUpdateMonitor.shared
 
     // EDYTOWANE wartości (UI)
     @State private var launchAtLogin = false
@@ -48,6 +50,7 @@ struct SettingsView: View {
     @State private var warningThreshold = 7
     @State private var selectedLanguageCode = "en"
     @State private var minimalLogging = true
+    @State private var automaticUpdateChecks = true
     @State private var languageAssistText = ""
     @State private var aiDetectInProgress = false
     @State private var aiRetryInProgress = false
@@ -84,6 +87,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.quietHoursStart) private var storedQuietHoursStart = "18:01"
     @AppStorage(SettingsKeys.quietHoursEnd) private var storedQuietHoursEnd = "05:59"
     @AppStorage(SettingsKeys.minimalLogging) private var storedMinimalLogging = true
+    @AppStorage(SettingsKeys.automaticUpdateChecks) private var storedAutomaticUpdateChecks = true
     var body: some View {
         ZStack {
             VStack(spacing: PMLayout.noSpacing) {
@@ -410,6 +414,23 @@ struct SettingsView: View {
                     .foregroundColor(PMTheme.textSecondary)
             }
 
+            Toggle(isOn: $automaticUpdateChecks) {
+                Text(LanguageSettings.localizedString("settings_auto_update_checks"))
+            }
+
+            Text(LanguageSettings.localizedString("settings_auto_update_checks_footnote"))
+                .font(.caption)
+                .foregroundColor(PMTheme.textSecondary)
+                .italic()
+                .pmMultilineText()
+
+            if let backgroundUpdateErrorText {
+                Text(backgroundUpdateErrorText)
+                    .font(.caption)
+                    .foregroundColor(PMTheme.danger)
+                    .pmMultilineText()
+            }
+
             PMAdaptiveActionRow {
                 Button {
                     handleOpenAboutAndCheckUpdatesTap()
@@ -441,6 +462,16 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private var backgroundUpdateErrorText: String? {
+        let state = updateMonitor.state
+        guard let error = state.lastBackgroundError else { return nil }
+        if let date = state.lastBackgroundErrorAt {
+            let dateText = DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .short)
+            return LanguageSettings.localizedString("update_last_error_with_date %@ %@", dateText, error)
+        }
+        return LanguageSettings.localizedString("update_last_error %@", error)
     }
 
     private var footerActions: some View {
@@ -543,6 +574,7 @@ struct SettingsView: View {
             || launchAtLogin != savedLaunchAtLogin
             || selectedLanguageCode != languageSettings.selectedLanguageCode
             || minimalLogging != storedMinimalLogging
+            || automaticUpdateChecks != storedAutomaticUpdateChecks
     }
 
     // MARK: - Helpers
@@ -621,6 +653,7 @@ struct SettingsView: View {
         quietHoursEndDate = timeStringToDate(quietHoursEndString) ?? Date()
         selectedLanguageCode = languageSettings.selectedLanguageCode
         minimalLogging = storedMinimalLogging
+        automaticUpdateChecks = storedAutomaticUpdateChecks
         refreshPendingRetryCount()
 
         // Helper service status
@@ -1292,6 +1325,9 @@ struct SettingsView: View {
         if storedMinimalLogging != minimalLogging {
             changes.append("minimal_logging: \(storedMinimalLogging) → \(minimalLogging)")
         }
+        if storedAutomaticUpdateChecks != automaticUpdateChecks {
+            changes.append("update_automatic_checks_enabled: \(storedAutomaticUpdateChecks) → \(automaticUpdateChecks)")
+        }
         if languageSettings.selectedLanguageCode != selectedLanguageCode {
             changes.append("appLanguage: \(languageSettings.selectedLanguageCode) → \(selectedLanguageCode)")
         }
@@ -1307,6 +1343,8 @@ struct SettingsView: View {
         storedQuietHoursStart = quietHoursStartString
         storedQuietHoursEnd = quietHoursEndString
         storedMinimalLogging = minimalLogging
+        storedAutomaticUpdateChecks = automaticUpdateChecks
+        PMUpdateMonitor.shared.setAutomaticChecksEnabled(automaticUpdateChecks)
 
         // Mirror do shared suite — helper czyta z "popo.PasswordMonitor" w syncSharedSettings.
         // Bez tego helper nigdy nie zobaczy zmian (jego UserDefaults.standard to osobny plist).
@@ -1317,6 +1355,7 @@ struct SettingsView: View {
             sharedDefaults.set(quietHoursStartString, forKey: SettingsKeys.quietHoursStart)
             sharedDefaults.set(quietHoursEndString, forKey: SettingsKeys.quietHoursEnd)
             sharedDefaults.set(minimalLogging, forKey: SettingsKeys.minimalLogging)
+            sharedDefaults.set(automaticUpdateChecks, forKey: SettingsKeys.automaticUpdateChecks)
             sharedDefaults.set(selectedLanguageCode, forKey: "appLanguage")
         }
 
@@ -1360,6 +1399,8 @@ struct SettingsView: View {
         storedQuietHoursStart = "18:01"
         storedQuietHoursEnd = "05:59"
         storedMinimalLogging = true
+        storedAutomaticUpdateChecks = true
+        PMUpdateMonitor.shared.setAutomaticChecksEnabled(true)
 
         languageSettings.selectedLanguageCode = "en"
 
@@ -1371,6 +1412,7 @@ struct SettingsView: View {
             sharedDefaults.set("18:01", forKey: SettingsKeys.quietHoursStart)
             sharedDefaults.set("05:59", forKey: SettingsKeys.quietHoursEnd)
             sharedDefaults.set(true, forKey: SettingsKeys.minimalLogging)
+            sharedDefaults.set(true, forKey: SettingsKeys.automaticUpdateChecks)
             sharedDefaults.set("en", forKey: "appLanguage")
         }
         Logger.shared.log("Settings reset to defaults")

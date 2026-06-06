@@ -41,6 +41,26 @@ All notable changes to this project will be documented in this file.
 - Deferred: separate top-level navigation destinations for `hrPortal` and `networkDrives`; in 2.0 they remain Home-dashboard modules.
 - Rejected for this cycle: localization/user-facing copy stored in Core contract models (moved to UI localization layer by design).
 
+## PasswordMonitor 1.9.3
+
+### Added
+- Added automatic GitHub Release update checks from the main app and helper on launch, activation, menu open, wake, and helper startup.
+- Added signed-manifest urgency support (`normal` / `critical`) and a `--urgency normal|critical` option to the manifest generator.
+- Added macOS notifications for regular and critical app updates.
+- Added subtle in-app update badges across app windows, with badge and notification clicks starting the update flow directly.
+- Added a critical-update blocker that keeps the update path available while pausing password-expiration notifications until the critical update is installed.
+- Added shared update notification state for cross-process cooldowns, in-flight checks, pending install requests, remind-later state, and background error visibility.
+- Added a dedicated E2E checklist for the update notification flow in `docs/e2e-update-notification-flow.md`.
+
+### Changed
+- Changed background update failures to preserve visible error context and retry after an hourly failure cooldown instead of silently hiding the problem.
+- Changed user-triggered update installs to reuse fresh signed manifest candidates and refresh stale candidates before installation.
+- Changed regular update reminders so `Remind later` suppresses regular update prompts for 7 days, while critical updates ignore that suppression.
+- Updated documentation for the new automatic, notification-driven update model.
+
+### Tests
+- Added core regression coverage for manifest urgency decoding, automatic-check cooldowns, failure retry cooldowns, in-flight check claims, pending install requests, candidate freshness, and fresh manifest reuse.
+
 ## PasswordMonitor 1.9.2
 - Added the in-app AD/mobile password change flow for issue #6 using OpenDirectory.
 - Added inline validation, password strength feedback, stable `PM-PWD-*` diagnostic codes, mapped domain policy errors, and a System Settings fallback.

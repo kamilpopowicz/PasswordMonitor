@@ -1224,6 +1224,198 @@ final class PasswordMonitorCoreTests: XCTestCase {
         XCTAssertThrowsError(try service.validateSignedManifest(signedManifest))
     }
 
+    func testUpdateManifestDecodeDefaultsMissingUrgencyToNormal() throws {
+        let data = Data("""
+        {
+          "version": "1.9.3",
+          "assetName": "PasswordMonitor.app.zip",
+          "assetSHA256": "\(String(repeating: "d", count: 64))",
+          "bundleIdentifier": "popo.PasswordMonitor",
+          "signingKeyID": "test-key"
+        }
+        """.utf8)
+
+        let manifest = try JSONDecoder().decode(PMUpdateManifest.self, from: data)
+
+        XCTAssertEqual(manifest.urgency, .normal)
+    }
+
+    func testUpdateManifestDecodeCriticalUrgency() throws {
+        let data = Data("""
+        {
+          "version": "1.9.3",
+          "assetName": "PasswordMonitor.app.zip",
+          "assetSHA256": "\(String(repeating: "e", count: 64))",
+          "bundleIdentifier": "popo.PasswordMonitor",
+          "signingKeyID": "test-key",
+          "urgency": "critical"
+        }
+        """.utf8)
+
+        let manifest = try JSONDecoder().decode(PMUpdateManifest.self, from: data)
+
+        XCTAssertEqual(manifest.urgency, .critical)
+    }
+
+    func testUpdateCandidateCarriesSignedManifestForInstallReuse() throws {
+        let manifest = PMUpdateManifest(
+            version: "1.9.4",
+            assetName: "PasswordMonitor.app.zip",
+            assetSHA256: String(repeating: "f", count: 64),
+            bundleIdentifier: "popo.PasswordMonitor",
+            signingKeyID: "test-key",
+            urgency: .critical
+        )
+        let signedManifest = PMSignedUpdateManifest(manifest: manifest, signature: "signature")
+
+        let candidate = PMUpdateCandidate(
+            version: try PMSemanticVersion("1.9.4"),
+            releaseTag: "v1.9.4",
+            assetName: manifest.assetName,
+            assetURL: URL(string: "https://api.github.com/repos/example/PasswordMonitor/releases/assets/1")!,
+            manifestURL: URL(string: "https://api.github.com/repos/example/PasswordMonitor/releases/assets/2")!,
+            manifestName: "PasswordMonitor.update-manifest.json",
+            signedManifest: signedManifest,
+            createdAt: Date(timeIntervalSince1970: 10_000),
+            bundleIdentifier: manifest.bundleIdentifier,
+            appBundleName: "PasswordMonitor.app",
+            urgency: manifest.urgency
+        )
+
+        XCTAssertEqual(candidate.signedManifest, signedManifest)
+        XCTAssertEqual(candidate.urgency, .critical)
+        XCTAssertTrue(candidate.isFresh(now: Date(timeIntervalSince1970: 10_000 + 1_799), ttl: 1_800))
+        XCTAssertFalse(candidate.isFresh(now: Date(timeIntervalSince1970: 10_000 + 1_801), ttl: 1_800))
+    }
+
+    func testAutomaticUpdateCheckCooldownPolicy() {
+        let now = Date(timeIntervalSince1970: 10_000)
+
+        XCTAssertTrue(UpdateNotificationStateStore.shouldRunAutomaticCheck(
+            automaticChecksEnabled: true,
+            lastAutomaticCheckAt: nil,
+            lastBackgroundErrorAt: nil,
+            now: now,
+            successCooldown: 100,
+            failureCooldown: 20
+        ))
+        XCTAssertFalse(UpdateNotificationStateStore.shouldRunAutomaticCheck(
+            automaticChecksEnabled: false,
+            lastAutomaticCheckAt: nil,
+            lastBackgroundErrorAt: nil,
+            now: now,
+            successCooldown: 100,
+            failureCooldown: 20
+        ))
+        XCTAssertFalse(UpdateNotificationStateStore.shouldRunAutomaticCheck(
+            automaticChecksEnabled: true,
+            lastAutomaticCheckAt: now.addingTimeInterval(-99),
+            lastBackgroundErrorAt: nil,
+            now: now,
+            successCooldown: 100,
+            failureCooldown: 20
+        ))
+        XCTAssertTrue(UpdateNotificationStateStore.shouldRunAutomaticCheck(
+            automaticChecksEnabled: true,
+            lastAutomaticCheckAt: now.addingTimeInterval(-100),
+            lastBackgroundErrorAt: nil,
+            now: now,
+            successCooldown: 100,
+            failureCooldown: 20
+        ))
+    }
+
+    func testAutomaticUpdateCheckFailureCooldownIsShorterThanSuccessCooldown() {
+        let now = Date(timeIntervalSince1970: 10_000)
+
+        XCTAssertFalse(UpdateNotificationStateStore.shouldRunAutomaticCheck(
+            automaticChecksEnabled: true,
+            lastAutomaticCheckAt: nil,
+            lastBackgroundErrorAt: now.addingTimeInterval(-59),
+            now: now,
+            successCooldown: 100,
+            failureCooldown: 60
+        ))
+        XCTAssertTrue(UpdateNotificationStateStore.shouldRunAutomaticCheck(
+            automaticChecksEnabled: true,
+            lastAutomaticCheckAt: nil,
+            lastBackgroundErrorAt: now.addingTimeInterval(-60),
+            now: now,
+            successCooldown: 100,
+            failureCooldown: 60
+        ))
+    }
+
+    func testUpdateStateStoreRecordsBackgroundErrorWithoutSuccessCooldown() {
+        let suiteName = "popo.PasswordMonitor.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = UpdateNotificationStateStore(defaults: defaults)
+        let now = Date(timeIntervalSince1970: 10_000)
+
+        store.recordBackgroundError("offline", at: now)
+
+        XCTAssertNil(store.state.lastAutomaticCheckAt)
+        XCTAssertEqual(store.state.lastBackgroundError, "offline")
+        XCTAssertEqual(store.state.lastBackgroundErrorAt, now)
+        XCTAssertFalse(store.shouldRunAutomaticCheck(now: now.addingTimeInterval(30), successCooldown: 100, failureCooldown: 60))
+        XCTAssertTrue(store.shouldRunAutomaticCheck(now: now.addingTimeInterval(60), successCooldown: 100, failureCooldown: 60))
+    }
+
+    func testUpdateStatePendingInstallRequestConsumesOnce() {
+        let suiteName = "popo.PasswordMonitor.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = UpdateNotificationStateStore(defaults: defaults)
+
+        store.setPendingInstallRequest(true)
+
+        XCTAssertTrue(store.consumePendingInstallRequest())
+        XCTAssertFalse(store.consumePendingInstallRequest())
+    }
+
+    func testUpdateStateAutomaticCheckClaimBlocksUntilTTL() {
+        let suiteName = "popo.PasswordMonitor.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = UpdateNotificationStateStore(defaults: defaults)
+        let now = Date(timeIntervalSince1970: 10_000)
+
+        XCTAssertTrue(store.claimAutomaticCheck(now: now, ttl: 120))
+        XCTAssertFalse(store.claimAutomaticCheck(now: now.addingTimeInterval(119), ttl: 120))
+        XCTAssertTrue(store.claimAutomaticCheck(now: now.addingTimeInterval(120), ttl: 120))
+    }
+
+    func testUpdateStateAutomaticCheckClaimClearsAfterFailure() {
+        let suiteName = "popo.PasswordMonitor.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = UpdateNotificationStateStore(defaults: defaults)
+        let now = Date(timeIntervalSince1970: 10_000)
+
+        XCTAssertTrue(store.claimAutomaticCheck(now: now, ttl: 120))
+        store.recordBackgroundError("offline", at: now.addingTimeInterval(1))
+
+        XCTAssertNil(store.state.checkInFlightUntil)
+        XCTAssertTrue(store.claimAutomaticCheck(now: now.addingTimeInterval(2), ttl: 120))
+    }
+
+    func testUpdateStateRemindLaterSuppressesNormalNotificationOnly() {
+        let suiteName = "popo.PasswordMonitor.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = UpdateNotificationStateStore(defaults: defaults)
+        let now = Date(timeIntervalSince1970: 10_000)
+
+        store.recordAvailableUpdate(version: "1.9.4", releaseTag: "v1.9.4", urgency: .normal)
+        store.remindLater(until: now.addingTimeInterval(60))
+        XCTAssertFalse(store.shouldNotifyUser(now: now))
+
+        store.recordAvailableUpdate(version: "1.9.5", releaseTag: "v1.9.5", urgency: .critical)
+        XCTAssertTrue(store.state.isCriticalBlocking)
+        XCTAssertTrue(store.shouldNotifyUser(now: now))
+    }
+
     private func signedManifest(
         manifest: PMUpdateManifest,
         privateKey: Curve25519.Signing.PrivateKey
